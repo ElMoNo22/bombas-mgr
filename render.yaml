@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bombas-mgr
+    env: python
+    buildCommand: pip install -r requirements.txt && python seed.py
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_PATH
+        value: /opt/render/project/src/bombas.db
+    disk:
+      name: data
+      mountPath: /opt/render/project/src
+      sizeGB: 1
