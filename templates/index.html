@@ -435,17 +435,30 @@ function interpH(curva,q){
 
 function normModelo(m){
   if(!m)return'';
-  return m.toLowerCase().replace(/bms\s*/,'').replace(/rn|rl|r2|xn|xf|xp|xj/g,'').replace(/\s+/g,'').trim();
+  let s=m.toLowerCase().replace(/^bms\s*/,'').replace(/["\s]/g,'').trim();
+  const hpMatch=s.match(/\/(\d+[,.]?\d*)(?:[-\w"]*)/);
+  const hp=hpMatch?parseFloat(hpMatch[1].replace(',','.')):null;
+  const seriesRaw=s.split('/')[0];
+  const series=seriesRaw.replace(/rn|rl|r2|xn|xf|xp|xj|x3|x2/g,'').replace(/[a-z]+$/,'');
+  return hp!==null?`${series}/${hp}`:series;
 }
 function findCat(modelo){
-  if(!modelo)return null;
-  return CATALOGO.find(b=>{
+  if(!modelo||!CATALOGO.length)return null;
+  let f=CATALOGO.find(b=>b.modelo===modelo);
+  if(f)return f;
+  const nr=normModelo(modelo);
+  if(!nr)return null;
+  const parts=nr.split('/');
+  const serR=parts[0], hpR=parts[1]?parseFloat(parts[1]):null;
+  f=CATALOGO.find(b=>{
     if(!b.modelo)return false;
-    if(b.modelo===modelo)return true;
-    const nb=normModelo(b.modelo),nr=normModelo(modelo);
+    const nb=normModelo(b.modelo);
     if(nb===nr)return true;
-    return nb.split('/')[0]===nr.split('/')[0]&&nb.split('/')[1]===nr.split('/')[1];
+    const partsB=nb.split('/');
+    const serB=partsB[0], hpB=partsB[1]?parseFloat(partsB[1]):null;
+    return serB&&serR&&serB===serR&&hpB!==null&&hpR!==null&&Math.abs(hpB-hpR)<0.1;
   });
+  return f||null;
 }
 
 function showPanel(p){
