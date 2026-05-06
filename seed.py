@@ -98,8 +98,8 @@ for p in probs:
     pid = p['perforacion_id']
     montados = db.execute('''
         SELECT id FROM asignaciones WHERE perforacion_id = ? AND estado = 'Montado'
-        ORDER BY CASE WHEN fecha_montaje IS NULL THEN 1 ELSE 0 END,
-                 fecha_montaje DESC, id DESC
+        ORDER BY CASE WHEN COALESCE(fecha_desmontaje,fecha_montaje) IS NULL THEN 1 ELSE 0 END,
+                 COALESCE(fecha_desmontaje,fecha_montaje) DESC, id DESC
     ''', (pid,)).fetchall()
     for row in montados[1:]:
         db.execute("UPDATE asignaciones SET estado='Desmontado' WHERE id=?", (row['id'],))

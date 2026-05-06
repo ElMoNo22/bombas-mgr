@@ -196,8 +196,9 @@ def get_bomba(bid):
         LEFT JOIN perforaciones p ON a.perforacion_id = p.id
         WHERE a.bomba_id = ?
         ORDER BY CASE WHEN a.estado = 'Montado' THEN 0 ELSE 1 END,
-                 CASE WHEN a.fecha_montaje IS NULL THEN 1 ELSE 0 END,
-                 a.fecha_montaje DESC, a.id DESC
+                 CASE WHEN COALESCE(a.fecha_desmontaje, a.fecha_montaje) IS NULL THEN 1 ELSE 0 END,
+                 COALESCE(a.fecha_desmontaje, a.fecha_montaje) DESC,
+                 a.id DESC
     ''', (bid,)).fetchall()
     bomba['historial'] = [row_to_dict(h) for h in hist]
     db.close()
@@ -297,8 +298,9 @@ def get_perforacion(pid):
         LEFT JOIN bombas b ON a.bomba_id = b.id
         WHERE a.perforacion_id = ?
         ORDER BY CASE WHEN a.estado = 'Montado' THEN 0 ELSE 1 END,
-                 CASE WHEN a.fecha_montaje IS NULL THEN 1 ELSE 0 END,
-                 a.fecha_montaje DESC, a.id DESC
+                 CASE WHEN COALESCE(a.fecha_desmontaje, a.fecha_montaje) IS NULL THEN 1 ELSE 0 END,
+                 COALESCE(a.fecha_desmontaje, a.fecha_montaje) DESC,
+                 a.id DESC
     ''', (pid,)).fetchall()
     perf['historial'] = [row_to_dict(h) for h in hist]
     db.close()
