@@ -14,14 +14,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:52px;position:sticky;top:0;z-index:50}
 .logo{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.08em}
 .logo span{color:var(--text3)}
-.header-tabs{display:flex;gap:2px;margin-left:auto}
-.htab{padding:6px 13px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans);transition:all .15s}
-.htab:hover{color:var(--text)}
-.htab.active{color:var(--text);border-bottom-color:var(--accent)}
+.htabs{display:flex;gap:2px;margin-left:auto}
+.htab{padding:6px 13px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans)}
+.htab:hover{color:var(--text)}.htab.active{color:var(--text);border-bottom-color:var(--accent)}
 .user-info{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;margin-left:12px;padding-left:12px;border-left:1px solid var(--border)}
 .main{padding:1.2rem 1.5rem;max-width:1400px;margin:0 auto}
 .panel{display:none}.panel.active{display:block}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:10px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:10px}
 .card-title{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -33,10 +32,9 @@ label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;l
 input,select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px;font-family:var(--sans);outline:none;transition:border-color .15s}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 select option{background:var(--bg3)}
-textarea{resize:vertical;min-height:70px}
+textarea{resize:vertical;min-height:60px}
 .btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);transition:background .15s}
-.btn:hover{background:var(--accent2)}
-.btn:disabled{opacity:.4;cursor:default}
+.btn:hover{background:var(--accent2)}.btn:disabled{opacity:.4;cursor:default}
 .btn-sm{padding:5px 11px;font-size:12px}
 .btn-green{background:rgba(52,199,123,.15);color:var(--green);border:1px solid rgba(52,199,123,.3)}
 .btn-green:hover{background:rgba(52,199,123,.25)}
@@ -50,11 +48,11 @@ textarea{resize:vertical;min-height:70px}
 .b-amber{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
 .b-blue{background:rgba(79,142,247,.12);color:var(--accent);border:1px solid rgba(79,142,247,.25)}
 .b-gray{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.b-empty{background:rgba(240,84,84,.05);color:var(--text3);border:1px dashed rgba(240,84,84,.3)}
 .row-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all .1s}
 .row-item:last-child{border-bottom:none}
 .row-item:hover{padding-left:6px;background:rgba(79,142,247,.04);border-radius:4px;margin:0 -6px;padding-right:6px}
-.ri-main{flex:1}
-.ri-modelo{font-size:13px;font-weight:500;font-family:var(--mono)}
+.ri-main{flex:1}.ri-id{font-size:13px;font-weight:500;font-family:var(--mono)}
 .ri-meta{font-size:12px;color:var(--text3);margin-top:2px}
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
 .ff{display:flex;flex-direction:column;gap:3px}
@@ -70,19 +68,19 @@ textarea{resize:vertical;min-height:70px}
 .pg-btn:not(:disabled):hover{border-color:var(--accent);color:var(--accent)}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;backdrop-filter:blur(3px)}
 .modal-bg.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.4rem;width:min(640px,95vw);margin:auto}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:1.4rem;width:min(680px,95vw);margin:auto}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .modal-title{font-size:15px;font-weight:600;font-family:var(--mono)}
 .modal-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px}
 .modal-close:hover{background:var(--bg3);color:var(--text)}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.detail-item{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 11px}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.di{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 11px}
 .di-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)}
 .di-val{font-size:13px;font-weight:500;margin-top:3px}
 .obs-box{background:var(--bg3);border:1px solid rgba(245,166,35,.3);border-radius:6px;padding:9px 11px;font-size:12px;color:var(--amber);margin-top:8px}
 .timeline{position:relative;padding-left:22px;margin-top:6px}
 .timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--border2);border-radius:1px}
-.tl-item{position:relative;margin-bottom:12px}
+.tl-item{position:relative;margin-bottom:10px}
 .tl-item:last-child{margin-bottom:0}
 .tl-dot{position:absolute;left:-18px;top:5px;width:10px;height:10px;border-radius:50%;border:2px solid var(--border2);background:var(--bg3)}
 .tl-dot.active{background:var(--green);border-color:var(--green);box-shadow:0 0 6px rgba(52,199,123,.5)}
@@ -90,38 +88,31 @@ textarea{resize:vertical;min-height:70px}
 .tl-card.active{border-color:rgba(52,199,123,.3);background:rgba(52,199,123,.04)}
 .tl-title{font-size:13px;font-weight:500;font-family:var(--mono);margin-bottom:2px}
 .tl-meta{font-size:11px;color:var(--text3)}
-.estimation-box{background:var(--bg3);border:1px solid rgba(79,142,247,.25);border-radius:8px;padding:12px 14px;margin-top:10px}
-.est-title{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
+.tl-actions{display:flex;gap:6px;margin-top:6px}
+.estimation-box{background:var(--bg3);border:1px solid rgba(79,142,247,.25);border-radius:8px;padding:10px 12px;margin-top:10px}
+.est-title{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .est-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .est-item{background:var(--bg2);border-radius:5px;padding:7px 9px}
-.est-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono)}
-.est-val{font-size:15px;font-weight:600;font-family:var(--mono);margin-top:2px}
+.est-lbl{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.est-val{font-size:14px;font-weight:600;font-family:var(--mono);margin-top:2px}
 .range-ok{color:var(--green)}.range-warn{color:var(--amber)}.range-err{color:var(--red)}
-.form-section{margin-bottom:16px}
-.form-section .g2,.form-section .g3{gap:8px;margin-bottom:8px}
 .sub-tabs{display:flex;gap:3px;margin-bottom:12px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:3px;width:fit-content}
 .stab{padding:5px 13px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-radius:5px;font-family:var(--sans)}
 .stab.active{background:var(--bg2);color:var(--text);border:1px solid var(--border2)}
-.drop-zone{border:2px dashed var(--border2);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative}
-.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(79,142,247,.06)}
-.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.log-box{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:12px;color:var(--text2);max-height:160px;overflow-y:auto;margin-top:10px}
-.log-ok{color:var(--green)}.log-err{color:var(--red)}.log-info{color:var(--accent)}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:320px}
 .toast.show{transform:translateY(0);opacity:1}
-.toast.ok{border-left:3px solid var(--green)}
-.toast.err{border-left:3px solid var(--red)}
+.toast.ok{border-left:3px solid var(--green)}.toast.err{border-left:3px solid var(--red)}
+.section-divider{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:10px}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-@media(max-width:700px){.g4{grid-template-columns:1fr 1fr}.g3,.g2{grid-template-columns:1fr}.main{padding:.8rem}.header{padding:0 .8rem}.htab{padding:6px 8px;font-size:11px}}
+@media(max-width:700px){.g4{grid-template-columns:1fr 1fr}.g3,.g2{grid-template-columns:1fr}.main{padding:.8rem}}
 </style>
 </head>
 <body>
-
 <header class="header">
   <div class="logo">POZO<span>/</span>MGR</div>
-  <nav class="header-tabs">
+  <nav class="htabs">
     <button class="htab active" onclick="showPanel('dashboard')">Dashboard</button>
     <button class="htab" onclick="showPanel('inventario')">Inventario</button>
     <button class="htab" onclick="showPanel('catalogo')">Catálogo</button>
@@ -130,7 +121,8 @@ textarea{resize:vertical;min-height:70px}
     <button class="htab" onclick="showPanel('datos')">Datos</button>
   </nav>
   <div class="user-info">
-    <span id="hdrUser">{{ username }}</span>
+    <span>{{ username }}</span>
+    <span class="badge b-gray" style="font-size:10px">{{ role }}</span>
     <a href="/logout" style="color:var(--text3);font-size:11px;text-decoration:none">salir</a>
   </div>
 </header>
@@ -142,8 +134,8 @@ textarea{resize:vertical;min-height:70px}
   <div style="margin-bottom:14px"><h1 style="font-size:19px;font-weight:600">Dashboard</h1></div>
   <div class="g4" style="margin-bottom:12px" id="dash-stats"></div>
   <div class="g2">
-    <div class="card"><div class="card-title">Estado de bombas</div><div id="dash-estados"></div></div>
-    <div class="card"><div class="card-title">Por zona</div><div id="dash-zonas"></div></div>
+    <div class="card"><div class="card-title">Bombas por estado</div><div id="dash-estados"></div></div>
+    <div class="card"><div class="card-title">Montadas por zona</div><div id="dash-zonas"></div></div>
   </div>
   <div class="g2" style="margin-top:10px">
     <div class="card"><div class="card-title">Montadas por HP</div><div id="dash-hp"></div></div>
@@ -154,221 +146,161 @@ textarea{resize:vertical;min-height:70px}
 <!-- INVENTARIO -->
 <div class="panel" id="panel-inventario">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div><h1 style="font-size:19px;font-weight:600">Inventario</h1><p style="font-size:12px;color:var(--text3)" id="inv-sub"></p></div>
-    <button class="btn btn-sm btn-new-perf" onclick="abrirNuevo()">+ Nueva perforación</button>
-  </div>
-  <div class="filters">
-    <div class="ff" style="flex:1;min-width:180px">
-      <label>Buscar</label>
-      <input type="text" id="fTexto" placeholder="Modelo, calle, tag, zona, serie..." oninput="filtrarInv()">
+    <div><h1 style="font-size:19px;font-weight:600">Inventario</h1><p id="inv-sub" style="font-size:12px;color:var(--text3)"></p></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm btn-ghost" onclick="exportarExcel()">↓ Excel</button>
+      <button class="btn btn-sm btn-ghost btn-new-perf" onclick="abrirNuevaPerf()">+ Perforación</button>
+      <button class="btn btn-sm btn-new-perf" onclick="abrirNuevaBomba()">+ Bomba</button>
     </div>
-    <div class="ff"><label>Estado</label>
-      <select id="fEstado" onchange="filtrarInv()">
-        <option value="">Todos</option>
-        <option>Montado</option><option>Desmontado</option><option>No operativo</option><option>En reparación</option><option>Baja</option><option>Parado</option>
-      </select>
-    </div>
-    <div class="ff"><label>Zona</label><select id="fZona" onchange="filtrarInv()"><option value="">Todas</option></select></div>
-    <div class="ff"><label>Marca</label><select id="fMarca" onchange="filtrarInv()"><option value="">Todas</option></select></div>
-    <div class="ff"><label>HP</label><select id="fHP" onchange="filtrarInv()"><option value="">Todos</option></select></div>
   </div>
-  <div class="card" style="padding:.5rem 1.1rem"><div id="inv-lista"></div></div>
-  <div class="pagination">
-    <button class="pg-btn" id="btnPrev" onclick="invPag(-1)">← Ant.</button>
-    <span id="pagInfo" style="font-family:var(--mono)"></span>
-    <button class="pg-btn" id="btnNext" onclick="invPag(1)">Sig. →</button>
-    <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="invCount"></span>
-  </div>
-</div>
-
-<!-- CATÁLOGO -->
-<div class="panel" id="panel-catalogo">
-  <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Catálogo Motorarg</h1><p style="font-size:12px;color:var(--text3)" id="cat-sub"></p></div>
   <div class="sub-tabs">
-    <button class="stab active" onclick="showSubCat('lista')">Listado</button>
-    <button class="stab" onclick="showSubCat('comparar')">Comparar curvas</button>
+    <button class="stab active" onclick="showSubInv('perforaciones')">Perforaciones</button>
+    <button class="stab" onclick="showSubInv('bombas')">Bombas</button>
   </div>
-  <div id="subcat-lista">
+
+  <!-- Sub: perforaciones -->
+  <div id="sub-perforaciones">
     <div class="filters">
-      <div class="ff" style="flex:1"><label>Buscar</label><input type="text" id="cTexto" placeholder="Modelo..." oninput="filtrarCat()"></div>
-      <div class="ff"><label>HP</label><select id="cHP" onchange="filtrarCat()"><option value="">Todos</option></select></div>
-      <div class="ff"><label>Descarga</label><select id="cDesc" onchange="filtrarCat()"><option value="">Todas</option></select></div>
-    </div>
-    <div class="card" style="padding:.5rem 1.1rem"><div id="cat-lista"></div></div>
-  </div>
-  <div id="subcat-comparar" style="display:none">
-    <div class="card">
-      <div class="card-title">Comparar hasta 3 modelos</div>
-      <div class="g3">
-        <div><label>Modelo A</label><select id="cA"><option value="">—</option></select></div>
-        <div><label>Modelo B</label><select id="cB"><option value="">—</option></select></div>
-        <div><label>Modelo C (opcional)</label><select id="cC"><option value="">—</option></select></div>
+      <div class="ff" style="flex:1;min-width:180px"><label>Buscar</label>
+        <input type="text" id="fPTexto" placeholder="Calle, modelo, TAG, zona..." oninput="filtrarPerfs()">
       </div>
-      <button class="btn btn-sm" style="margin-top:10px" onclick="compararCurvas()">Comparar</button>
+      <div class="ff"><label>Estado</label>
+        <select id="fPEstado" onchange="filtrarPerfs()">
+          <option value="">Todos</option>
+          <option value="Montado">Montado</option>
+          <option value="Desmontado">Desmontado / Libre</option>
+        </select>
+      </div>
+      <div class="ff"><label>Zona</label><select id="fPZona" onchange="filtrarPerfs()"><option value="">Todas</option></select></div>
+      <div class="ff"><label>HP</label><select id="fPHP" onchange="filtrarPerfs()"><option value="">Todos</option></select></div>
     </div>
-    <div id="comp-info"></div>
-    <div class="chart-wrap" id="chartCompWrap" style="display:none"><canvas id="chartComp"></canvas></div>
+    <div class="card" style="padding:.5rem 1.1rem"><div id="perfs-lista"></div></div>
+    <div class="pagination">
+      <button class="pg-btn" id="btnPP" onclick="perfPag(-1)">← Ant.</button>
+      <span id="pagInfoP" style="font-family:var(--mono)"></span>
+      <button class="pg-btn" id="btnNP" onclick="perfPag(1)">Sig. →</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="perfCount"></span>
+    </div>
+  </div>
+
+  <!-- Sub: bombas -->
+  <div id="sub-bombas" style="display:none">
+    <div class="filters">
+      <div class="ff" style="flex:1;min-width:180px"><label>Buscar</label>
+        <input type="text" id="fBTexto" placeholder="N° equipo, TAG, modelo, marca..." oninput="filtrarBombas()">
+      </div>
+      <div class="ff"><label>Estado</label>
+        <select id="fBEstado" onchange="filtrarBombas()">
+          <option value="">Todas</option>
+          <option value="Montado">Montada</option>
+          <option value="disponible">Disponible</option>
+          <option value="Desmontado">Desmontada</option>
+        </select>
+      </div>
+      <div class="ff"><label>Marca</label><select id="fBMarca" onchange="filtrarBombas()"><option value="">Todas</option></select></div>
+      <div class="ff"><label>HP</label><select id="fBHP" onchange="filtrarBombas()"><option value="">Todos</option></select></div>
+    </div>
+    <div class="card" style="padding:.5rem 1.1rem"><div id="bombas-lista"></div></div>
+    <div class="pagination">
+      <button class="pg-btn" id="btnPB" onclick="bombaPag(-1)">← Ant.</button>
+      <span id="pagInfoB" style="font-family:var(--mono)"></span>
+      <button class="pg-btn" id="btnNB" onclick="bombaPag(1)">Sig. →</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="bombaCount"></span>
+    </div>
   </div>
 </div>
 
-<!-- BUSCAR EQUIVALENTE -->
+<!-- CATÁLOGO, BUSCAR, ANALÍTICA, DATOS panels (simplified placeholders filled by JS) -->
+<div class="panel" id="panel-catalogo">
+  <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Catálogo Motorarg</h1><p id="cat-sub" style="font-size:12px;color:var(--text3)"></p></div>
+  <div class="filters">
+    <div class="ff" style="flex:1"><label>Buscar</label><input type="text" id="cTexto" oninput="filtrarCat()" placeholder="Modelo..."></div>
+    <div class="ff"><label>HP</label><select id="cHP" onchange="filtrarCat()"><option value="">Todos</option></select></div>
+    <div class="ff"><label>Descarga</label><select id="cDesc" onchange="filtrarCat()"><option value="">Todas</option></select></div>
+  </div>
+  <div class="card" style="padding:.5rem 1.1rem"><div id="cat-lista"></div></div>
+</div>
+
 <div class="panel" id="panel-buscar">
   <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Buscar equivalente</h1></div>
   <div class="card">
     <div class="card-title">Bomba a reemplazar</div>
     <div class="g3" style="margin-bottom:10px">
-      <div>
-        <label>Perforación montada</label>
-        <select id="bDirSel" onchange="autoFillDireccion()">
-          <option value="">— elegir dirección —</option>
-        </select>
-      </div>
-      <div><label>Q trabajo (m³/h)</label><input type="number" id="bQ" placeholder="ej: 20" step=".5" min="0"></div>
-      <div><label>H trabajo (m)</label><input type="number" id="bH" placeholder="ej: 80" step="1" min="0"></div>
+      <div><label>Perforación montada</label><select id="bDirSel" onchange="autoFillDir()"><option value="">— elegir —</option></select></div>
+      <div><label>Q trabajo (m³/h)</label><input type="number" id="bQ" step=".5" min="0" placeholder="ej: 20"></div>
+      <div><label>H trabajo (m)</label><input type="number" id="bH" step="1" min="0" placeholder="ej: 80"></div>
     </div>
-    <div class="g3" style="margin-bottom:10px">
-      <div><label>HP máx.</label><input type="number" id="bHP2" placeholder="sin límite" step=".5" min="0"></div>
-      <div><label>Descarga</label>
-        <select id="bDesc2"><option value="">— cualquiera —</option><option>2"</option><option>2 1/2"</option><option>3"</option><option>4"</option><option>3" - 4"</option></select>
-      </div>
+    <div class="g3">
+      <div><label>HP máx.</label><input type="number" id="bHP2" step=".5" min="0" placeholder="sin límite"></div>
+      <div><label>Descarga</label><select id="bDesc2"><option value="">—</option><option>2"</option><option>2 1/2"</option><option>3"</option><option>4"</option><option>3" - 4"</option></select></div>
       <div><label>Tolerancia ±%</label><input type="number" id="bTol" value="20" step="5" min="5" max="50"></div>
     </div>
-    <!-- Info bomba actual -->
-    <div id="bInfoActual" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:10px 14px;margin-bottom:10px;font-size:12px">
-    </div>
-    <button class="btn btn-sm" onclick="buscarEq()">🔍 Buscar equivalentes</button>
+    <div id="bInfoActual" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:10px 14px;margin-top:10px;font-size:12px"></div>
+    <button class="btn btn-sm" style="margin-top:12px" onclick="buscarEq()">🔍 Buscar</button>
   </div>
   <div id="buscar-resultados"></div>
   <div class="chart-wrap" id="chartBuscarWrap" style="display:none"><canvas id="chartBuscar"></canvas></div>
 </div>
 
-<!-- ANALÍTICA -->
 <div class="panel" id="panel-analitica">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div><h1 style="font-size:19px;font-weight:600">Analítica</h1><p style="font-size:12px;color:var(--text3)">Diagnóstico operativo del inventario</p></div>
+    <h1 style="font-size:19px;font-weight:600">Analítica</h1>
     <button class="btn btn-sm btn-ghost" onclick="exportarExcel()">↓ Exportar Excel</button>
   </div>
-
-  <div class="sub-tabs" id="analitica-tabs">
+  <div class="sub-tabs" id="anal-tabs">
     <button class="stab active" onclick="showSubAnal('rango')">⚠ Fuera de rango</button>
     <button class="stab" onclick="showSubAnal('faltantes')">⚡ Datos faltantes</button>
     <button class="stab" onclick="showSubAnal('antiguedad')">🕐 Antigüedad</button>
     <button class="stab" onclick="showSubAnal('estadisticas')">📊 Estadísticas</button>
   </div>
-
-  <!-- FUERA DE RANGO -->
-  <div id="subanal-rango">
-    <div class="card" style="margin-bottom:10px">
-      <div class="card-title">Bombas montadas trabajando fuera o cerca del límite de su curva H-Q</div>
-      <p style="font-size:12px;color:var(--text3);margin-bottom:10px">Solo incluye bombas con profundidad de trabajo cargada y modelo en el catálogo.</p>
-      <div id="rango-lista"></div>
-    </div>
-  </div>
-
-  <!-- DATOS FALTANTES -->
-  <div id="subanal-faltantes" style="display:none">
-    <div class="card" style="margin-bottom:10px">
-      <div class="card-title">Filtrar por datos faltantes</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="faltantes-btns"></div>
-      <div id="faltantes-lista"></div>
-    </div>
-  </div>
-
-  <!-- ANTIGÜEDAD -->
-  <div id="subanal-antiguedad" style="display:none">
-    <div class="card" style="margin-bottom:10px">
-      <div class="card-title">Bombas montadas sin actualización de datos</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <label style="margin-bottom:0;white-space:nowrap">Sin actualizar hace más de</label>
-        <input type="number" id="antMeses" value="12" min="1" max="60" style="width:70px" onchange="renderAntiguedad()">
-        <span style="font-size:13px;color:var(--text2)">meses</span>
-      </div>
-      <div id="antiguedad-lista"></div>
-    </div>
-  </div>
-
-  <!-- ESTADÍSTICAS -->
-  <div id="subanal-estadisticas" style="display:none">
-    <div class="g2" style="margin-bottom:10px">
-      <div class="card">
-        <div class="card-title">Completitud de datos (montadas)</div>
-        <div id="est-completitud"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Distribución de marcas</div>
-        <div id="est-marcas"></div>
-      </div>
-    </div>
-    <div class="g2">
-      <div class="card">
-        <div class="card-title">Profundidad promedio por zona</div>
-        <div id="est-profundidad"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">HP promedio por zona</div>
-        <div id="est-hp-zona"></div>
-      </div>
-    </div>
-  </div>
+  <div id="subanal-rango"></div>
+  <div id="subanal-faltantes" style="display:none"></div>
+  <div id="subanal-antiguedad" style="display:none"></div>
+  <div id="subanal-estadisticas" style="display:none"></div>
 </div>
 
-<!-- DATOS -->
 <div class="panel" id="panel-datos">
-  <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Gestión de datos</h1></div>
-  <div class="sub-tabs">
-    <button class="stab active" onclick="showSubDatos('importar')">Importar Excel</button>
-    <button class="stab" onclick="showSubDatos('usuarios')" id="tabUsers" style="display:none">Usuarios</button>
+  <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Datos</h1></div>
+  <div class="sub-tabs" id="datos-tabs">
+    <button class="stab active" onclick="showSubDatos('catalogo')">Importar catálogo</button>
+    <button class="stab" id="tabUsers" style="display:none" onclick="showSubDatos('usuarios')">Usuarios</button>
   </div>
-  <div id="subdatos-importar">
-    <div class="g2">
-      <div>
-        <div class="card">
-          <div class="card-title">📋 Inventario de perforaciones</div>
-          <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Formato: <code style="color:var(--text2)">Perforaciones_R1_Actualizado.xlsx</code> · Hoja1</p>
-          <div class="drop-zone" id="dropInv" ondragover="dzOver(event,'dropInv')" ondragleave="dzLeave('dropInv')" ondrop="dzDrop(event,'inventario')">
-            <input type="file" accept=".xlsx,.xls" onchange="fileSelected(event,'inventario')">
-            <div style="font-size:28px;margin-bottom:8px">📂</div>
-            <div style="font-size:13px;font-weight:500">Arrastrá el Excel aquí</div>
-            <div style="font-size:12px;color:var(--text3)">o hacé click · .xlsx / .xls</div>
-          </div>
-          <div id="statusInv" style="margin-top:8px"></div>
-        </div>
+  <div id="subdatos-catalogo">
+    <div class="card">
+      <div class="card-title">Importar catálogo de bombas (curvas H-Q)</div>
+      <div style="border:2px dashed var(--border2);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;background:var(--bg3);position:relative" id="dropCat"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+        ondragleave="this.style.borderColor='var(--border2)'"
+        ondrop="event.preventDefault();this.style.borderColor='var(--border2)';processFileCat(event.dataTransfer.files[0])">
+        <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="processFileCat(this.files[0])">
+        <div style="font-size:28px;margin-bottom:8px">📂</div>
+        <div style="font-size:13px;font-weight:500">Arrastrá el Excel aquí</div>
+        <div style="font-size:12px;color:var(--text3)">Caudales_de_bombas.xlsx · Hoja Bombas Motorarg</div>
       </div>
-      <div>
-        <div class="card">
-          <div class="card-title">📊 Catálogo de bombas (curvas H-Q)</div>
-          <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Formato: <code style="color:var(--text2)">Caudales_de_bombas.xlsx</code> · Hoja Bombas Motorarg</p>
-          <div class="drop-zone" id="dropCat" ondragover="dzOver(event,'dropCat')" ondragleave="dzLeave('dropCat')" ondrop="dzDrop(event,'catalogo')">
-            <input type="file" accept=".xlsx,.xls" onchange="fileSelected(event,'catalogo')">
-            <div style="font-size:28px;margin-bottom:8px">📂</div>
-            <div style="font-size:13px;font-weight:500">Arrastrá el Excel aquí</div>
-            <div style="font-size:12px;color:var(--text3)">o hacé click · .xlsx / .xls</div>
-          </div>
-          <div id="statusCat" style="margin-top:8px"></div>
-        </div>
-      </div>
+      <div id="statusCat" style="margin-top:8px"></div>
     </div>
-    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="card-title" style="margin-bottom:0">Log</div><button onclick="document.getElementById('logBox').innerHTML=''" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Limpiar</button></div><div class="log-box" id="logBox"><span style="color:var(--text3)">— Esperando —</span></div></div>
+    <div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><div class="card-title" style="margin-bottom:0">Log</div><button onclick="document.getElementById('logBox').innerHTML=''" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Limpiar</button></div>
+    <div id="logBox" style="background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:12px;color:var(--text2);max-height:160px;overflow-y:auto"><span style="color:var(--text3)">— Esperando —</span></div></div>
   </div>
   <div id="subdatos-usuarios" style="display:none">
     <div class="card">
-      <div class="card-title">Usuarios del sistema</div>
+      <div class="card-title">Usuarios</div>
       <div id="users-lista"></div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
         <div class="card-title">Nuevo usuario</div>
         <div class="g3">
-          <div><label>Usuario</label><input type="text" id="nu-user" placeholder="nombre"></div>
-          <div><label>Contraseña</label><input type="password" id="nu-pass" placeholder="mínimo 6 caracteres"></div>
-          <div><label>Rol</label><select id="nu-role"><option value="viewer">viewer — solo lectura</option><option value="editor">editor — puede editar</option><option value="admin">admin — acceso total</option></select></div>
+          <div><label>Usuario</label><input type="text" id="nu-user"></div>
+          <div><label>Contraseña</label><input type="password" id="nu-pass"></div>
+          <div><label>Rol</label><select id="nu-role"><option value="viewer">viewer</option><option value="editor">editor</option><option value="admin">admin</option></select></div>
         </div>
-        <button class="btn btn-sm" style="margin-top:8px" onclick="crearUsuario()">Crear usuario</button>
+        <button class="btn btn-sm" style="margin-top:8px" onclick="crearUsuario()">Crear</button>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">Cambiar mi contraseña</div>
+      <div class="card-title">Mi contraseña</div>
       <div class="g3">
-        <div><label>Contraseña actual</label><input type="password" id="pw-current"></div>
-        <div><label>Nueva contraseña</label><input type="password" id="pw-new"></div>
+        <div><label>Actual</label><input type="password" id="pw-current"></div>
+        <div><label>Nueva</label><input type="password" id="pw-new"></div>
         <div style="display:flex;align-items:flex-end"><button class="btn btn-sm" onclick="cambiarPassword()">Cambiar</button></div>
       </div>
     </div>
@@ -377,28 +309,53 @@ textarea{resize:vertical;min-height:70px}
 
 </main>
 
-<!-- MODAL DETALLE PERFORACIÓN -->
-<div class="modal-bg" id="modal-det" onclick="if(event.target===this)closeModal('det')">
-  <div class="modal" style="width:min(720px,95vw)">
+<!-- MODAL PERFORACIÓN -->
+<div class="modal-bg" id="modal-perf" onclick="if(event.target===this)closeModal('perf')">
+  <div class="modal" style="width:min(760px,95vw)">
     <div class="modal-header">
-      <div class="modal-title" id="modal-det-title"></div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-sm btn-ghost" id="btn-edit-modal" onclick="abrirEditar()" style="display:none">✏ Editar</button>
-        <button class="modal-close" onclick="closeModal('det')">✕</button>
+      <div class="modal-title" id="modal-perf-title"></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-ghost" id="btn-edit-perf" onclick="editarPerfActual()" style="display:none">✏ Editar pozo</button>
+        <button class="modal-close" onclick="closeModal('perf')">✕</button>
       </div>
     </div>
-    <div id="modal-det-body"></div>
+    <div id="modal-perf-body"></div>
   </div>
 </div>
 
-<!-- MODAL EDITAR/NUEVO -->
-<div class="modal-bg" id="modal-form" onclick="if(event.target===this)closeModal('form')">
-  <div class="modal" style="width:min(700px,95vw)">
+<!-- MODAL BOMBA -->
+<div class="modal-bg" id="modal-bomba" onclick="if(event.target===this)closeModal('bomba')">
+  <div class="modal" style="width:min(760px,95vw)">
     <div class="modal-header">
-      <div class="modal-title" id="modal-form-title">Nueva perforación</div>
+      <div class="modal-title" id="modal-bomba-title"></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-ghost" id="btn-edit-bomba" onclick="editarBombaActual()" style="display:none">✏ Editar bomba</button>
+        <button class="modal-close" onclick="closeModal('bomba')">✕</button>
+      </div>
+    </div>
+    <div id="modal-bomba-body"></div>
+  </div>
+</div>
+
+<!-- MODAL FORM GENÉRICO -->
+<div class="modal-bg" id="modal-form" onclick="if(event.target===this)closeModal('form')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-form-title"></div>
       <button class="modal-close" onclick="closeModal('form')">✕</button>
     </div>
     <div id="modal-form-body"></div>
+  </div>
+</div>
+
+<!-- MODAL ASIGNAR BOMBA -->
+<div class="modal-bg" id="modal-asignar" onclick="if(event.target===this)closeModal('asignar')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-asignar-title">Asignar bomba</div>
+      <button class="modal-close" onclick="closeModal('asignar')">✕</button>
+    </div>
+    <div id="modal-asignar-body"></div>
   </div>
 </div>
 
@@ -414,431 +371,776 @@ textarea{resize:vertical;min-height:70px}
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══ STATE ═══
-let INVENTARIO = [], CATALOGO = [];
-let invFiltered = [], invPage = 0;
-const PER_PAGE = 20;
-let chartBuscar=null, chartComp=null, chartModal=null;
-const COLORS=['#4f8ef7','#34c77b','#f5a623','#f05454','#9b59b6','#1abc9c'];
-let currentDetId = null;
+// ══ STATE ══
 const USER_ROLE = '{{ role }}';
 const USER_ID = {{ user_id }};
 const CAN_EDIT = ['editor','admin'].includes(USER_ROLE);
 const CAN_ADMIN = USER_ROLE === 'admin';
 
-// ═══ UTILS ═══
-function toast(msg, type='ok'){
+let PERFS = [], BOMBAS = [], CATALOGO = [];
+let perfsFiltered = [], bombasFiltered = [];
+let perfPage = 0, bombaPage = 0;
+const PER = 20;
+let chartBuscar = null, chartModal = null, chartComp = null;
+const COLORS = ['#4f8ef7','#34c77b','#f5a623','#f05454','#9b59b6','#1abc9c'];
+let currentPerfId = null, currentBombaId = null;
+
+// ══ UTILS ══
+const fmt = f => (!f||f==='NaT'||f==='null') ? '—' : f;
+const fmtLoc = r => [r.calle, r.entre&&r.entre!=='0'?`e/${r.entre}`:null, r.y_col&&r.y_col!=='0'?`y ${r.y_col}`:null].filter(Boolean).join(' ');
+const normZona = z => {if(!z)return'Sin zona';const l=z.toLowerCase();if(l.includes('sur'))return'La Plata Sur';if(l.includes('norte'))return'La Plata Norte';return z;}
+
+function estadoBadge(e){
+  if(!e||e==='Desmontado')return'<span class="badge b-red">Desmontado</span>';
+  if(e==='Montado')return'<span class="badge b-green">Montado</span>';
+  return`<span class="badge b-amber">${e}</span>`;
+}
+function librebadge(){return'<span class="badge b-empty">Sin bomba</span>';}
+
+function toast(msg,type='ok'){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.className='toast '+type+' show';
+  t.textContent=msg;t.className='toast '+type+' show';
   setTimeout(()=>t.classList.remove('show'),3000);
 }
 function openModal(id){document.getElementById('modal-'+id).classList.add('open');}
 function closeModal(id){document.getElementById('modal-'+id).classList.remove('open');}
-function estadoBadge(e){
-  const m={'Montado':'b-green','Desmontado':'b-red','No operativo':'b-amber','En reparación':'b-amber','Baja':'b-gray','Parado':'b-amber'};
-  return `<span class="badge ${m[e]||'b-gray'}">${e}</span>`;
-}
-function normalZona(z){
-  if(!z)return 'Sin zona'; const l=z.toLowerCase();
-  if(l.includes('sur'))return 'La Plata Sur';
-  if(l.includes('norte'))return 'La Plata Norte';
-  return z;
-}
-function fmtLoc(r){
-  return [r.calle, r.entre&&r.entre!=='0'?`e/${r.entre}`:null, r.y_col&&r.y_col!=='0'?`y ${r.y_col}`:null].filter(Boolean).join(' ');
-}
-function interpH(curva,q){
-  if(!curva||!curva.length)return null;
-  if(q<=curva[0][0])return curva[0][1];
-  for(let i=1;i<curva.length;i++){
-    if(q<=curva[i][0]){
-      const t=(q-curva[i-1][0])/(curva[i][0]-curva[i-1][0]);
-      return curva[i-1][1]+t*(curva[i][1]-curva[i-1][1]);
-    }
-  }
-  return 0;
-}
 
-// ═══ API ═══
-async function api(url, method='GET', body=null){
+async function api(url,method='GET',body=null){
   const opts={method,headers:{'Content-Type':'application/json'}};
-  if(body) opts.body=JSON.stringify(body);
+  if(body)opts.body=JSON.stringify(body);
   const res=await fetch(url,opts);
   if(res.status===401){window.location.href='/login';return null;}
   return res;
 }
 
-// ═══ LOAD DATA ═══
-async function loadAll(){
-  const [invRes, catRes] = await Promise.all([api('/api/perforaciones'), api('/api/catalogo')]);
-  if(invRes && invRes.ok) INVENTARIO = await invRes.json();
-  if(catRes && catRes.ok) CATALOGO = await catRes.json();
-  renderDash();
-  initInvFilters();
-  filtrarInv();
-  initCatFilters();
-  initBuscarSelect();
+function barChart(elId,dataObj,colorMap,sortByKey=false){
+  const entries=Object.entries(dataObj).sort((a,b)=>sortByKey?parseFloat(a[0])-parseFloat(b[0]):b[1]-a[1]).slice(0,8);
+  const max=Math.max(...entries.map(e=>e[1]),1);
+  document.getElementById(elId).innerHTML=entries.map(([k,n])=>`
+    <div class="bar-row"><div class="bar-label"><span>${k}</span><span style="font-family:var(--mono)">${n}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/max*100)}%;background:${typeof colorMap==='string'?colorMap:colorMap[k]||'var(--text3)'}"></div></div></div>`).join('');
 }
 
-// ═══ PANELS ═══
+function interpH(curva,q){
+  if(!curva||!curva.length)return null;
+  if(q<=curva[0][0])return curva[0][1];
+  for(let i=1;i<curva.length;i++){
+    if(q<=curva[i][0]){const t=(q-curva[i-1][0])/(curva[i][0]-curva[i-1][0]);return curva[i-1][1]+t*(curva[i][1]-curva[i-1][1]);}
+  }
+  return 0;
+}
+
+function normModelo(m){
+  if(!m)return'';
+  return m.toLowerCase().replace(/bms\s*/,'').replace(/rn|rl|r2|xn|xf|xp|xj/g,'').replace(/\s+/g,'').trim();
+}
+function findCat(modelo){
+  if(!modelo)return null;
+  return CATALOGO.find(b=>{
+    if(!b.modelo)return false;
+    if(b.modelo===modelo)return true;
+    const nb=normModelo(b.modelo),nr=normModelo(modelo);
+    if(nb===nr)return true;
+    return nb.split('/')[0]===nr.split('/')[0]&&nb.split('/')[1]===nr.split('/')[1];
+  });
+}
+
 function showPanel(p){
   document.querySelectorAll('.htab').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   document.querySelector(`.htab[onclick*="${p}"]`).classList.add('active');
   document.getElementById('panel-'+p).classList.add('active');
+  if(p==='analitica')showSubAnal('rango');
 }
 
-// ═══ DASHBOARD ═══
-function renderDash(){
-  const montados=INVENTARIO.filter(r=>r.estado==='Montado').length;
-  const desmontados=INVENTARIO.filter(r=>r.estado==='Desmontado').length;
+// ══ LOAD ══
+async function loadAll(){
+  const [pr,br,cr]=await Promise.all([api('/api/perforaciones'),api('/api/bombas'),api('/api/catalogo')]);
+  if(pr&&pr.ok)PERFS=await pr.json();
+  if(br&&br.ok)BOMBAS=await br.json();
+  if(cr&&cr.ok)CATALOGO=await cr.json();
+  renderDash();
+  initInvFilters();
+  filtrarPerfs();
+  filtrarBombas();
+  initCatFilters();
+  initBuscarSelect();
+}
+
+// ══ DASHBOARD ══
+async function renderDash(){
+  const res=await api('/api/stats');
+  if(!res||!res.ok)return;
+  const s=await res.json();
   document.getElementById('dash-stats').innerHTML=`
-    <div class="stat"><div class="stat-val" style="color:var(--green)">${montados}</div><div class="stat-lbl">Montadas</div></div>
-    <div class="stat"><div class="stat-val" style="color:var(--red)">${desmontados}</div><div class="stat-lbl">Desmontadas</div></div>
-    <div class="stat"><div class="stat-val">${INVENTARIO.length}</div><div class="stat-lbl">Total</div></div>
-    <div class="stat"><div class="stat-val" style="color:var(--accent)">${CATALOGO.length}</div><div class="stat-lbl">Catálogo</div></div>`;
-  barChart('dash-estados', INVENTARIO.reduce((a,r)=>{a[r.estado]=(a[r.estado]||0)+1;return a;},{}),
-    {'Montado':'var(--green)','Desmontado':'var(--red)','No operativo':'var(--amber)','En reparación':'var(--amber)','Baja':'var(--text3)','Parado':'var(--amber)'});
-  barChart('dash-zonas', INVENTARIO.reduce((a,r)=>{const z=normalZona(r.zona);a[z]=(a[z]||0)+1;return a;},''), 'var(--accent)');
-  barChart('dash-hp', INVENTARIO.filter(r=>r.estado==='Montado'&&r.hp).reduce((a,r)=>{const k=r.hp+' HP';a[k]=(a[k]||0)+1;return a;},{}), 'var(--amber)', true);
-  const modMap={};
-  INVENTARIO.filter(r=>r.estado==='Montado'&&r.modelo).forEach(r=>{modMap[r.modelo]=(modMap[r.modelo]||0)+1;});
-  const modTop=Object.entries(modMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const mMax=modTop[0]?.[1]||1;
-  document.getElementById('dash-modelos').innerHTML=modTop.map(([m,n],i)=>`
+    <div class="stat"><div class="stat-val" style="color:var(--green)">${s.montadas}</div><div class="stat-lbl">Montadas</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--accent)">${s.disponibles}</div><div class="stat-lbl">Disponibles</div></div>
+    <div class="stat"><div class="stat-val">${s.total_bombas}</div><div class="stat-lbl">Bombas</div></div>
+    <div class="stat"><div class="stat-val">${s.total_perforaciones}</div><div class="stat-lbl">Perforaciones</div></div>`;
+  const estados={'Montado':s.montadas,'Disponible':s.disponibles};
+  barChart('dash-estados',estados,{'Montado':'var(--green)','Disponible':'var(--accent)'});
+  barChart('dash-zonas',Object.fromEntries(s.por_zona.map(z=>[z.zona||'Sin zona',z.n])),'var(--accent)');
+  barChart('dash-hp',Object.fromEntries(s.por_hp.map(h=>[h.hp+' HP',h.n])),'var(--amber)',true);
+  const mMax=s.modelos_top[0]?.n||1;
+  document.getElementById('dash-modelos').innerHTML=s.modelos_top.map((m,i)=>`
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
       <span style="font-size:10px;color:var(--text3);min-width:14px;font-family:var(--mono)">${i+1}</span>
-      <span style="flex:1;font-size:12px;font-family:var(--mono)">${m}</span>
-      <div style="width:60px;height:4px;background:var(--bg3);border-radius:2px"><div style="height:4px;width:${Math.round(n/mMax*100)}%;background:var(--green);border-radius:2px"></div></div>
-      <span style="font-size:12px;color:var(--text3);font-family:var(--mono);min-width:20px;text-align:right">${n}</span>
+      <span style="flex:1;font-size:12px;font-family:var(--mono)">${m.modelo}</span>
+      <div style="width:60px;height:4px;background:var(--bg3);border-radius:2px"><div style="height:4px;width:${Math.round(m.n/mMax*100)}%;background:var(--green);border-radius:2px"></div></div>
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">${m.n}</span>
     </div>`).join('');
 }
 
-function barChart(elId, dataObj, colorMap, sortByKey=false){
-  const entries = Object.entries(dataObj).sort((a,b)=>sortByKey?parseFloat(a[0])-parseFloat(b[0]):b[1]-a[1]).slice(0,8);
-  const max = Math.max(...entries.map(e=>e[1]),1);
-  document.getElementById(elId).innerHTML=entries.map(([k,n])=>`
-    <div class="bar-row">
-      <div class="bar-label"><span>${k}</span><span style="font-family:var(--mono)">${n}</span></div>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/max*100)}%;background:${typeof colorMap==='string'?colorMap:colorMap[k]||'var(--text3)'}"></div></div>
-    </div>`).join('');
+// ══ INVENTARIO — PERFORACIONES ══
+function showSubInv(s){
+  document.querySelectorAll('.sub-tabs .stab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.sub-tabs .stab[onclick*="${s}"]`).classList.add('active');
+  document.getElementById('sub-perforaciones').style.display=s==='perforaciones'?'block':'none';
+  document.getElementById('sub-bombas').style.display=s==='bombas'?'block':'none';
 }
 
-// ═══ INVENTARIO ═══
 function initInvFilters(){
-  const zonas=[...new Set(INVENTARIO.map(r=>normalZona(r.zona)))].sort();
-  const marcas=[...new Set(INVENTARIO.map(r=>r.marca).filter(Boolean))].sort();
-  const hps=[...new Set(INVENTARIO.map(r=>r.hp).filter(Boolean))].sort((a,b)=>a-b);
-  populate('fZona', zonas);
-  populate('fMarca', marcas);
-  populate('fHP', hps, h=>h+' HP');
+  const zonas=[...new Set(PERFS.map(p=>normZona(p.zona)))].sort();
+  const hps=[...new Set(BOMBAS.map(b=>b.hp).filter(Boolean))].sort((a,b)=>a-b);
+  const marcas=[...new Set(BOMBAS.map(b=>b.marca).filter(Boolean))].sort();
+  populate('fPZona',zonas);
+  populate('fPHP',hps,h=>h+' HP');
+  populate('fBMarca',marcas);
+  populate('fBHP',hps,h=>h+' HP');
+  document.getElementById('inv-sub').textContent=`${PERFS.length} perforaciones · ${BOMBAS.length} bombas · ${BOMBAS.filter(b=>b.estado_actual==='Montado').length} montadas`;
 }
-function populate(id, items, label=null){
+function populate(id,items,label=null){
   const s=document.getElementById(id);
   while(s.options.length>1)s.remove(1);
   items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=label?label(v):v;s.appendChild(o);});
 }
 
-function filtrarInv(){
-  const txt=(document.getElementById('fTexto').value||'').toLowerCase().trim();
-  const est=document.getElementById('fEstado').value;
-  const zon=document.getElementById('fZona').value;
-  const marc=document.getElementById('fMarca').value;
-  const hp=document.getElementById('fHP').value;
-  invFiltered=INVENTARIO.filter(r=>{
+function filtrarPerfs(){
+  const txt=(document.getElementById('fPTexto').value||'').toLowerCase().trim();
+  const est=document.getElementById('fPEstado').value;
+  const zon=document.getElementById('fPZona').value;
+  const hp=document.getElementById('fPHP').value;
+  perfsFiltered=PERFS.filter(p=>{
     if(txt){
-      const c=String(r.calle||'').trim(), e=String(r.entre||'').trim(), y=String(r.y_col||'').trim();
-      const dirs=[`${c} y ${y}`,`${c} ${y}`,`${c} e/${e} y ${y}`,`${c}y${y}`].map(s=>s.toLowerCase());
-      const campos=[r.modelo||'',r.calle||'',r.y_col||'',r.entre||'',r.zona||'',r.serie||'',r.denominacion||'',r.marca||'',r.tag||'',r.n_equipo||'',r.sap_id||''].map(s=>s.toLowerCase());
-      if(![...campos,...dirs].some(x=>x.includes(txt)))return false;
+      const c=String(p.calle||''),e=String(p.entre||''),y=String(p.y_col||'');
+      const dirs=[`${c} y ${y}`,`${c} ${y}`,`${c} e/${e} y ${y}`].map(s=>s.toLowerCase());
+      const campos=[p.modelo||'',p.marca||'',p.tag||'',p.n_equipo||'',p.zona||'',p.calle||'',p.y_col||''].map(s=>s.toLowerCase());
+      if(![...dirs,...campos].some(x=>x.includes(txt)))return false;
     }
-    if(est&&r.estado!==est)return false;
-    if(zon&&normalZona(r.zona)!==zon)return false;
-    if(marc&&r.marca!==marc)return false;
-    if(hp&&String(r.hp)!==hp)return false;
+    if(est){
+      const isMontado=p.estado_actual==='Montado';
+      if(est==='Montado'&&!isMontado)return false;
+      if(est==='Desmontado'&&isMontado)return false;
+    }
+    if(zon&&normZona(p.zona)!==zon)return false;
+    if(hp&&String(p.hp)!==hp)return false;
     return true;
   });
-  invPage=0;
-  renderInv();
+  perfPage=0;renderPerfs();
 }
 
-function renderInv(){
-  const start=invPage*PER_PAGE, end=Math.min(start+PER_PAGE,invFiltered.length);
-  document.getElementById('invCount').textContent=`${invFiltered.length} resultado(s)`;
-  document.getElementById('inv-sub').textContent=`${INVENTARIO.length} registros · ${INVENTARIO.filter(r=>r.estado==='Montado').length} montadas · ${INVENTARIO.filter(r=>r.estado==='Desmontado').length} desmontadas`;
-  document.getElementById('pagInfo').textContent=`${invPage+1} / ${Math.max(1,Math.ceil(invFiltered.length/PER_PAGE))}`;
-  document.getElementById('btnPrev').disabled=invPage===0;
-  document.getElementById('btnNext').disabled=end>=invFiltered.length;
+function renderPerfs(){
+  const start=perfPage*PER, end=Math.min(start+PER,perfsFiltered.length);
+  document.getElementById('perfCount').textContent=`${perfsFiltered.length} resultado(s)`;
+  document.getElementById('pagInfoP').textContent=`${perfPage+1}/${Math.max(1,Math.ceil(perfsFiltered.length/PER))}`;
+  document.getElementById('btnPP').disabled=perfPage===0;
+  document.getElementById('btnNP').disabled=end>=perfsFiltered.length;
   let html='';
-  invFiltered.slice(start,end).forEach(r=>{
-    const loc=fmtLoc(r);
-    html+=`<div class="row-item" onclick="showDet(${r.id})">
+  perfsFiltered.slice(start,end).forEach(p=>{
+    const loc=fmtLoc(p);
+    const isMontado=p.estado_actual==='Montado';
+    html+=`<div class="row-item" onclick="showPerf(${p.id})">
       <div class="ri-main">
-        <div class="ri-modelo">${r.modelo||'—'}<span style="color:var(--text3);font-weight:400;font-size:12px"> · ${r.marca||'?'}</span>${r.tag?`<span style="color:var(--text3);font-size:11px;margin-left:8px">${r.tag}</span>`:''}</div>
-        <div class="ri-meta">${normalZona(r.zona)} · ${loc||'—'}${r.prof_trabajo_mts?' · '+r.prof_trabajo_mts+'m':''}</div>
+        <div class="ri-id">📍 ${loc||'—'}</div>
+        <div class="ri-meta">${normZona(p.zona)}${p.prof_trabajo_mts?' · '+p.prof_trabajo_mts+'m':''}</div>
       </div>
-      <span style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-right:6px">${r.hp?r.hp+' HP':'—'}</span>
-      ${estadoBadge(r.estado)}
+      ${isMontado?`
+        <div style="text-align:right;margin-right:8px">
+          <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${p.modelo||'—'}</div>
+          <div style="font-size:11px;color:var(--text3)">${p.marca||''} · ${p.hp?p.hp+'HP':'—'}${p.tag?' · '+p.tag:''}</div>
+        </div>
+        ${estadoBadge('Montado')}
+      `:`<span style="margin-right:8px">${librebadge()}</span>`}
     </div>`;
   });
-  document.getElementById('inv-lista').innerHTML=html||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
+  document.getElementById('perfs-lista').innerHTML=html||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
 }
-function invPag(d){invPage=Math.max(0,Math.min(invPage+d,Math.ceil(invFiltered.length/PER_PAGE)-1));renderInv();}
+function perfPag(d){perfPage=Math.max(0,Math.min(perfPage+d,Math.ceil(perfsFiltered.length/PER)-1));renderPerfs();}
 
-// ═══ DETALLE PERFORACIÓN ═══
-async function showDet(id){
-  const r=INVENTARIO.find(x=>x.id===id);
-  if(!r)return;
-  currentDetId=id;
-  const loc=fmtLoc(r);
-
-  // Estimation
-  // Match bomba en catálogo — matching flexible por número de serie del modelo
-  // Inventario: "658/20", "669/15", "6100R2/25" etc.
-  // Catálogo: "BMS 658RN/20", "BMS 669RN/15", "BMS 6100RN/25" etc.
-  function normModelo(m){
-    if(!m)return'';
-    return m.toLowerCase()
-      .replace(/bms\s*/,'')      // quitar "BMS "
-      .replace(/rn|rl|r2|xn|xf|xp|xj/g,'') // quitar sufijos de serie
-      .replace(/\s+/g,'')
-      .trim();
-  }
-  const catBomba = CATALOGO.find(b=>{
-    if(!b.modelo||!r.modelo)return false;
-    // Intento 1: match exacto
-    if(b.modelo===r.modelo)return true;
-    // Intento 2: normalizar ambos y comparar
-    const nb=normModelo(b.modelo), nr=normModelo(r.modelo);
-    if(nb===nr)return true;
-    // Intento 3: el número base coincide (ej: "658" en "658/20" y "658RN/20")
-    const baseB=nb.split('/')[0], baseR=nr.split('/')[0];
-    const hpB=nb.split('/')[1], hpR=nr.split('/')[1];
-    return baseB===baseR && hpB===hpR;
+function filtrarBombas(){
+  const txt=(document.getElementById('fBTexto').value||'').toLowerCase().trim();
+  const est=document.getElementById('fBEstado').value;
+  const marc=document.getElementById('fBMarca').value;
+  const hp=document.getElementById('fBHP').value;
+  bombasFiltered=BOMBAS.filter(b=>{
+    if(txt){
+      const campos=[b.n_equipo||'',b.tag||'',b.tag_extraviado||'',b.modelo||'',b.marca||'',b.serie||''].map(s=>s.toLowerCase());
+      if(!campos.some(x=>x.includes(txt)))return false;
+    }
+    if(est){
+      if(est==='Montado'&&b.estado_actual!=='Montado')return false;
+      if(est==='disponible'&&b.estado_actual==='Montado')return false;
+      if(est==='Desmontado'&&(b.estado_actual==='Montado'||!b.estado_actual))return false;
+    }
+    if(marc&&b.marca!==marc)return false;
+    if(hp&&String(b.hp)!==hp)return false;
+    return true;
   });
+  bombaPage=0;renderBombas();
+}
 
-  // Limpiar NaT de fechas
-  const fmtFecha = f => (!f||f==='NaT'||f==='null'||f==='undefined') ? '—' : f;
+function renderBombas(){
+  const start=bombaPage*PER, end=Math.min(start+PER,bombasFiltered.length);
+  document.getElementById('bombaCount').textContent=`${bombasFiltered.length} resultado(s)`;
+  document.getElementById('pagInfoB').textContent=`${bombaPage+1}/${Math.max(1,Math.ceil(bombasFiltered.length/PER))}`;
+  document.getElementById('btnPB').disabled=bombaPage===0;
+  document.getElementById('btnNB').disabled=end>=bombasFiltered.length;
+  let html='';
+  bombasFiltered.slice(start,end).forEach(b=>{
+    const isMontado=b.estado_actual==='Montado';
+    const loc=b.calle?fmtLoc(b):'—';
+    html+=`<div class="row-item" onclick="showBomba(${b.id})">
+      <div class="ri-main">
+        <div class="ri-id">${b.n_equipo||'—'} <span style="color:var(--text3);font-weight:400"> · ${b.modelo||'?'} · ${b.marca||'?'}</span></div>
+        <div class="ri-meta">TAG: ${b.tag||'—'}${b.serie?' · Serie: '+b.serie:''}</div>
+      </div>
+      ${isMontado?`<div style="text-align:right;margin-right:8px;font-size:12px;color:var(--text3)">📍 ${loc}</div>`:''}
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-right:6px">${b.hp?b.hp+' HP':'—'}</span>
+      ${isMontado?estadoBadge('Montado'):'<span class="badge b-blue">Disponible</span>'}
+    </div>`;
+  });
+  document.getElementById('bombas-lista').innerHTML=html||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
+}
+function bombaPag(d){bombaPage=Math.max(0,Math.min(bombaPage+d,Math.ceil(bombasFiltered.length/PER)-1));renderBombas();}
 
+// ══ DETALLE PERFORACIÓN ══
+async function showPerf(pid){
+  currentPerfId=pid;
+  const res=await api(`/api/perforaciones/${pid}`);
+  if(!res||!res.ok)return;
+  const p=await res.json();
+  const loc=fmtLoc(p);
+  const isMontado=p.historial&&p.historial[0]&&p.historial[0].estado==='Montado';
+  const asigActual=isMontado?p.historial[0]:null;
+
+  // Estimación caudal
   let estimHTML='';
-  if(catBomba&&catBomba.curva&&catBomba.curva.length){
-    const hEst=r.nivel_dinamico?(r.prof_trabajo_mts||0)+r.nivel_dinamico:(r.prof_trabajo_mts||null);
-    if(hEst){
-      const qEst=interpH(catBomba.curva,hEst);
-      const hMax=catBomba.curva[0][1], qMax=catBomba.curva[catBomba.curva.length-1][0];
-      let rangoClass='range-ok', rangoTxt='✅ Dentro de rango';
-      if(hEst>hMax*0.95){rangoClass='range-err';rangoTxt='❌ Fuera de rango (H muy alta)';}
-      else if(hEst>hMax*0.85||qEst<qMax*0.1){rangoClass='range-warn';rangoTxt='⚠ Cerca del límite';}
-      const sinND=!r.nivel_dinamico?'<div style="font-size:11px;color:var(--amber);margin-top:6px">⚠ Sin nivel dinámico — estimación basada solo en profundidad</div>':'';
-      estimHTML=`<div class="estimation-box" style="margin-top:10px">
-        <div class="est-title">Estimación de caudal</div>
+  if(asigActual&&asigActual.modelo){
+    const cat=findCat(asigActual.modelo);
+    if(cat&&p.prof_trabajo_mts){
+      const hEst=p.nivel_dinamico?p.prof_trabajo_mts+p.nivel_dinamico:p.prof_trabajo_mts;
+      const qEst=interpH(cat.curva,hEst);
+      const hMax=cat.curva[0][1];
+      let rc='range-ok',rt='✅ En rango';
+      if(hEst>hMax){rc='range-err';rt='❌ Fuera de rango';}
+      else if(hEst>hMax*0.88){rc='range-warn';rt='⚠ Cerca del límite';}
+      estimHTML=`<div class="estimation-box">
+        <div class="est-title">Estimación de caudal${!p.nivel_dinamico?' · <span style="color:var(--amber)">sin nivel dinámico</span>':''}</div>
         <div class="est-grid">
           <div class="est-item"><div class="est-lbl">H estimada</div><div class="est-val">${hEst.toFixed(1)} m</div></div>
           <div class="est-item"><div class="est-lbl">Q estimado</div><div class="est-val ${qEst>0?'range-ok':'range-err'}">${qEst>0?qEst.toFixed(1)+' m³/h':'—'}</div></div>
-          <div class="est-item"><div class="est-lbl">Rango</div><div class="est-val ${rangoClass}" style="font-size:12px">${rangoTxt}</div></div>
+          <div class="est-item"><div class="est-lbl">Rango</div><div class="est-val ${rc}" style="font-size:11px">${rt}</div></div>
         </div>
-        ${sinND}
       </div>`;
     }
   }
 
-  // Historial
-  function mismaPerf(a,b){
-    if(!a.calle||!b.calle)return false;
-    if(String(a.calle).trim()!==String(b.calle).trim())return false;
-    const ya=String(a.y_col||'').trim(), yb=String(b.y_col||'').trim();
-    const ea=String(a.entre||'').trim(), eb=String(b.entre||'').trim();
-    if(ya&&yb&&ya!=='0'&&yb!=='0'&&ya===yb)return true;
-    if(ya&&eb&&ya!=='0'&&eb!=='0'&&ya===eb)return true;
-    if(ea&&yb&&ea!=='0'&&yb!=='0'&&ea===yb)return true;
-    return false;
-  }
-  const historial=INVENTARIO.filter(x=>x.id!==r.id&&mismaPerf(r,x));
-  const parseDate=s=>{if(!s)return 0;const p=s.split('/');if(p.length===3)return new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`).getTime()||0;return new Date(s).getTime()||0;};
-  const allReg=[r,...historial].sort((a,b)=>{
-    const am=a.estado==='Montado'?1:0,bm=b.estado==='Montado'?1:0;
-    if(bm!==am)return bm-am;
-    return parseDate(b.fecha_notif)-parseDate(a.fecha_notif);
-  });
-  const activoId=(allReg.find(x=>x.estado==='Montado')||r).id;
-  const tlHTML=historial.length>0?`
+  // Timeline historial
+  const tlHTML=p.historial&&p.historial.length?`
     <div style="margin-top:14px">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">
-        Historial · ${allReg.length} registros
-      </div>
+      <div class="section-divider">Historial de bombas en esta perforación · ${p.historial.length} registros</div>
       <div class="timeline">
-        ${allReg.map(h=>{
-          const isActive=h.id===activoId, isCurrent=h.id===r.id;
-          return `<div class="tl-item">
-            <div class="tl-dot ${isActive?'active':'old'}"></div>
-            <div class="tl-card ${isActive?'active':''}">
-              <div class="tl-title">${isCurrent?'▶ ':''}${h.modelo||'—'} · ${h.marca||''} ${estadoBadge(h.estado)}${isCurrent?' <span style="font-size:10px;color:var(--text3)">(este)</span>':''}</div>
-              <div class="tl-meta">${h.hp?h.hp+' HP · ':''}${fmtFecha(h.fecha_notif)}${h.serie?' · '+h.serie:''}</div>
-              ${h.observaciones?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.observaciones}</div>`:''}
+        ${p.historial.map((h,i)=>{
+          const isAct=i===0&&h.estado==='Montado';
+          return`<div class="tl-item">
+            <div class="tl-dot ${isAct?'active':'old'}"></div>
+            <div class="tl-card ${isAct?'active':''}">
+              <div class="tl-title">${h.n_equipo||'—'} · ${h.modelo||'—'} · ${h.marca||''} ${estadoBadge(h.estado)}</div>
+              <div class="tl-meta">
+                ${h.hp?h.hp+' HP · ':''}TAG: ${h.tag||'—'}
+                ${h.fecha_montaje?` · Montada: ${h.fecha_montaje}`:''}
+                ${h.fecha_desmontaje?` · Desmontada: ${h.fecha_desmontaje}`:''}
+                ${h.notificada_por?` · Por: ${h.notificada_por}`:''}
+              </div>
+              ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
+              ${CAN_EDIT?`<div class="tl-actions">
+                <button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>
+                ${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="eliminarAsignacion(${h.id},event)">Eliminar</button>`:''}
+              </div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:'' ;
+
+  document.getElementById('modal-perf-title').innerHTML=`📍 ${loc||'—'} <span style="font-size:12px;font-weight:400;color:var(--text3)">· ${normZona(p.zona)}</span>`;
+  document.getElementById('btn-edit-perf').style.display=CAN_EDIT?'inline-flex':'none';
+  document.getElementById('modal-perf-body').innerHTML=`
+    <div class="dg">
+      <div class="di"><div class="di-label">Zona</div><div class="di-val">${normZona(p.zona)}</div></div>
+      <div class="di"><div class="di-label">Bombeo</div><div class="di-val">${fmt(p.bombeo)}</div></div>
+      <div class="di"><div class="di-label">Prof. trabajo</div><div class="di-val" style="font-family:var(--mono)">${p.prof_trabajo_mts?p.prof_trabajo_mts+' m':'—'}</div></div>
+      <div class="di"><div class="di-label">Cañería</div><div class="di-val">${fmt(p.tipo_cañeria)}</div></div>
+      <div class="di"><div class="di-label">Nivel estático</div><div class="di-val" style="font-family:var(--mono)">${p.nivel_estatico?p.nivel_estatico+' m':'—'}</div></div>
+      <div class="di"><div class="di-label">Nivel dinámico</div><div class="di-val" style="font-family:var(--mono)">${p.nivel_dinamico?p.nivel_dinamico+' m':'—'}</div></div>
+    </div>
+    ${isMontado&&asigActual?`
+      <div style="background:rgba(52,199,123,.06);border:1px solid rgba(52,199,123,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--green);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Bomba montada actualmente</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600;font-family:var(--mono)">${asigActual.n_equipo||'—'} · ${asigActual.modelo||'—'}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:3px">${asigActual.marca||''} · ${asigActual.hp||'—'} HP · TAG: ${asigActual.tag||'—'}</div>
+          </div>
+          ${CAN_EDIT?`
+          <button class="btn btn-sm" onclick="showBomba(${asigActual.bomba_id||asigActual.id})">Ver bomba</button>
+          <button class="btn btn-sm btn-red" onclick="desmontarModal(${asigActual.id})">→ Desmontar</button>
+          `:''}
+        </div>
+      </div>
+    `:`
+      <div style="background:rgba(240,84,84,.05);border:1px dashed rgba(240,84,84,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;color:var(--text3)">Sin bomba montada actualmente</span>
+        ${CAN_EDIT?`<button class="btn btn-sm" onclick="abrirAsignar(${p.id})">+ Asignar bomba</button>`:''}
+      </div>
+    `}
+    ${estimHTML}
+    ${tlHTML}
+    ${CAN_EDIT&&!isMontado?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+      <button class="btn btn-sm" onclick="abrirAsignar(${p.id})">+ Asignar nueva bomba</button>
+    </div>`:''}
+  `;
+  openModal('perf');
+}
+
+// ══ DETALLE BOMBA ══
+async function showBomba(bid){
+  currentBombaId=bid;
+  const res=await api(`/api/bombas/${bid}`);
+  if(!res||!res.ok)return;
+  const b=await res.json();
+  const isActMontada=b.historial&&b.historial[0]&&b.historial[0].estado==='Montado';
+
+  const tlHTML=b.historial&&b.historial.length?`
+    <div style="margin-top:14px">
+      <div class="section-divider">Historial de esta bomba · ${b.historial.length} asignaciones</div>
+      <div class="timeline">
+        ${b.historial.map((h,i)=>{
+          const isAct=i===0;
+          const locH=[h.calle,h.entre&&h.entre!=='0'?`e/${h.entre}`:null,h.y_col&&h.y_col!=='0'?`y ${h.y_col}`:null].filter(Boolean).join(' ');
+          return`<div class="tl-item">
+            <div class="tl-dot ${isAct&&h.estado==='Montado'?'active':'old'}"></div>
+            <div class="tl-card ${isAct&&h.estado==='Montado'?'active':''}">
+              <div class="tl-title">📍 ${locH||'—'} ${estadoBadge(h.estado)}</div>
+              <div class="tl-meta">
+                ${h.zona?normZona(h.zona)+' · ':''}
+                ${h.fecha_montaje?'Montada: '+h.fecha_montaje:'Sin fecha montaje'}
+                ${h.fecha_desmontaje?' → Desmontada: '+h.fecha_desmontaje:''}
+                ${h.notificada_por?' · Por: '+h.notificada_por:''}
+              </div>
+              ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
+              ${CAN_EDIT?`<div class="tl-actions">
+                <button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>
+                ${h.estado==='Montado'?`<button class="btn btn-sm btn-red" onclick="desmontarModal(${h.id},event)">→ Desmontar</button>`:''}
+              </div>`:''}
             </div>
           </div>`;
         }).join('')}
       </div>
     </div>`:'';
 
-  document.getElementById('modal-det-title').innerHTML=`${r.modelo||'—'} ${estadoBadge(r.estado)}`;
-  document.getElementById('btn-edit-modal').style.display = CAN_EDIT ? 'inline-flex' : 'none';
-  document.getElementById('modal-det-body').innerHTML=`
-    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">📍 ${normalZona(r.zona)} · ${loc||'—'}${r.tag?` · TAG: ${r.tag}`:''}${r.sap_id?` · SAP: ${r.sap_id}`:''}</div>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="di-label">Marca</div><div class="di-val">${r.marca||'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Potencia</div><div class="di-val" style="font-family:var(--mono)">${r.hp?r.hp+' HP':'—'}</div></div>
-      <div class="detail-item"><div class="di-label">N° Serie</div><div class="di-val" style="font-family:var(--mono)">${r.serie||'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Amperes</div><div class="di-val" style="font-family:var(--mono)">${r.amperes||'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Prof. trabajo</div><div class="di-val" style="font-family:var(--mono)">${r.prof_trabajo_mts?r.prof_trabajo_mts+' m':'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Cañería</div><div class="di-val" style="font-size:12px">${r.tipo_cañeria||'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Nivel estático</div><div class="di-val" style="font-family:var(--mono)">${r.nivel_estatico?r.nivel_estatico+' m':'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Nivel dinámico</div><div class="di-val" style="font-family:var(--mono)">${r.nivel_dinamico?r.nivel_dinamico+' m':'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Q medido</div><div class="di-val" style="font-family:var(--mono)">${r.Q_m3h?r.Q_m3h+' m³/h':'—'}</div></div>
-      <div class="detail-item"><div class="di-label">H medida</div><div class="di-val" style="font-family:var(--mono)">${r.H_mca?r.H_mca+' m':'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Notificada por</div><div class="di-val">${r.notificada_por||'—'}</div></div>
-      <div class="detail-item"><div class="di-label">Fecha notif.</div><div class="di-val">${fmtFecha(r.fecha_notif)}</div></div>
+  document.getElementById('modal-bomba-title').innerHTML=`${b.n_equipo||'—'} <span style="font-size:12px;font-weight:400;color:var(--text3)">· ${b.modelo||'—'} · ${b.marca||'—'}</span>`;
+  document.getElementById('btn-edit-bomba').style.display=CAN_EDIT?'inline-flex':'none';
+  document.getElementById('modal-bomba-body').innerHTML=`
+    <div class="dg">
+      <div class="di"><div class="di-label">TAG actual</div><div class="di-val" style="font-family:var(--mono)">${b.tag||'—'}</div></div>
+      <div class="di"><div class="di-label">TAG anterior/extraviado</div><div class="di-val" style="font-family:var(--mono)">${b.tag_extraviado||'—'}</div></div>
+      <div class="di"><div class="di-label">Marca</div><div class="di-val">${b.marca||'—'}</div></div>
+      <div class="di"><div class="di-label">Modelo</div><div class="di-val" style="font-family:var(--mono)">${b.modelo||'—'}</div></div>
+      <div class="di"><div class="di-label">Potencia</div><div class="di-val" style="font-family:var(--mono)">${b.hp?b.hp+' HP':'—'}${b.kw?' / '+b.kw+' kW':''}</div></div>
+      <div class="di"><div class="di-label">Amperes</div><div class="di-val" style="font-family:var(--mono)">${b.amperes||'—'}</div></div>
+      <div class="di"><div class="di-label">N° Serie</div><div class="di-val" style="font-family:var(--mono)">${b.serie||'—'}</div></div>
+      <div class="di"><div class="di-label">SAP ID</div><div class="di-val" style="font-family:var(--mono)">${b.sap_id||'—'}</div></div>
     </div>
-    ${r.observaciones?`<div class="obs-box">⚠ ${r.observaciones}</div>`:''}
-    ${estimHTML}
+    ${isActMontada?`
+      <div style="background:rgba(52,199,123,.06);border:1px solid rgba(52,199,123,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--green);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Montada actualmente en</div>
+        <div style="font-size:14px;font-weight:600;font-family:var(--mono)">📍 ${[b.historial[0].calle,b.historial[0].y_col&&b.historial[0].y_col!=='0'?'y '+b.historial[0].y_col:null].filter(Boolean).join(' ')}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${normZona(b.historial[0].zona)}</div>
+      </div>
+    `:`<div style="background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px">
+        🔵 Disponible para ser asignada
+      </div>`}
+    ${b.observaciones?`<div class="obs-box">⚠ ${b.observaciones}</div>`:''}
     ${tlHTML}
-    <div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      ${CAN_EDIT ? `<button class="btn btn-sm btn-green" onclick="cambiarEstadoRapido(${r.id},'${r.estado==='Montado'?'Desmontado':'Montado'}')">
-        ${r.estado==='Montado'?'→ Desmontar':'→ Montar'}
-      </button>` : ''}
-      ${CAN_ADMIN ? `<button class="btn btn-sm btn-red" onclick="eliminarPerf(${r.id})">Eliminar</button>` : ''}
-    </div>`;
-  openModal('det');
+    ${CAN_EDIT?`<div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+      ${!isActMontada?`<button class="btn btn-sm" onclick="abrirAsignarBomba(${b.id})">+ Asignar a perforación</button>`:''}
+      ${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="eliminarBomba(${b.id})">Eliminar bomba</button>`:''}
+    </div>`:''}
+  `;
+  openModal('bomba');
 }
 
-// ═══ CRUD ═══
-function formHTML(r=null){
-  const v=(f,def='')=>r?r[f]??def:def;
-  return `
-  <div class="form-section">
-    <div class="card-title">Identificación</div>
-    <div class="g3"><div><label>N° Equipo</label><input id="f-n_equipo" value="${v('n_equipo')}"></div><div><label>TAG</label><input id="f-tag" value="${v('tag')}"></div><div><label>SAP ID</label><input id="f-sap_id" value="${v('sap_id')}"></div></div>
-  </div>
-  <div class="form-section">
-    <div class="card-title">Ubicación</div>
-    <div class="g3"><div><label>Zona</label><select id="f-zona"><option value="">—</option>${['La Plata Sur','La Plata Norte','Gonnet','Villa Elisa','City Bell','Magdalena'].map(z=>`<option ${v('zona')===z?'selected':''}>${z}</option>`).join('')}</select></div><div><label>Calle</label><input id="f-calle" value="${v('calle')}"></div><div><label>Entre</label><input id="f-entre" value="${v('entre')}"></div></div>
-    <div class="g3"><div><label>Y (esquina)</label><input id="f-y_col" value="${v('y_col')}"></div><div><label>Bombeo</label><input id="f-bombeo" value="${v('bombeo')}"></div><div><label>Ubicación actual equipo</label><input id="f-ubicacion_actual" value="${v('ubicacion_actual')}"></div></div>
-  </div>
-  <div class="form-section">
-    <div class="card-title">Equipo</div>
-    <div class="g3"><div><label>Estado</label><select id="f-estado"><option value="">—</option>${['Montado','Desmontado','No operativo','En reparación','Baja','Parado'].map(e=>`<option ${v('estado')===e?'selected':''}>${e}</option>`).join('')}</select></div><div><label>Marca</label><input id="f-marca" value="${v('marca')}"></div><div><label>Modelo</label><input id="f-modelo" value="${v('modelo')}"></div></div>
-    <div class="g3"><div><label>Potencia HP</label><input type="number" id="f-hp" value="${v('hp')}" step=".5"></div><div><label>Potencia kW</label><input type="number" id="f-kw" value="${v('kw')}" step=".01"></div><div><label>Amperes</label><input id="f-amperes" value="${v('amperes')}"></div></div>
-    <div class="g3"><div><label>N° Serie</label><input id="f-serie" value="${v('serie')}"></div><div><label>Salida (Ø)</label><input id="f-salida" value="${v('salida')}"></div><div><label>Tazones</label><input id="f-tazones" value="${v('tazones')}"></div></div>
-  </div>
-  <div class="form-section">
-    <div class="card-title">Datos hidráulicos</div>
-    <div class="g3"><div><label>Prof. trabajo (m)</label><input type="number" id="f-prof" value="${v('prof_trabajo_mts')}" step=".5"></div><div><label>Nivel estático (m)</label><input type="number" id="f-ne" value="${v('nivel_estatico')}" step=".5"></div><div><label>Nivel dinámico (m)</label><input type="number" id="f-nd" value="${v('nivel_dinamico')}" step=".5"></div></div>
-    <div class="g3"><div><label>Q medido (m³/h)</label><input type="number" id="f-Q" value="${v('Q_m3h')}" step=".5"></div><div><label>H medida (mca)</label><input type="number" id="f-H" value="${v('H_mca')}" step="1"></div><div><label>Tipo cañería</label><input id="f-cañeria" value="${v('tipo_cañeria')}"></div></div>
-  </div>
-  <div class="form-section">
-    <div class="card-title">Otros datos</div>
-    <div class="g3"><div><label>Notificada por</label><input id="f-noti" value="${v('notificada_por')}"></div><div><label>Fecha notif.</label><input id="f-fecha" value="${v('fecha_notif')}" placeholder="dd/mm/yyyy"></div><div><label>Id Estadío</label><input id="f-estadio" value="${v('id_estadio')}"></div></div>
-    <div><label>Observaciones</label><textarea id="f-obs">${v('observaciones')}</textarea></div>
-  </div>
-  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-    <button class="btn btn-ghost btn-sm" onclick="closeModal('form')">Cancelar</button>
-    <button class="btn btn-sm" onclick="guardarPerf()">💾 Guardar</button>
-  </div>`;
+// ══ ASIGNAR BOMBA ══
+async function abrirAsignar(perfId){
+  // Load available bombas
+  const res=await api('/api/bombas/disponibles');
+  if(!res||!res.ok)return;
+  const disponibles=await res.json();
+  const perf=PERFS.find(p=>p.id===perfId);
+  document.getElementById('modal-asignar-title').textContent=`Asignar bomba a ${fmtLoc(perf)||'perforación'}`;
+  document.getElementById('modal-asignar-body').innerHTML=`
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">${disponibles.length} bombas disponibles en el inventario</p>
+    <div style="margin-bottom:12px">
+      <label>Buscar bomba disponible</label>
+      <input type="text" id="asig-search" placeholder="N° equipo, TAG, modelo..." oninput="filtrarAsigDisp()">
+    </div>
+    <div class="card" style="padding:.5rem 1rem;max-height:240px;overflow-y:auto" id="asig-lista"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+      <div class="section-divider">Datos de la asignación</div>
+      <div class="g3" style="margin-top:8px">
+        <div><label>Fecha montaje</label><input type="text" id="asig-fecha" placeholder="dd/mm/yyyy"></div>
+        <div><label>Notificada por</label><input type="text" id="asig-noti"></div>
+        <div><label>Notas</label><input type="text" id="asig-notas"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn btn-sm btn-ghost" onclick="closeModal('asignar')">Cancelar</button>
+        <button class="btn btn-sm" onclick="confirmarAsignar(${perfId})">Confirmar asignación</button>
+      </div>
+    </div>
+  `;
+  // Store disponibles for filtering
+  window._asigDisp = disponibles;
+  window._asigSelected = null;
+  renderAsigDisp(disponibles);
+  openModal('asignar');
 }
 
-function getFormData(){
-  const n=id=>document.getElementById(id)?.value?.trim()||null;
-  const num=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
-  return {
-    n_equipo:n('f-n_equipo'),tag:n('f-tag'),sap_id:n('f-sap_id'),
-    zona:n('f-zona'),calle:n('f-calle'),entre:n('f-entre'),y_col:n('f-y_col'),bombeo:n('f-bombeo'),ubicacion_actual:n('f-ubicacion_actual'),
-    estado:n('f-estado'),marca:n('f-marca'),modelo:n('f-modelo'),hp:num('f-hp'),kw:num('f-kw'),amperes:n('f-amperes'),
-    serie:n('f-serie'),salida:n('f-salida'),tazones:n('f-tazones'),
-    prof_trabajo_mts:num('f-prof'),nivel_estatico:num('f-ne'),nivel_dinamico:num('f-nd'),
-    Q_m3h:num('f-Q'),H_mca:num('f-H'),tipo_cañeria:n('f-cañeria'),
-    notificada_por:n('f-noti'),fecha_notif:n('f-fecha'),id_estadio:n('f-estadio'),observaciones:n('f-obs'),
+function renderAsigDisp(lista){
+  document.getElementById('asig-lista').innerHTML=lista.map(b=>`
+    <div class="row-item" onclick="selAsig(${b.id},this)" id="asig-item-${b.id}">
+      <div class="ri-main">
+        <div class="ri-id">${b.n_equipo||'—'} · ${b.modelo||'?'}</div>
+        <div class="ri-meta">${b.marca||'?'} · ${b.hp?b.hp+'HP':''} · TAG: ${b.tag||'—'}</div>
+      </div>
+    </div>`).join('')||'<div style="padding:1rem;color:var(--text3);text-align:center">Sin resultados</div>';
+}
+
+function filtrarAsigDisp(){
+  const txt=(document.getElementById('asig-search').value||'').toLowerCase();
+  renderAsigDisp(window._asigDisp.filter(b=>
+    [b.n_equipo,b.tag,b.modelo,b.marca,b.serie].some(v=>v&&v.toLowerCase().includes(txt))
+  ));
+}
+
+function selAsig(id,el){
+  document.querySelectorAll('[id^="asig-item-"]').forEach(e=>e.style.background='');
+  el.style.background='rgba(79,142,247,.1)';
+  window._asigSelected=id;
+}
+
+async function confirmarAsignar(perfId){
+  if(!window._asigSelected){toast('Seleccioná una bomba','err');return;}
+  const data={
+    bomba_id:window._asigSelected,
+    perforacion_id:perfId,
+    estado:'Montado',
+    fecha_montaje:document.getElementById('asig-fecha').value||null,
+    notificada_por:document.getElementById('asig-noti').value||null,
+    notas:document.getElementById('asig-notas').value||null,
   };
+  const res=await api('/api/asignaciones','POST',data);
+  if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
+  closeModal('asignar');
+  closeModal('perf');
+  toast('Bomba asignada correctamente');
+  await loadAll();
+  showPerf(perfId);
 }
 
-function abrirNuevo(){
-  document.getElementById('modal-form-title').textContent='Nueva perforación';
-  document.getElementById('modal-form-body').innerHTML=formHTML(null);
-  currentDetId=null;
+async function abrirAsignarBomba(bombaId){
+  // Assign a specific bomba to a perforacion
+  const perf_opts=PERFS.filter(p=>p.estado_actual!=='Montado');
+  document.getElementById('modal-asignar-title').textContent='Asignar a perforación';
+  document.getElementById('modal-asignar-body').innerHTML=`
+    <div style="margin-bottom:12px">
+      <label>Buscar perforación libre</label>
+      <input type="text" id="asig-perf-search" placeholder="Calle, zona..." oninput="filtrarAsigPerf()">
+    </div>
+    <div class="card" style="padding:.5rem 1rem;max-height:240px;overflow-y:auto" id="asig-perf-lista"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+      <div class="g3">
+        <div><label>Fecha montaje</label><input type="text" id="asig2-fecha" placeholder="dd/mm/yyyy"></div>
+        <div><label>Notificada por</label><input type="text" id="asig2-noti"></div>
+        <div><label>Notas</label><input type="text" id="asig2-notas"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn btn-sm btn-ghost" onclick="closeModal('asignar')">Cancelar</button>
+        <button class="btn btn-sm" onclick="confirmarAsignarBomba(${bombaId})">Confirmar</button>
+      </div>
+    </div>`;
+  window._asigPerfDisp=perf_opts;
+  window._asigPerfSelected=null;
+  renderAsigPerf(perf_opts);
+  openModal('asignar');
+}
+
+function renderAsigPerf(lista){
+  document.getElementById('asig-perf-lista').innerHTML=lista.map(p=>`
+    <div class="row-item" onclick="selAsigPerf(${p.id},this)" id="asig-perf-${p.id}">
+      <div class="ri-main">
+        <div class="ri-id">📍 ${fmtLoc(p)}</div>
+        <div class="ri-meta">${normZona(p.zona)}${p.prof_trabajo_mts?' · '+p.prof_trabajo_mts+'m':''}</div>
+      </div>
+    </div>`).join('')||'<div style="padding:1rem;color:var(--text3);text-align:center">Sin perforaciones libres</div>';
+}
+
+function filtrarAsigPerf(){
+  const txt=(document.getElementById('asig-perf-search').value||'').toLowerCase();
+  renderAsigPerf(window._asigPerfDisp.filter(p=>
+    [p.calle,p.y_col,p.zona,p.entre].some(v=>v&&v.toLowerCase().includes(txt))
+  ));
+}
+
+function selAsigPerf(id,el){
+  document.querySelectorAll('[id^="asig-perf-"]').forEach(e=>e.style.background='');
+  el.style.background='rgba(79,142,247,.1)';
+  window._asigPerfSelected=id;
+}
+
+async function confirmarAsignarBomba(bombaId){
+  if(!window._asigPerfSelected){toast('Seleccioná una perforación','err');return;}
+  const data={
+    bomba_id:bombaId,
+    perforacion_id:window._asigPerfSelected,
+    estado:'Montado',
+    fecha_montaje:document.getElementById('asig2-fecha').value||null,
+    notificada_por:document.getElementById('asig2-noti').value||null,
+    notas:document.getElementById('asig2-notas').value||null,
+  };
+  const res=await api('/api/asignaciones','POST',data);
+  if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
+  closeModal('asignar');
+  closeModal('bomba');
+  toast('Bomba asignada correctamente');
+  await loadAll();
+  showBomba(bombaId);
+}
+
+// ══ DESMONTAR ══
+async function desmontarModal(asigId,event){
+  if(event)event.stopPropagation();
+  document.getElementById('modal-form-title').textContent='Desmontar bomba';
+  document.getElementById('modal-form-body').innerHTML=`
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Registrá la fecha y motivo del desmontaje.</p>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label>Fecha desmontaje</label><input type="text" id="des-fecha" placeholder="dd/mm/yyyy"></div>
+      <div><label>Notas / motivo</label><input type="text" id="des-notas" placeholder="ej: falla de motor"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm btn-ghost" onclick="closeModal('form')">Cancelar</button>
+      <button class="btn btn-sm btn-red" onclick="confirmarDesmontar(${asigId})">Confirmar desmontaje</button>
+    </div>`;
   openModal('form');
 }
 
-function abrirEditar(){
-  const r=INVENTARIO.find(x=>x.id===currentDetId);
-  if(!r)return;
-  document.getElementById('modal-form-title').textContent=`Editar: ${r.modelo||'—'}`;
-  document.getElementById('modal-form-body').innerHTML=formHTML(r);
-  closeModal('det');
-  openModal('form');
-}
-
-async function guardarPerf(){
-  const data=getFormData();
-  let res;
-  if(currentDetId){
-    res=await api(`/api/perforaciones/${currentDetId}`,'PUT',data);
-  } else {
-    res=await api('/api/perforaciones','POST',data);
-  }
-  if(!res||!res.ok){toast('Error al guardar','err');return;}
-  const updated=await res.json();
-  if(currentDetId){
-    const idx=INVENTARIO.findIndex(x=>x.id===currentDetId);
-    if(idx>=0)INVENTARIO[idx]=updated;
-  } else {
-    INVENTARIO.push(updated);
-  }
+async function confirmarDesmontar(asigId){
+  const fecha=document.getElementById('des-fecha').value||null;
+  const notas=document.getElementById('des-notas').value||null;
+  const res=await api(`/api/asignaciones/${asigId}/desmontar`,'POST',{fecha_desmontaje:fecha,notas});
+  if(!res||!res.ok){toast('Error','err');return;}
   closeModal('form');
-  filtrarInv();
-  renderDash();
-  toast(currentDetId?'Registro actualizado':'Nuevo registro creado');
-  currentDetId=updated.id;
+  closeModal('perf');
+  closeModal('bomba');
+  toast('Bomba desmontada');
+  await loadAll();
 }
 
-async function cambiarEstadoRapido(id, nuevoEstado){
-  const res=await api(`/api/perforaciones/${id}/estado`,'PATCH',{estado:nuevoEstado});
-  if(!res||!res.ok){toast('Error al cambiar estado','err');return;}
-  const updated=await res.json();
-  const idx=INVENTARIO.findIndex(x=>x.id===id);
-  if(idx>=0)INVENTARIO[idx]=updated;
-  closeModal('det');
-  filtrarInv();
-  renderDash();
-  toast(`Estado cambiado a ${nuevoEstado}`);
+// ══ EDITAR ASIGNACIÓN ══
+async function editarAsignacion(asigId,event){
+  if(event)event.stopPropagation();
+  document.getElementById('modal-form-title').textContent='Editar asignación';
+  document.getElementById('modal-form-body').innerHTML=`
+    <div class="g2" style="margin-bottom:10px">
+      <div><label>Estado</label><select id="ea-estado"><option value="Montado">Montado</option><option value="Desmontado">Desmontado</option></select></div>
+      <div><label>Notificada por</label><input type="text" id="ea-noti"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label>Fecha montaje</label><input type="text" id="ea-fmont" placeholder="dd/mm/yyyy"></div>
+      <div><label>Fecha desmontaje</label><input type="text" id="ea-fdes" placeholder="dd/mm/yyyy"></div>
+    </div>
+    <div style="margin-bottom:12px"><label>Notas</label><textarea id="ea-notas"></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm btn-ghost" onclick="closeModal('form')">Cancelar</button>
+      <button class="btn btn-sm" onclick="guardarAsignacion(${asigId})">Guardar</button>
+    </div>`;
+  openModal('form');
 }
 
-async function eliminarPerf(id){
-  if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.'))return;
-  const res=await api(`/api/perforaciones/${id}`,'DELETE');
-  if(!res||!res.ok){toast('Error al eliminar','err');return;}
-  INVENTARIO=INVENTARIO.filter(x=>x.id!==id);
-  closeModal('det');
-  filtrarInv();
-  renderDash();
+async function guardarAsignacion(aid){
+  const data={
+    estado:document.getElementById('ea-estado').value,
+    notificada_por:document.getElementById('ea-noti').value||null,
+    fecha_montaje:document.getElementById('ea-fmont').value||null,
+    fecha_desmontaje:document.getElementById('ea-fdes').value||null,
+    notas:document.getElementById('ea-notas').value||null,
+  };
+  const res=await api(`/api/asignaciones/${aid}`,'PUT',data);
+  if(!res||!res.ok){toast('Error','err');return;}
+  closeModal('form');
+  toast('Asignación actualizada');
+  await loadAll();
+  if(currentPerfId)showPerf(currentPerfId);
+  else if(currentBombaId)showBomba(currentBombaId);
+}
+
+async function eliminarAsignacion(aid,event){
+  if(event)event.stopPropagation();
+  if(!confirm('¿Eliminar este registro del historial?'))return;
+  const res=await api(`/api/asignaciones/${aid}`,'DELETE');
+  if(!res||!res.ok){toast('Error','err');return;}
   toast('Registro eliminado');
+  await loadAll();
+  if(currentPerfId)showPerf(currentPerfId);
+  else if(currentBombaId)showBomba(currentBombaId);
 }
 
-// ═══ CATÁLOGO ═══
+// ══ CRUD PERFORACIÓN ══
+function abrirNuevaPerf(){
+  currentPerfId=null;
+  document.getElementById('modal-form-title').textContent='Nueva perforación';
+  document.getElementById('modal-form-body').innerHTML=perfFormHTML(null);
+  openModal('form');
+}
+function editarPerfActual(){
+  const p=PERFS.find(x=>x.id===currentPerfId);
+  if(!p)return;
+  document.getElementById('modal-form-title').textContent=`Editar: ${fmtLoc(p)}`;
+  document.getElementById('modal-form-body').innerHTML=perfFormHTML(p);
+  closeModal('perf');openModal('form');
+}
+function perfFormHTML(p){
+  const v=(f,d='')=>p?p[f]??d:d;
+  return`
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Calle</label><input id="pf-calle" value="${v('calle')}"></div>
+      <div><label>Entre</label><input id="pf-entre" value="${v('entre')}"></div>
+      <div><label>Y (esquina)</label><input id="pf-y" value="${v('y_col')}"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Zona</label><select id="pf-zona">${['','La Plata Sur','La Plata Norte','Gonnet','Villa Elisa','City Bell','Magdalena'].map(z=>`<option ${v('zona')===z?'selected':''}>${z}</option>`).join('')}</select></div>
+      <div><label>Bombeo</label><input id="pf-bombeo" value="${v('bombeo')}"></div>
+      <div><label>Candado</label><input id="pf-candado" value="${v('candado')}"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Prof. trabajo (m)</label><input type="number" id="pf-prof" value="${v('prof_trabajo_mts')}" step=".5"></div>
+      <div><label>Nivel estático</label><input type="number" id="pf-ne" value="${v('nivel_estatico')}" step=".5"></div>
+      <div><label>Nivel dinámico</label><input type="number" id="pf-nd" value="${v('nivel_dinamico')}" step=".5"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Q medido (m³/h)</label><input type="number" id="pf-q" value="${v('Q_m3h')}" step=".5"></div>
+      <div><label>H medida (mca)</label><input type="number" id="pf-h" value="${v('H_mca')}" step="1"></div>
+      <div><label>Tipo cañería</label><input id="pf-can" value="${v('tipo_cañeria')}"></div>
+    </div>
+    <div style="margin-bottom:12px"><label>Observaciones</label><textarea id="pf-obs">${v('observaciones')}</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm btn-ghost" onclick="closeModal('form')">Cancelar</button>
+      <button class="btn btn-sm" onclick="guardarPerf()">💾 Guardar</button>
+    </div>`;
+}
+async function guardarPerf(){
+  const num=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
+  const str=id=>document.getElementById(id)?.value?.trim()||null;
+  const data={calle:str('pf-calle'),entre:str('pf-entre'),y_col:str('pf-y'),zona:str('pf-zona'),
+    bombeo:str('pf-bombeo'),candado:str('pf-candado'),prof_trabajo_mts:num('pf-prof'),
+    nivel_estatico:num('pf-ne'),nivel_dinamico:num('pf-nd'),Q_m3h:num('pf-q'),H_mca:num('pf-h'),
+    tipo_cañeria:str('pf-can'),observaciones:str('pf-obs')};
+  const res=currentPerfId?await api(`/api/perforaciones/${currentPerfId}`,'PUT',data):await api('/api/perforaciones','POST',data);
+  if(!res||!res.ok){toast('Error al guardar','err');return;}
+  const saved=await res.json();
+  closeModal('form');
+  toast(currentPerfId?'Perforación actualizada':'Perforación creada');
+  await loadAll();
+  if(currentPerfId)showPerf(currentPerfId);
+}
+
+// ══ CRUD BOMBA ══
+function abrirNuevaBomba(){
+  currentBombaId=null;
+  document.getElementById('modal-form-title').textContent='Nueva bomba';
+  document.getElementById('modal-form-body').innerHTML=bombaFormHTML(null);
+  openModal('form');
+}
+function editarBombaActual(){
+  const b=BOMBAS.find(x=>x.id===currentBombaId);
+  if(!b)return;
+  document.getElementById('modal-form-title').textContent=`Editar: ${b.n_equipo||'bomba'}`;
+  document.getElementById('modal-form-body').innerHTML=bombaFormHTML(b);
+  closeModal('bomba');openModal('form');
+}
+function bombaFormHTML(b){
+  const v=(f,d='')=>b?b[f]??d:d;
+  return`
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>N° Equipo</label><input id="bf-neq" value="${v('n_equipo')}"></div>
+      <div><label>TAG actual</label><input id="bf-tag" value="${v('tag')}"></div>
+      <div><label>TAG anterior/extraviado</label><input id="bf-tagv" value="${v('tag_extraviado')}"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Marca</label><input id="bf-marca" value="${v('marca')}"></div>
+      <div><label>Modelo</label><input id="bf-modelo" value="${v('modelo')}"></div>
+      <div><label>HP</label><input type="number" id="bf-hp" value="${v('hp')}" step=".5"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>kW</label><input type="number" id="bf-kw" value="${v('kw')}" step=".01"></div>
+      <div><label>Amperes</label><input id="bf-amp" value="${v('amperes')}"></div>
+      <div><label>N° Serie</label><input id="bf-serie" value="${v('serie')}"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Salida (Ø)</label><input id="bf-salida" value="${v('salida')}"></div>
+      <div><label>Tazones</label><input id="bf-tazones" value="${v('tazones')}"></div>
+      <div><label>SAP ID</label><input id="bf-sap" value="${v('sap_id')}"></div>
+    </div>
+    <div style="margin-bottom:12px"><label>Observaciones</label><textarea id="bf-obs">${v('observaciones')}</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm btn-ghost" onclick="closeModal('form')">Cancelar</button>
+      <button class="btn btn-sm" onclick="guardarBomba()">💾 Guardar</button>
+    </div>`;
+}
+async function guardarBomba(){
+  const num=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
+  const str=id=>document.getElementById(id)?.value?.trim()||null;
+  const data={n_equipo:str('bf-neq'),tag:str('bf-tag'),tag_extraviado:str('bf-tagv'),
+    marca:str('bf-marca'),modelo:str('bf-modelo'),hp:num('bf-hp'),kw:num('bf-kw'),
+    amperes:str('bf-amp'),serie:str('bf-serie'),salida:str('bf-salida'),
+    tazones:str('bf-tazones'),sap_id:str('bf-sap'),observaciones:str('bf-obs')};
+  const res=currentBombaId?await api(`/api/bombas/${currentBombaId}`,'PUT',data):await api('/api/bombas','POST',data);
+  if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
+  const saved=await res.json();
+  currentBombaId=saved.id;
+  closeModal('form');
+  toast(currentBombaId?'Bomba actualizada':'Bomba creada');
+  await loadAll();
+}
+
+async function eliminarBomba(bid){
+  if(!confirm('¿Eliminar esta bomba y todo su historial?'))return;
+  const res=await api(`/api/bombas/${bid}`,'DELETE');
+  if(!res||!res.ok){toast('Error','err');return;}
+  closeModal('bomba');toast('Bomba eliminada');await loadAll();
+}
+
+// ══ CATÁLOGO ══
 function initCatFilters(){
   const hps=[...new Set(CATALOGO.map(b=>b.hp).filter(Boolean))].sort((a,b)=>a-b);
   const descs=[...new Set(CATALOGO.map(b=>b.descarga).filter(Boolean))].sort();
-  populate('cHP',hps,h=>h+' HP');
-  populate('cDesc',descs);
-  const sels=['cA','cB','cC'];
-  sels.forEach(id=>{const s=document.getElementById(id);while(s.options.length>0)s.remove(0);const o=document.createElement('option');o.textContent='—';s.appendChild(o);});
-  CATALOGO.forEach(b=>{sels.forEach(id=>{const s=document.getElementById(id);const o=document.createElement('option');o.value=b.id;o.textContent=`${b.modelo} (${b.hp}HP · ${b.descarga})`;s.appendChild(o);});});
+  populate('cHP',hps,h=>h+' HP');populate('cDesc',descs);
   document.getElementById('cat-sub').textContent=`${CATALOGO.length} modelos · Ø 6"`;
   filtrarCat();
 }
-
 function filtrarCat(){
   const txt=(document.getElementById('cTexto').value||'').toLowerCase();
   const hp=document.getElementById('cHP').value;
@@ -850,126 +1152,68 @@ function filtrarCat(){
     return true;
   });
   document.getElementById('cat-lista').innerHTML=fil.map(b=>{
-    const qMax=b.curva?.[b.curva.length-1]?.[0]||0, hMax=b.curva?.[0]?.[1]||0;
-    return `<div class="row-item" onclick="showCatDet(${b.id})">
-      <div class="ri-main"><div class="ri-modelo">${b.modelo}</div><div class="ri-meta">Q: 0–${qMax} m³/h · H máx: ${hMax} m · ${b.etapas} etapas · ${b.descarga}</div></div>
+    const qMax=b.curva?.[b.curva.length-1]?.[0]||0,hMax=b.curva?.[0]?.[1]||0;
+    return`<div class="row-item" onclick="showCatDet(${b.id})">
+      <div class="ri-main"><div class="ri-id">${b.modelo}</div><div class="ri-meta">Q: 0–${qMax} m³/h · H máx: ${hMax} m · ${b.etapas} et. · ${b.descarga}</div></div>
       <span class="badge b-amber" style="margin-right:6px">${b.hp} HP</span>
       <span class="badge b-blue">${b.descarga}</span>
     </div>`;
   }).join('')||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
 }
-
 function showCatDet(id){
-  const b=CATALOGO.find(x=>x.id===id);
-  if(!b)return;
+  const b=CATALOGO.find(x=>x.id===id);if(!b)return;
   document.getElementById('modal-cat-title').textContent=b.modelo;
   document.getElementById('modal-cat-body').innerHTML=`
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
       <span class="badge b-amber">${b.hp} HP</span>
       <span class="badge b-blue">${b.descarga}</span>
       <span class="badge b-gray">${b.etapas} etapas</span>
     </div>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="di-label">Q máximo</div><div class="di-val" style="font-family:var(--mono)">${b.curva?.[b.curva.length-1]?.[0]||'—'} m³/h</div></div>
-      <div class="detail-item"><div class="di-label">H máxima</div><div class="di-val" style="font-family:var(--mono)">${b.curva?.[0]?.[1]||'—'} m</div></div>
+    <div class="dg">
+      <div class="di"><div class="di-label">Q máximo</div><div class="di-val" style="font-family:var(--mono)">${b.curva?.[b.curva.length-1]?.[0]||'—'} m³/h</div></div>
+      <div class="di"><div class="di-label">H máxima</div><div class="di-val" style="font-family:var(--mono)">${b.curva?.[0]?.[1]||'—'} m</div></div>
     </div>`;
   openModal('cat');
   setTimeout(()=>{
     if(chartModal)chartModal.destroy();
     chartModal=new Chart(document.getElementById('modal-chart'),{type:'scatter',
-      data:{datasets:[{label:'Curva H-Q',data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,.1)',tension:.4,showLine:true,fill:true,pointRadius:3}]},
+      data:{datasets:[{label:'H-Q',data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,.1)',tension:.4,showLine:true,fill:true,pointRadius:3}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
                 y:{title:{display:true,text:'H (m)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
   },100);
 }
 
-function showSubCat(s){
-  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`.stab[onclick*="${s}"]`).classList.add('active');
-  document.getElementById('subcat-lista').style.display=s==='lista'?'block':'none';
-  document.getElementById('subcat-comparar').style.display=s==='comparar'?'block':'none';
-}
-
-function compararCurvas(){
-  const ids=['cA','cB','cC'].map(id=>document.getElementById(id).value).filter(v=>v);
-  if(ids.length<2){document.getElementById('comp-info').innerHTML='<p style="color:var(--text3);font-size:13px">Seleccioná al menos 2 modelos.</p>';return;}
-  const bombas=ids.map(id=>CATALOGO.find(b=>b.id==id));
-  if(chartComp)chartComp.destroy();
-  document.getElementById('chartCompWrap').style.display='block';
-  chartComp=new Chart(document.getElementById('chartComp'),{type:'scatter',
-    data:{datasets:bombas.map((b,i)=>({label:`${b.modelo} (${b.hp}HP)`,data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:COLORS[i],backgroundColor:'transparent',tension:.4,pointRadius:2,fill:false,showLine:true}))},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#8b91a8',font:{size:11},boxWidth:10}}},
-      scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
-              y:{title:{display:true,text:'H (m)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
-  document.getElementById('comp-info').innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${bombas.map((b,i)=>`<div class="card" style="flex:1;min-width:150px;border-left:3px solid ${COLORS[i]}"><div style="font-size:13px;font-weight:600;font-family:var(--mono);margin-bottom:4px">${b.modelo}</div><div style="font-size:12px;color:var(--text3)">${b.hp} HP · ${b.etapas} et. · ${b.descarga}</div></div>`).join('')}</div>`;
-}
-
-// ═══ BUSCAR EQUIVALENTE ═══
-function normModelo(m){
-  if(!m)return'';
-  return m.toLowerCase().replace(/bms\s*/,'').replace(/rn|rl|r2|xn|xf|xp|xj/g,'').replace(/\s+/g,'').trim();
-}
-function findCatBomba(modelo){
-  if(!modelo)return null;
-  return CATALOGO.find(b=>{
-    if(!b.modelo)return false;
-    if(b.modelo===modelo)return true;
-    const nb=normModelo(b.modelo),nr=normModelo(modelo);
-    if(nb===nr)return true;
-    const baseB=nb.split('/')[0],baseR=nr.split('/')[0];
-    const hpB=nb.split('/')[1],hpR=nr.split('/')[1];
-    return baseB===baseR&&hpB===hpR;
-  });
-}
-
+// ══ BUSCAR EQUIVALENTE ══
 function initBuscarSelect(){
   const s=document.getElementById('bDirSel');
   while(s.options.length>1)s.remove(1);
-  const montadas=INVENTARIO.filter(r=>r.estado==='Montado'&&r.calle&&r.y_col&&r.y_col!=='0');
-  // Sort by zone then address
-  montadas.sort((a,b)=>(normalZona(a.zona)+fmtLoc(a)).localeCompare(normalZona(b.zona)+fmtLoc(b)));
-  montadas.forEach(r=>{
+  PERFS.filter(p=>p.estado_actual==='Montado'&&p.calle).sort((a,b)=>fmtLoc(a).localeCompare(fmtLoc(b))).forEach(p=>{
     const o=document.createElement('option');
-    o.value=r.id;
-    o.textContent=`${fmtLoc(r)} — ${r.modelo||'?'} ${r.hp?r.hp+'HP':''} (${normalZona(r.zona)})`;
+    o.value=p.id;
+    o.textContent=`${fmtLoc(p)} — ${p.modelo||'?'} ${p.hp?p.hp+'HP':''} (${normZona(p.zona)})`;
     s.appendChild(o);
   });
 }
-
-function autoFillDireccion(){
+function autoFillDir(){
   const id=parseInt(document.getElementById('bDirSel').value);
   const infoDiv=document.getElementById('bInfoActual');
   if(!id){infoDiv.style.display='none';return;}
-  const r=INVENTARIO.find(x=>x.id===id);
-  if(!r){infoDiv.style.display='none';return;}
-
-  // Auto-fill HP
-  if(r.hp)document.getElementById('bHP2').value=r.hp;
-
-  // Calc H estimada
-  const hEst=r.nivel_dinamico?(r.prof_trabajo_mts||0)+r.nivel_dinamico:(r.prof_trabajo_mts||null);
+  const p=PERFS.find(x=>x.id===id);if(!p)return;
+  if(p.hp)document.getElementById('bHP2').value=p.hp;
+  const hEst=p.nivel_dinamico?(p.prof_trabajo_mts||0)+p.nivel_dinamico:(p.prof_trabajo_mts||null);
   if(hEst)document.getElementById('bH').value=hEst.toFixed(0);
-
-  // Fill Q if measured
-  if(r.Q_m3h)document.getElementById('bQ').value=r.Q_m3h;
-
-  // Find current cat bomba for Q estimation
-  const cat=findCatBomba(r.modelo);
+  if(p.Q_m3h)document.getElementById('bQ').value=p.Q_m3h;
+  const cat=findCat(p.modelo);
   let qEstHTML='—';
-  if(cat&&hEst){
-    const qEst=interpH(cat.curva,hEst);
-    if(qEst>0)qEstHTML=`~${qEst.toFixed(1)} m³/h (estimado curva)`;
-  }
-
+  if(cat&&hEst){const qE=interpH(cat.curva,hEst);if(qE>0)qEstHTML=`~${qE.toFixed(1)} m³/h`;}
   infoDiv.style.display='block';
-  infoDiv.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-      <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)">Bomba actual</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${r.modelo||'—'} · ${r.hp||'?'} HP</div></div>
-      <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)">Prof. trabajo</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${r.prof_trabajo_mts?r.prof_trabajo_mts+' m':'—'}</div></div>
-      <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)">H estimada</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${hEst?hEst.toFixed(1)+' m':'—'}${!r.nivel_dinamico?' <span style="color:var(--amber);font-size:10px">sin ND</span>':''}</div></div>
-      <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)">Q actual estimado</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${qEstHTML}</div></div>
-    </div>`;
+  infoDiv.innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+    <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Bomba actual</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${p.modelo||'—'} · ${p.hp||'?'} HP</div></div>
+    <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Prof. trabajo</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${p.prof_trabajo_mts?p.prof_trabajo_mts+' m':'—'}</div></div>
+    <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">H estimada</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${hEst?hEst.toFixed(1)+' m':'—'}${!p.nivel_dinamico?' <span style="color:var(--amber);font-size:10px">sin ND</span>':''}</div></div>
+    <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Q estimado actual</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${qEstHTML}</div></div>
+  </div>`;
 }
 
 function buscarEq(){
@@ -979,12 +1223,9 @@ function buscarEq(){
   const tol=parseFloat(document.getElementById('bTol').value)||20;
   const desc=document.getElementById('bDesc2').value;
   const div=document.getElementById('buscar-resultados');
-
-  // Get current selected perforacion for simulation comparison
   const selId=parseInt(document.getElementById('bDirSel').value)||null;
-  const perfActual=selId?INVENTARIO.find(x=>x.id===selId):null;
-  const catActual=perfActual?findCatBomba(perfActual.modelo):null;
-
+  const perfAct=selId?PERFS.find(x=>x.id===selId):null;
+  const catAct=perfAct?findCat(perfAct.modelo):null;
   if(isNaN(q)||isNaN(h)){div.innerHTML=`<div class="card"><p style="color:var(--red);font-size:13px">Ingresá Q y H de trabajo.</p></div>`;return;}
   const res=[];
   for(const b of CATALOGO){
@@ -997,398 +1238,205 @@ function buscarEq(){
     const errH=Math.abs(hc-h)/h*100;
     if(errH>tol)continue;
     const sc=Math.max(0,Math.round((1-errH/tol)*100));
-    const enCampo=INVENTARIO.filter(r=>r.modelo===b.modelo).length;
-    // Check range
     const hMax=b.curva[0][1];
-    let rangoTxt='✅ En rango', rangoCls='range-ok';
-    if(h>hMax){rangoTxt='❌ Fuera de rango';rangoCls='range-err';}
-    else if(h>hMax*0.88){rangoTxt='⚠ Cerca del límite';rangoCls='range-warn';}
-    // Q gain vs current
-    let gananciaHTML='';
-    if(catActual){
-      const qActual=interpH(catActual.curva,h);
-      const qNueva=interpH(b.curva,h);
-      if(qActual>0&&qNueva>0){
-        const diff=((qNueva-qActual)/qActual*100).toFixed(1);
-        const cls=parseFloat(diff)>0?'range-ok':'range-err';
-        gananciaHTML=`<div class="detail-item"><div class="di-label">vs actual</div><div class="di-val ${cls}" style="font-size:13px">${parseFloat(diff)>0?'+':''}${diff}% Q</div></div>`;
-      }
-    }
-    res.push({...b,hEnQ:+hc.toFixed(1),errH:+errH.toFixed(1),sc,enCampo,rangoTxt,rangoCls,gananciaHTML});
+    let rt='✅ En rango',rc='range-ok';
+    if(h>hMax){rt='❌ Fuera de rango';rc='range-err';}
+    else if(h>hMax*0.88){rt='⚠ Cerca del límite';rc='range-warn';}
+    let ganHTML='';
+    if(catAct){const qA=interpH(catAct.curva,h);const qN=interpH(b.curva,h);if(qA>0&&qN>0){const d=((qN-qA)/qA*100).toFixed(1);ganHTML=`<div class="di"><div class="di-label">vs actual</div><div class="di-val ${parseFloat(d)>0?'range-ok':'range-err'}" style="font-size:13px">${parseFloat(d)>0?'+':''}${d}% Q</div></div>`;}}
+    res.push({...b,hEnQ:+hc.toFixed(1),errH:+errH.toFixed(1),sc,rt,rc,ganHTML,enCampo:BOMBAS.filter(b2=>b2.modelo===b.modelo).length});
   }
   res.sort((a,b2)=>b2.sc-a.sc);
-  if(!res.length){div.innerHTML=`<div class="card"><p style="text-align:center;padding:1rem;color:var(--text3)">Sin resultados. Ampliá la tolerancia o quitá filtros.</p></div>`;document.getElementById('chartBuscarWrap').style.display='none';return;}
-  const scCls=s=>s>=75?'range-ok':s>=45?'range-warn':'range-err';
-  div.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-family:var(--mono)">${res.length} resultado(s) · Q=${q} m³/h · H=${h} m · tol ±${tol}%</div>`+
+  if(!res.length){div.innerHTML=`<div class="card"><p style="text-align:center;padding:1rem;color:var(--text3)">Sin resultados.</p></div>`;document.getElementById('chartBuscarWrap').style.display='none';return;}
+  const scC=s=>s>=75?'range-ok':s>=45?'range-warn':'range-err';
+  div.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-family:var(--mono)">${res.length} resultado(s) · Q=${q} · H=${h} · tol ±${tol}%</div>`+
     res.slice(0,6).map((b,i)=>`<div class="card" style="${i===0?'border-color:var(--accent)':''}">
       <div style="display:flex;align-items:center;gap:10px">
-        <div class="${scCls(b.sc)}" style="font-size:24px;font-weight:700;font-family:var(--mono);min-width:54px">${b.sc}%</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:600;font-family:var(--mono)">${b.modelo}${b.enCampo?` <span class="badge b-green" style="font-size:10px">En campo: ${b.enCampo}</span>`:''}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">${b.hp} HP · ${b.etapas} et. · ${b.descarga}</div>
-        </div>
+        <div class="${scC(b.sc)}" style="font-size:24px;font-weight:700;font-family:var(--mono);min-width:54px">${b.sc}%</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600;font-family:var(--mono)">${b.modelo}${b.enCampo?` <span class="badge b-green" style="font-size:10px">${b.enCampo} en campo</span>`:''}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${b.hp} HP · ${b.etapas} et. · ${b.descarga}</div></div>
         ${i===0?'<span class="badge b-blue">Mejor match</span>':''}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(${b.gananciaHTML?5:4},1fr);gap:6px;margin-top:10px">
-        <div class="detail-item"><div class="di-label">H @ Q</div><div class="di-val" style="font-family:var(--mono)">${b.hEnQ} m</div></div>
-        <div class="detail-item"><div class="di-label">Dif. H</div><div class="di-val" style="font-family:var(--mono)">${b.errH}%</div></div>
-        <div class="detail-item"><div class="di-label">Q máx.</div><div class="di-val" style="font-family:var(--mono)">${b.curva[b.curva.length-1][0]} m³/h</div></div>
-        <div class="detail-item"><div class="di-label">Rango</div><div class="di-val ${b.rangoCls}" style="font-size:11px">${b.rangoTxt}</div></div>
-        ${b.gananciaHTML}
+      <div style="display:grid;grid-template-columns:repeat(${b.ganHTML?5:4},1fr);gap:6px;margin-top:10px">
+        <div class="di"><div class="di-label">H @ Q</div><div class="di-val" style="font-family:var(--mono)">${b.hEnQ} m</div></div>
+        <div class="di"><div class="di-label">Dif. H</div><div class="di-val" style="font-family:var(--mono)">${b.errH}%</div></div>
+        <div class="di"><div class="di-label">Q máx.</div><div class="di-val" style="font-family:var(--mono)">${b.curva[b.curva.length-1][0]} m³/h</div></div>
+        <div class="di"><div class="di-label">Rango</div><div class="di-val ${b.rc}" style="font-size:11px">${b.rt}</div></div>
+        ${b.ganHTML}
       </div>
     </div>`).join('');
-  renderChartBuscar(q,h,res.slice(0,4),catActual,h);
-}
-
-function renderChartBuscar(q,h,bombas,catActual,hRef){
   document.getElementById('chartBuscarWrap').style.display='block';
   if(chartBuscar)chartBuscar.destroy();
-  const ds=bombas.map((b,i)=>({label:`${b.modelo} (${b.hp}HP)`,data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:COLORS[i],backgroundColor:'transparent',tension:.4,pointRadius:2,fill:false,showLine:true}));
-  // Add current bomba curve in white dashed if available
-  if(catActual&&catActual.curva){
-    ds.push({label:`Actual: ${catActual.modelo}`,data:catActual.curva.map(p=>({x:p[0],y:p[1]})),borderColor:'#ffffff',backgroundColor:'transparent',borderDash:[6,3],tension:.4,pointRadius:0,fill:false,showLine:true});
-  }
-  ds.push({label:'Punto requerido',data:[{x:q,y:h}],borderColor:'#f05454',backgroundColor:'#f05454',pointRadius:9,pointStyle:'crossRot',showLine:false});
+  const ds=res.slice(0,4).map((b,i)=>({label:`${b.modelo}(${b.hp}HP)`,data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:COLORS[i],backgroundColor:'transparent',tension:.4,pointRadius:2,fill:false,showLine:true}));
+  if(catAct&&catAct.curva)ds.push({label:`Actual: ${catAct.modelo}`,data:catAct.curva.map(p=>({x:p[0],y:p[1]})),borderColor:'#fff',backgroundColor:'transparent',borderDash:[6,3],tension:.4,pointRadius:0,fill:false,showLine:true});
+  ds.push({label:'Pto. requerido',data:[{x:q,y:h}],borderColor:'#f05454',backgroundColor:'#f05454',pointRadius:9,pointStyle:'crossRot',showLine:false});
   chartBuscar=new Chart(document.getElementById('chartBuscar'),{type:'scatter',data:{datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#8b91a8',font:{size:11},boxWidth:10}}},
       scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
               y:{title:{display:true,text:'H (m)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
 }
 
-// ═══ ANALÍTICA ═══
+// ══ ANALÍTICA ══
 function showSubAnal(s){
-  document.querySelectorAll('#analitica-tabs .stab').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`#analitica-tabs .stab[onclick*="${s}"]`).classList.add('active');
-  ['rango','faltantes','antiguedad','estadisticas'].forEach(x=>{
-    document.getElementById('subanal-'+x).style.display=x===s?'block':'none';
-  });
+  document.querySelectorAll('#anal-tabs .stab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#anal-tabs .stab[onclick*="${s}"]`).classList.add('active');
+  ['rango','faltantes','antiguedad','estadisticas'].forEach(x=>{document.getElementById('subanal-'+x).style.display=x===s?'block':'none';});
   if(s==='rango')renderFueraRango();
   if(s==='faltantes')renderFaltantes();
   if(s==='antiguedad')renderAntiguedad();
   if(s==='estadisticas')renderEstadisticas();
 }
-
 function renderFueraRango(){
-  const montadas=INVENTARIO.filter(r=>r.estado==='Montado'&&r.prof_trabajo_mts&&r.modelo);
-  const resultados=[];
-  for(const r of montadas){
-    const cat=findCatBomba(r.modelo);
-    if(!cat||!cat.curva||!cat.curva.length)continue;
-    const hEst=r.nivel_dinamico?(r.prof_trabajo_mts||0)+r.nivel_dinamico:r.prof_trabajo_mts;
-    const qEst=interpH(cat.curva,hEst);
-    const hMax=cat.curva[0][1];
-    const qMax=cat.curva[cat.curva.length-1][0];
-    let estado='ok';
-    if(hEst>hMax)estado='err';
-    else if(hEst>hMax*0.88||qEst<qMax*0.08)estado='warn';
-    if(estado!=='ok')resultados.push({r,cat,hEst,qEst,hMax,qMax,estado});
+  const montadas=PERFS.filter(p=>p.estado_actual==='Montado'&&p.prof_trabajo_mts&&p.modelo);
+  const res=[];
+  for(const p of montadas){
+    const cat=findCat(p.modelo);if(!cat||!cat.curva||!cat.curva.length)continue;
+    const hEst=p.nivel_dinamico?(p.prof_trabajo_mts||0)+p.nivel_dinamico:p.prof_trabajo_mts;
+    const qEst=interpH(cat.curva,hEst);const hMax=cat.curva[0][1];const qMax=cat.curva[cat.curva.length-1][0];
+    let est='ok';
+    if(hEst>hMax)est='err';
+    else if(hEst>hMax*0.88||qEst<qMax*0.08)est='warn';
+    if(est!=='ok')res.push({p,cat,hEst,qEst,hMax,qMax,est});
   }
-  resultados.sort((a,b)=>a.estado==='err'?-1:1);
-  const div=document.getElementById('rango-lista');
-  if(!resultados.length){
-    div.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--green);font-size:14px">✅ Todas las bombas con datos completos están dentro del rango operativo</div>`;
-    return;
-  }
-  div.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${resultados.length} bomba(s) con advertencia</div>`+
-    resultados.map(({r,cat,hEst,qEst,hMax,qMax,estado})=>{
-      const cls=estado==='err'?'b-red':'b-amber';
-      const txt=estado==='err'?'❌ Fuera de rango':'⚠ Cerca del límite';
-      return `<div class="card" style="margin-bottom:8px;border-color:${estado==='err'?'rgba(240,84,84,.4)':'rgba(245,166,35,.4)'}">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span class="badge ${cls}">${txt}</span>
-          <div style="flex:1">
-            <span style="font-family:var(--mono);font-weight:500">${r.modelo}</span>
-            <span style="color:var(--text3);font-size:12px;margin-left:8px">📍 ${fmtLoc(r)} · ${normalZona(r.zona)}</span>
-          </div>
-          <button class="btn btn-sm btn-ghost" onclick="showDet(${r.id})">Ver detalle</button>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px">
-          <div class="detail-item"><div class="di-label">H estimada</div><div class="di-val" style="font-family:var(--mono)">${hEst.toFixed(1)} m</div></div>
-          <div class="detail-item"><div class="di-label">H máx. curva</div><div class="di-val" style="font-family:var(--mono)">${hMax} m</div></div>
-          <div class="detail-item"><div class="di-label">Q estimado</div><div class="di-val" style="font-family:var(--mono)">${qEst>0?qEst.toFixed(1)+' m³/h':'—'}</div></div>
-          <div class="detail-item"><div class="di-label">Catálogo match</div><div class="di-val" style="font-size:12px">${cat.modelo}</div></div>
-        </div>
-      </div>`;
-    }).join('');
+  res.sort((a,b)=>a.est==='err'?-1:1);
+  const div=document.getElementById('subanal-rango');
+  if(!res.length){div.innerHTML=`<div class="card"><div style="text-align:center;padding:2rem;color:var(--green)">✅ Todas las bombas con datos completos están dentro del rango operativo</div></div>`;return;}
+  div.innerHTML=`<div class="card"><div class="card-title">Bombas montadas fuera o cerca del límite (${res.length})</div>`+
+    res.map(({p,cat,hEst,qEst,hMax,est})=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span class="badge ${est==='err'?'b-red':'b-amber'}">${est==='err'?'❌ Fuera':'⚠ Límite'}</span>
+      <div style="flex:1"><div style="font-family:var(--mono);font-size:13px">${p.modelo} · ${p.hp||'—'} HP</div>
+      <div style="font-size:12px;color:var(--text3)">📍 ${fmtLoc(p)} · ${normZona(p.zona)} · H=${hEst.toFixed(1)}m (máx ${hMax}m)</div></div>
+      <button class="btn btn-sm btn-ghost" onclick="showPerf(${p.id})">Ver</button>
+    </div>`).join('')+`</div>`;
 }
-
 function renderFaltantes(){
   const campos=[
-    {key:'prof_trabajo_mts',label:'Sin profundidad de trabajo',desc:'Necesario para estimar caudal'},
-    {key:'nivel_dinamico',label:'Sin nivel dinámico',desc:'Mejora precisión del cálculo H'},
-    {key:'nivel_estatico',label:'Sin nivel estático',desc:'Dato de referencia del pozo'},
-    {key:'serie',label:'Sin N° de serie',desc:'Identificación del equipo'},
-    {key:'tag',label:'Sin TAG',desc:'Código alfanumérico de identificación'},
-    {key:'tipo_cañeria',label:'Sin tipo de cañería',desc:'Datos de instalación'},
-    {key:'Q_m3h',label:'Sin Q medido',desc:'Caudal real en campo'},
-    {key:'H_mca',label:'Sin H medida',desc:'Altura manométrica real'},
-    {key:'fecha_notif',label:'Sin fecha de notificación',desc:'Trazabilidad temporal'},
+    {k:'prof_trabajo_mts',l:'Sin profundidad',src:'perfs'},
+    {k:'nivel_dinamico',l:'Sin nivel dinámico',src:'perfs'},
+    {k:'nivel_estatico',l:'Sin nivel estático',src:'perfs'},
+    {k:'Q_m3h',l:'Sin Q medido',src:'perfs'},
+    {k:'serie',l:'Sin N° serie (bomba)',src:'bombas'},
+    {k:'tag',l:'Sin TAG (bomba)',src:'bombas'},
   ];
-  const btnDiv=document.getElementById('faltantes-btns');
-  btnDiv.innerHTML=campos.map(c=>{
-    const n=INVENTARIO.filter(r=>r.estado==='Montado'&&!r[c.key]).length;
-    return `<button class="btn btn-sm btn-ghost" onclick="filtrarFaltante('${c.key}','${c.label}')" style="position:relative">
-      ${c.label} <span style="background:var(--red);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:4px">${n}</span>
-    </button>`;
-  }).join('');
-  document.getElementById('faltantes-lista').innerHTML='<p style="font-size:13px;color:var(--text3)">Seleccioná un campo para ver las bombas montadas que lo tienen vacío.</p>';
+  const montadas=PERFS.filter(p=>p.estado_actual==='Montado');
+  const div=document.getElementById('subanal-faltantes');
+  div.innerHTML=`<div class="card"><div class="card-title">Filtrar por datos faltantes</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">`+
+    campos.map(c=>{
+      const src=c.src==='perfs'?montadas:BOMBAS.filter(b=>b.estado_actual==='Montado');
+      const n=src.filter(r=>!r[c.k]).length;
+      return`<button class="btn btn-sm btn-ghost" onclick="mostrarFaltante('${c.k}','${c.l}','${c.src}')">
+        ${c.l} <span style="background:var(--red);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:4px">${n}</span>
+      </button>`;
+    }).join('')+`</div><div id="falt-lista"><p style="font-size:13px;color:var(--text3)">Seleccioná un campo.</p></div></div>`;
 }
-
-function filtrarFaltante(campo, label){
-  const faltantes=INVENTARIO.filter(r=>r.estado==='Montado'&&!r[campo]);
-  const div=document.getElementById('faltantes-lista');
-  if(!faltantes.length){div.innerHTML=`<div style="text-align:center;padding:1.5rem;color:var(--green)">✅ Todas las bombas montadas tienen ${label} completo</div>`;return;}
-  div.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${faltantes.length} bomba(s) montadas sin <strong>${label}</strong></div>`+
-    `<div class="card" style="padding:.5rem 1rem">`+
-    faltantes.map(r=>`
-      <div class="row-item" onclick="showDet(${r.id})">
-        <div class="ri-main">
-          <div class="ri-modelo">${r.modelo||'—'} · ${r.marca||'?'}</div>
-          <div class="ri-meta">📍 ${fmtLoc(r)||'—'} · ${normalZona(r.zona)}</div>
-        </div>
-        <span style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-right:6px">${r.hp?r.hp+' HP':'—'}</span>
-        <button class="btn btn-sm" onclick="event.stopPropagation();abrirEditarId(${r.id})">✏ Completar</button>
-      </div>`).join('')+`</div>`;
+function mostrarFaltante(campo,label,src){
+  const montadas=PERFS.filter(p=>p.estado_actual==='Montado');
+  const lista=(src==='perfs'?montadas:BOMBAS.filter(b=>b.estado_actual==='Montado')).filter(r=>!r[campo]);
+  document.getElementById('falt-lista').innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:8px">${lista.length} con ${label}</div>`+
+    lista.slice(0,50).map(r=>src==='perfs'?`<div class="row-item" onclick="showPerf(${r.id})">
+      <div class="ri-main"><div class="ri-id">📍 ${fmtLoc(r)}</div><div class="ri-meta">${normZona(r.zona)} · ${r.modelo||'—'}</div></div>
+    </div>`:`<div class="row-item" onclick="showBomba(${r.id})">
+      <div class="ri-main"><div class="ri-id">${r.n_equipo||'—'} · ${r.modelo||'—'}</div><div class="ri-meta">TAG: ${r.tag||'—'}</div></div>
+    </div>`).join('');
 }
-
 function renderAntiguedad(){
-  const meses=parseInt(document.getElementById('antMeses').value)||12;
-  const hoy=new Date();
-  const limite=new Date(hoy.getFullYear(),hoy.getMonth()-meses,hoy.getDate());
-  const montadas=INVENTARIO.filter(r=>r.estado==='Montado');
-  const viejas=montadas.filter(r=>{
-    if(!r.fecha_notif||r.fecha_notif==='NaT')return true;
-    const p=r.fecha_notif.split('/');
-    if(p.length!==3)return true;
-    const d=new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`);
-    return isNaN(d.getTime())||d<limite;
-  }).sort((a,b)=>(a.fecha_notif||'').localeCompare(b.fecha_notif||''));
-  const div=document.getElementById('antiguedad-lista');
-  if(!viejas.length){div.innerHTML=`<div style="text-align:center;padding:1.5rem;color:var(--green)">✅ Todas las bombas montadas fueron notificadas en los últimos ${meses} meses</div>`;return;}
-  div.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${viejas.length} bomba(s) sin actualización reciente</div>`+
-    `<div class="card" style="padding:.5rem 1rem">`+
-    viejas.slice(0,50).map(r=>`
-      <div class="row-item" onclick="showDet(${r.id})">
-        <div class="ri-main">
-          <div class="ri-modelo">${r.modelo||'—'}</div>
-          <div class="ri-meta">📍 ${fmtLoc(r)||'—'} · ${normalZona(r.zona)}</div>
-        </div>
-        <span style="font-size:12px;color:var(--amber);font-family:var(--mono)">${r.fecha_notif||'Sin fecha'}</span>
-      </div>`).join('')+`</div>`;
+  document.getElementById('subanal-antiguedad').innerHTML=`<div class="card"><p style="font-size:13px;color:var(--text3)">Función disponible próximamente.</p></div>`;
 }
-
 function renderEstadisticas(){
-  const montadas=INVENTARIO.filter(r=>r.estado==='Montado');
+  const montadas=PERFS.filter(p=>p.estado_actual==='Montado');
   const total=montadas.length;
-  // Completitud
-  const campos2=[
-    {k:'prof_trabajo_mts',l:'Profundidad'},
-    {k:'nivel_dinamico',l:'Nivel dinámico'},
-    {k:'nivel_estatico',l:'Nivel estático'},
-    {k:'serie',l:'N° Serie'},
-    {k:'Q_m3h',l:'Q medido'},
-    {k:'H_mca',l:'H medida'},
-    {k:'tag',l:'TAG'},
-  ];
-  const maxComp=total||1;
-  document.getElementById('est-completitud').innerHTML=campos2.map(c=>{
-    const n=montadas.filter(r=>r[c.k]).length;
-    const pct=Math.round(n/maxComp*100);
-    const col=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-    return `<div class="bar-row"><div class="bar-label"><span>${c.l}</span><span style="font-family:var(--mono)">${n}/${total} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
-  }).join('');
-  // Marcas
-  barChart('est-marcas',INVENTARIO.reduce((a,r)=>{if(r.marca){a[r.marca]=(a[r.marca]||0)+1;}return a;},{}),'var(--accent)');
-  // Prof por zona
-  const zonaProf={};
-  montadas.filter(r=>r.prof_trabajo_mts&&r.zona).forEach(r=>{
-    const z=normalZona(r.zona);
-    if(!zonaProf[z])zonaProf[z]={sum:0,n:0};
-    zonaProf[z].sum+=r.prof_trabajo_mts;zonaProf[z].n++;
-  });
-  const profData=Object.fromEntries(Object.entries(zonaProf).map(([z,v])=>[z+` (prom)`,Math.round(v.sum/v.n)]));
-  barChart('est-profundidad',profData,'var(--amber)');
-  // HP por zona
-  const zonaHP={};
-  montadas.filter(r=>r.hp&&r.zona).forEach(r=>{
-    const z=normalZona(r.zona);
-    if(!zonaHP[z])zonaHP[z]={sum:0,n:0};
-    zonaHP[z].sum+=r.hp;zonaHP[z].n++;
-  });
-  const hpData=Object.fromEntries(Object.entries(zonaHP).map(([z,v])=>[z,+(v.sum/v.n).toFixed(1)]));
-  barChart('est-hp-zona',hpData,'var(--green)');
+  const campos=[{k:'prof_trabajo_mts',l:'Profundidad'},{k:'nivel_dinamico',l:'Nivel dinámico'},{k:'Q_m3h',l:'Q medido'}];
+  const compHTML=campos.map(c=>{const n=montadas.filter(r=>r[c.k]).length;const pct=Math.round(n/(total||1)*100);const col=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+    return`<div class="bar-row"><div class="bar-label"><span>${c.l}</span><span style="font-family:var(--mono)">${n}/${total} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;}).join('');
+  const marcaMap=BOMBAS.reduce((a,b)=>{if(b.marca){a[b.marca]=(a[b.marca]||0)+1;}return a;},{});
+  const marcaMax=Math.max(...Object.values(marcaMap),1);
+  const marcaHTML=Object.entries(marcaMap).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`<div class="bar-row"><div class="bar-label"><span>${m}</span><span style="font-family:var(--mono)">${n}</span></div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/marcaMax*100)}%;background:var(--accent)"></div></div></div>`).join('');
+  document.getElementById('subanal-estadisticas').innerHTML=`<div class="g2"><div class="card"><div class="card-title">Completitud (montadas)</div>${compHTML}</div><div class="card"><div class="card-title">Distribución por marca</div>${marcaHTML}</div></div>`;
 }
 
-// ═══ EXPORTAR EXCEL ═══
+// ══ EXPORT EXCEL ══
 function exportarExcel(){
-  const data=invFiltered.length?invFiltered:INVENTARIO;
-  const headers=['ID','TAG','N° Equipo','Zona','Estado','Modelo','Marca','HP','Serie','Calle','Entre','Y','Prof. trabajo (m)','Nivel estático','Nivel dinámico','Q m³/h','H mca','Tipo cañería','Notificada por','Fecha notif.','Observaciones'];
-  const rows=data.map(r=>[
-    r.id,r.tag,r.n_equipo,normalZona(r.zona),r.estado,r.modelo,r.marca,r.hp,r.serie,
-    r.calle,r.entre,r.y_col,r.prof_trabajo_mts,r.nivel_estatico,r.nivel_dinamico,
-    r.Q_m3h,r.H_mca,r.tipo_cañeria,r.notificada_por,r.fecha_notif,r.observaciones
-  ]);
+  const data=perfsFiltered.length?perfsFiltered:PERFS;
+  const headers=['Calle','Entre','Y','Zona','Estado','Modelo','Marca','HP','N° Equipo','TAG','Serie','Prof.(m)','N.Estático','N.Dinámico','Q m³/h','H mca','Cañería'];
+  const rows=data.map(p=>[p.calle,p.entre,p.y_col,normZona(p.zona),p.estado_actual||'—',p.modelo,p.marca,p.hp,p.n_equipo,p.tag,p.serie,p.prof_trabajo_mts,p.nivel_estatico,p.nivel_dinamico,p.Q_m3h,p.H_mca,p.tipo_cañeria]);
   const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-  // Column widths
-  ws['!cols']=[{wch:6},{wch:10},{wch:12},{wch:14},{wch:12},{wch:14},{wch:12},{wch:6},{wch:10},{wch:8},{wch:8},{wch:8},{wch:14},{wch:12},{wch:12},{wch:10},{wch:10},{wch:20},{wch:16},{wch:14},{wch:30}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Inventario');
-  const fecha=new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb,`inventario_${fecha}.xlsx`);
+  ws['!cols']=[8,8,8,14,12,14,12,6,12,10,10,10,10,10,10,10,20].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Inventario');
+  XLSX.writeFile(wb,`inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast(`Excel exportado — ${data.length} registros`);
 }
 
-// ═══ HELPER — editar desde analítica ═══
-function abrirEditarId(id){
-  currentDetId=id;
-  const r=INVENTARIO.find(x=>x.id===id);
-  if(!r)return;
-  document.getElementById('modal-form-title').textContent=`Editar: ${r.modelo||'—'}`;
-  document.getElementById('modal-form-body').innerHTML=formHTML(r);
-  openModal('form');
-}
-
-// ═══ IMPORTAR EXCEL ═══
-function dzOver(e,id){e.preventDefault();document.getElementById(id).classList.add('dragover');}
-function dzLeave(id){document.getElementById(id).classList.remove('dragover');}
-function dzDrop(e,tipo){e.preventDefault();dzLeave(tipo==='inventario'?'dropInv':'dropCat');const f=e.dataTransfer.files[0];if(f)processFile(f,tipo);}
-function fileSelected(e,tipo){const f=e.target.files[0];if(f)processFile(f,tipo);}
-
-function log(msg,type=''){
-  const box=document.getElementById('logBox');
-  if(box.querySelector('span[style*="text3"]'))box.innerHTML='';
-  const line=document.createElement('div');
-  line.className=type?'log-'+type:'';
-  line.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
-  box.appendChild(line);box.scrollTop=box.scrollHeight;
-}
-
-function setStatus(tipo,html){document.getElementById('status'+(tipo==='inventario'?'Inv':'Cat')).innerHTML=html;}
-
-function processFile(file,tipo){
-  log(`Leyendo "${file.name}"...`,'info');
-  const reader=new FileReader();
-  reader.onload=async function(e){
-    try{
-      const data=new Uint8Array(e.target.result);
-      const wb=XLSX.read(data,{type:'array'});
-      log(`Hojas: ${wb.SheetNames.join(', ')}`,'info');
-      if(tipo==='inventario') await parseImportInv(wb,file.name);
-      else await parseImportCat(wb,file.name);
-    }catch(err){log('Error: '+err.message,'err');setStatus(tipo,`<span style="color:var(--red);font-size:13px">✕ ${err.message}</span>`);}
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-async function parseImportInv(wb,fname){
-  const sheetName=wb.SheetNames.includes('Hoja1')?'Hoja1':wb.SheetNames[0];
-  const ws=wb.Sheets[sheetName];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-  const clean=v=>{const s=String(v||'').trim();return(s===''||s==='null'||s==='undefined')?null:s;};
-  const parseNum=v=>{if(!v)return null;const m=String(v).replace(',','.').match(/(\d+\.?\d*)/);return m?parseFloat(m[1]):null;};
-  const normE=e=>{if(!e)return'Desconocido';const l=e.toLowerCase();if(l.includes('montado')&&!l.includes('des'))return'Montado';if(l.includes('desmontado')||l.includes('desmontaje'))return'Desmontado';if(l.includes('baja'))return'Baja';if(l.includes('parado'))return'Parado';if(l.includes('no operativo'))return'No operativo';if(l.includes('reparaci'))return'En reparación';return e.trim();};
-  const normZ=z=>{if(!z)return null;const l=z.toLowerCase();if(l.includes('sur'))return'La Plata Sur';if(l.includes('norte'))return'La Plata Norte';return z.trim();};
-  // Detect header row — look for 'Marca' or 'Estado'
-  let headerRow=0;
-  for(let i=0;i<5;i++){const r=rows[i]||[];if(r.some(c=>String(c||'').toLowerCase().includes('marca'))){headerRow=i;break;}}
-  const headers=(rows[headerRow]||[]).map(h=>String(h||'').trim());
-  const col=name=>{const i=headers.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));return i>=0?i:null;};
-  log(`Fila de headers: ${headerRow}, columnas detectadas: ${headers.length}`,'info');
-  const records=[];
-  for(let i=headerRow+1;i<rows.length;i++){
-    const r=rows[i];if(!r)continue;
-    const marca=clean(r[col('marca')]);const modelo=clean(r[col('modelo')]);
-    if(!marca&&!modelo)continue;
-    records.push({
-      n_equipo:clean(r[col('equipo')]),tag:clean(r[col('tag')]),tag_extraviado:clean(r[col('extraviado')]),
-      zona:normZ(clean(r[col('cent')]||r[col('zona')])),estado:normE(clean(r[col('estado')])),
-      denominacion:clean(r[col('denominaci')]),
-      calle:clean(r[col('calle')]),entre:clean(r[col('entre')]),y_col:clean(r[col(' y')??col('y ')??col('y')]),
-      bombeo:clean(r[col('bombeo')]),marca,modelo,
-      hp:parseNum(r[col('hp')]),kw:parseNum(r[col('kw')]),amperes:clean(r[col('amperes')]),
-      serie:clean(r[col('serie')]),salida:clean(r[col('salida')]),tazones:clean(r[col('tazon')]),
-      largo_mm:parseNum(r[col('largo')]),ubicacion_actual:clean(r[col('ubicacion actual')]),
-      notificada_por:clean(r[col('notificada')]),relevado_el:clean(r[col('relevado')]),candado:clean(r[col('candado')]),
-      tipo_cañeria:clean(r[col('cañer')??col('caner')]),mts_cañeria:clean(r[col('mts tot')]),
-      prof_trabajo_mts:parseNum(r[col('profund')]),Q_m3h:parseNum(r[col('q (')??col('q(')]),H_m3h:parseNum(r[col('h (')??col('h(')]),
-      nivel_estatico:parseNum(r[col('estat')]),nivel_dinamico:parseNum(r[col('dinami')]),
-      fecha_lectura:clean(r[col('fecha lect')]),fecha_notif:clean(r[col('fecha notif')??col('notificacion')]),
-      observaciones:clean(r[col('observ')]),id_estadio:clean(r[col('estadio')]),sap_id:clean(r[col('sap')??col('equipo sap')]),
-    });
-  }
-  if(!records.length){log('Sin registros válidos','err');return;}
-  const res=await api('/api/import/perforaciones','POST',{records});
-  if(!res||!res.ok){log('Error al importar en servidor','err');return;}
-  const data=await res.json();
-  INVENTARIO.length=0;records.forEach(r=>INVENTARIO.push({...r,id:records.indexOf(r)+1}));
-  // Reload properly
-  const fresh=await api('/api/perforaciones');
-  if(fresh&&fresh.ok){INVENTARIO.length=0;(await fresh.json()).forEach(r=>INVENTARIO.push(r));}
-  initInvFilters();filtrarInv();renderDash();initBuscarSelect();
-  log(`✓ ${data.count} registros importados`,'ok');
-  setStatus('inventario',`<span style="color:var(--green);font-size:13px">✓ ${data.count} registros desde "${fname}"</span>`);
-  toast(`${data.count} perforaciones importadas`);
-}
-
-async function parseImportCat(wb,fname){
-  const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('motorarg'))||wb.SheetNames[0];
-  const ws=wb.Sheets[sheetName];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-  const alturaRow=rows[7]||[];
-  const alturas={};
-  for(let c=12;c<alturaRow.length;c++){const v=alturaRow[c];if(v!==null&&v!==undefined&&v!==''){const h=parseFloat(String(v).replace(',','.'));if(!isNaN(h))alturas[c]=h;}}
-  const records=[];
-  for(let i=9;i<rows.length;i++){
-    const r=rows[i];if(!r)continue;
-    const marca=String(r[1]||'').trim();const modelo=String(r[3]||'').trim();
-    if(!marca||marca==='null'||!modelo||modelo==='null')continue;
-    const hpM=String(r[5]||'').replace(',','.').match(/(\d+\.?\d*)/);
-    const curva=[];
-    for(const[col,h]of Object.entries(alturas)){const val=r[parseInt(col)];if(val===null||val===undefined||val==='')continue;const m=String(val).replace(',','.').match(/^(\d+\.?\d*)/);if(m){const q=parseFloat(m[1]);if(q>0)curva.push([q,h]);}}
-    curva.sort((a,b)=>a[0]-b[0]);
-    if(curva.length<2)continue;
-    records.push({marca,modelo,para:String(r[4]||'').trim(),hp:hpM?parseFloat(hpM[1]):null,etapas:String(r[6]||'').trim(),descarga:String(r[7]||'').trim(),largo_mm:String(r[9]||'').trim(),curva});
-  }
-  if(!records.length){log('Sin modelos válidos','err');return;}
-  const res=await api('/api/import/catalogo','POST',{records});
-  if(!res||!res.ok){log('Error al importar','err');return;}
-  const data=await res.json();
-  const fresh=await api('/api/catalogo');
-  if(fresh&&fresh.ok){CATALOGO.length=0;(await fresh.json()).forEach(r=>CATALOGO.push(r));}
-  initCatFilters();
-  log(`✓ ${data.count} modelos importados`,'ok');
-  setStatus('catalogo',`<span style="color:var(--green);font-size:13px">✓ ${data.count} modelos desde "${fname}"</span>`);
-  toast(`${data.count} modelos de catálogo importados`);
-}
-
-// ═══ USUARIOS ═══
+// ══ DATOS ══
 function showSubDatos(s){
-  document.querySelectorAll('#panel-datos .stab').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`#panel-datos .stab[onclick*="${s}"]`).classList.add('active');
-  document.getElementById('subdatos-importar').style.display=s==='importar'?'block':'none';
+  document.querySelectorAll('#datos-tabs .stab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#datos-tabs .stab[onclick*="${s}"]`).classList.add('active');
+  document.getElementById('subdatos-catalogo').style.display=s==='catalogo'?'block':'none';
   document.getElementById('subdatos-usuarios').style.display=s==='usuarios'?'block':'none';
   if(s==='usuarios')loadUsers();
 }
 
+function logMsg(msg,type=''){
+  const box=document.getElementById('logBox');
+  if(box.querySelector('span[style*="text3"]'))box.innerHTML='';
+  const line=document.createElement('div');
+  line.className=type?'log-'+type:'';line.style.color=type==='ok'?'var(--green)':type==='err'?'var(--red)':'var(--accent)';
+  line.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
+  box.appendChild(line);box.scrollTop=box.scrollHeight;
+}
+
+function processFileCat(file){
+  if(!file)return;
+  logMsg(`Leyendo "${file.name}"...`,'info');
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('motorarg'))||wb.SheetNames[0];
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:null});
+      const alturas={};
+      (rows[7]||[]).forEach((v,c)=>{if(c>=12&&v!==null){const h=parseFloat(String(v).replace(',','.'));if(!isNaN(h))alturas[c]=h;}});
+      const records=[];
+      for(let i=9;i<rows.length;i++){
+        const r=rows[i];if(!r)continue;
+        const marca=String(r[1]||'').trim(),modelo=String(r[3]||'').trim();
+        if(!marca||marca==='null'||!modelo||modelo==='null')continue;
+        const hpM=String(r[5]||'').replace(',','.').match(/(\d+\.?\d*)/);
+        const curva=[];
+        Object.entries(alturas).forEach(([col,h])=>{const val=r[parseInt(col)];if(val==null)return;const m=String(val).replace(',','.').match(/^(\d+\.?\d*)/);if(m){const q=parseFloat(m[1]);if(q>0)curva.push([q,h]);}});
+        curva.sort((a,b)=>a[0]-b[0]);
+        if(curva.length>=2)records.push({marca,modelo,para:String(r[4]||'').trim(),hp:hpM?parseFloat(hpM[1]):null,etapas:String(r[6]||'').trim(),descarga:String(r[7]||'').trim(),largo_mm:String(r[9]||'').trim(),curva});
+      }
+      if(!records.length){logMsg('Sin modelos válidos','err');return;}
+      const res=await api('/api/import/catalogo','POST',{records});
+      if(!res||!res.ok){logMsg('Error al importar','err');return;}
+      const data=await res.json();
+      const fresh=await api('/api/catalogo');
+      if(fresh&&fresh.ok){CATALOGO.length=0;(await fresh.json()).forEach(r=>CATALOGO.push(r));}
+      initCatFilters();initBuscarSelect();
+      logMsg(`✓ ${data.count} modelos importados`,'ok');
+      document.getElementById('statusCat').innerHTML=`<span style="color:var(--green);font-size:13px">✓ ${data.count} modelos desde "${file.name}"</span>`;
+      toast(`${data.count} modelos importados`);
+    }catch(err){logMsg('Error: '+err.message,'err');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══ USUARIOS ══
 async function loadUsers(){
-  const res=await api('/api/users');
-  if(!res||!res.ok)return;
+  const res=await api('/api/users');if(!res||!res.ok)return;
   const users=await res.json();
   const roleBadge=r=>r==='admin'?'b-red':r==='editor'?'b-amber':'b-gray';
   document.getElementById('users-lista').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase">
       <span>Usuario</span><span>Rol</span><span></span>
     </div>`+
-  users.map(u=>`
-    <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+    users.map(u=>`<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
       <span style="font-family:var(--mono);font-size:13px">${u.username}</span>
       <span class="badge ${roleBadge(u.role)}">${u.role}</span>
-      <div style="display:flex;gap:6px">
-        ${u.id!==USER_ID?`<button class="btn btn-sm btn-ghost" onclick="cambiarRol(${u.id},'${u.role}')">Cambiar rol</button><button class="btn btn-sm btn-red" onclick="deleteUser(${u.id})">Eliminar</button>`:'<span style="font-size:11px;color:var(--text3)">(vos)</span>'}
-      </div>
+      <div style="display:flex;gap:6px">${u.id!==USER_ID?`<button class="btn btn-sm btn-ghost" onclick="cambiarRol(${u.id},'${u.role}')">Rol</button><button class="btn btn-sm btn-red" onclick="deleteUser(${u.id})">✕</button>`:'<span style="font-size:11px;color:var(--text3)">(vos)</span>'}</div>
     </div>`).join('');
 }
-
 async function crearUsuario(){
   const u=document.getElementById('nu-user').value.trim();
   const p=document.getElementById('nu-pass').value;
@@ -1399,23 +1447,17 @@ async function crearUsuario(){
   toast('Usuario creado');loadUsers();
   document.getElementById('nu-user').value='';document.getElementById('nu-pass').value='';
 }
-
 async function deleteUser(id){
   if(!confirm('¿Eliminar usuario?'))return;
-  await api(`/api/users/${id}`,'DELETE');
-  toast('Usuario eliminado');loadUsers();
+  await api(`/api/users/${id}`,'DELETE');toast('Usuario eliminado');loadUsers();
 }
-
-async function cambiarRol(id, rolActual){
-  const roles=['viewer','editor','admin'];
-  const opts=roles.map(r=>`${r}${r===rolActual?' (actual)':''}`).join('\n');
-  const nuevo=prompt(`Nuevo rol para este usuario:\n\nOpciones: viewer, editor, admin\nRol actual: ${rolActual}\n\nEscribí el nuevo rol:`,'');
-  if(!nuevo||!roles.includes(nuevo.trim()))return;
+async function cambiarRol(id,actual){
+  const nuevo=prompt(`Rol actual: ${actual}\nNuevo rol (viewer / editor / admin):`,'');
+  if(!nuevo||!['viewer','editor','admin'].includes(nuevo.trim()))return;
   const res=await api(`/api/users/${id}/role`,'PATCH',{role:nuevo.trim()});
-  if(!res||!res.ok){toast('Error al cambiar rol','err');return;}
-  toast(`Rol cambiado a ${nuevo.trim()}`);loadUsers();
+  if(!res||!res.ok){toast('Error','err');return;}
+  toast(`Rol cambiado a ${nuevo}`);loadUsers();
 }
-
 async function cambiarPassword(){
   const cur=document.getElementById('pw-current').value;
   const nw=document.getElementById('pw-new').value;
@@ -1425,18 +1467,10 @@ async function cambiarPassword(){
   document.getElementById('pw-current').value='';document.getElementById('pw-new').value='';
 }
 
-// ═══ INIT ═══
-if(CAN_ADMIN){
-  document.getElementById('tabUsers').style.display='';
-}
-// Hide "Nueva perforación" button for viewers
-if(!CAN_EDIT){
-  document.querySelectorAll('.btn-new-perf').forEach(b=>b.style.display='none');
-}
-// Show rango when switching to analitica
-document.querySelector('.htab[onclick*="analitica"]').addEventListener('click',()=>{
-  setTimeout(()=>{showSubAnal('rango');},100);
-});
+// ══ INIT ══
+if(CAN_ADMIN)document.getElementById('tabUsers').style.display='';
+if(!CAN_EDIT)document.querySelectorAll('.btn-new-perf').forEach(b=>b.style.display='none');
+document.querySelector('.htab[onclick*="analitica"]').addEventListener('click',()=>setTimeout(()=>showSubAnal('rango'),100));
 loadAll();
 </script>
 </body>

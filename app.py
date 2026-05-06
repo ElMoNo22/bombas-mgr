@@ -1,21 +1,20 @@
 import os, json, sqlite3, re
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session, g
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024-cambiar-en-prod')
-
+app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024')
 DB_PATH = os.environ.get('DB_PATH', 'bombas.db')
-
-# ═══════════════════════════════════════════
-# DATABASE
-# ═══════════════════════════════════════════
 
 def get_db():
     db = sqlite3.connect(DB_PATH)
     db.row_factory = sqlite3.Row
+    db.execute("PRAGMA foreign_keys = ON")
     return db
+
+def row_to_dict(row):
+    return dict(row) if row else None
 
 def init_db():
     db = get_db()
@@ -26,48 +25,60 @@ def init_db():
             password_hash TEXT NOT NULL,
             role TEXT DEFAULT 'viewer'
         );
-
-        CREATE TABLE IF NOT EXISTS perforaciones (
+        CREATE TABLE IF NOT EXISTS bombas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            n_equipo TEXT,
+            n_equipo TEXT UNIQUE,
             tag TEXT,
             tag_extraviado TEXT,
-            zona TEXT,
-            estado TEXT,
-            denominacion TEXT,
-            calle TEXT,
-            entre TEXT,
-            y_col TEXT,
-            bombeo TEXT,
             marca TEXT,
             modelo TEXT,
             hp REAL,
             kw REAL,
             amperes TEXT,
             serie TEXT,
+            peso_kg REAL,
+            largo_mm REAL,
             salida TEXT,
             tazones TEXT,
-            largo_mm REAL,
-            ubicacion_actual TEXT,
-            notificada_por TEXT,
-            relevado_el TEXT,
-            candado TEXT,
-            tipo_cañeria TEXT,
-            mts_cañeria TEXT,
-            prof_trabajo_mts REAL,
-            Q_m3h REAL,
-            H_mca REAL,
-            nivel_estatico REAL,
-            nivel_dinamico REAL,
-            fecha_lectura TEXT,
-            fecha_notif TEXT,
-            observaciones TEXT,
-            id_estadio TEXT,
             sap_id TEXT,
+            id_estadio TEXT,
+            observaciones TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-
+        CREATE TABLE IF NOT EXISTS perforaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            calle TEXT,
+            entre TEXT,
+            y_col TEXT,
+            zona TEXT,
+            bombeo TEXT,
+            denominacion TEXT,
+            prof_trabajo_mts REAL,
+            tipo_cañeria TEXT,
+            mts_cañeria TEXT,
+            nivel_estatico REAL,
+            nivel_dinamico REAL,
+            Q_m3h REAL,
+            H_mca REAL,
+            candado TEXT,
+            observaciones TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS asignaciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bomba_id INTEGER REFERENCES bombas(id),
+            perforacion_id INTEGER REFERENCES perforaciones(id),
+            estado TEXT DEFAULT 'Desmontado',
+            fecha_montaje TEXT,
+            fecha_desmontaje TEXT,
+            notificada_por TEXT,
+            relevado_el TEXT,
+            notas TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS catalogo (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             marca TEXT,
@@ -80,19 +91,12 @@ def init_db():
             curva_json TEXT
         );
     ''')
-
-    # Create default admin user if not exists
     existing = db.execute('SELECT id FROM users WHERE username = ?', ('admin',)).fetchone()
     if not existing:
         db.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
                    ('admin', generate_password_hash('bombas2024'), 'admin'))
-
     db.commit()
     db.close()
-
-# ═══════════════════════════════════════════
-# AUTH
-# ═══════════════════════════════════════════
 
 def login_required(f):
     @wraps(f)
@@ -105,7 +109,6 @@ def login_required(f):
     return decorated
 
 def editor_required(f):
-    """Editor o admin pueden modificar datos"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
@@ -116,7 +119,6 @@ def editor_required(f):
     return decorated
 
 def admin_required(f):
-    """Solo admin"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
@@ -126,14 +128,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ═══════════════════════════════════════════
-# PAGES
-# ═══════════════════════════════════════════
-
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', username=session.get('username'), role=session.get('role'), user_id=session.get('user_id', 0))
+    return render_template('index.html', username=session.get('username'),
+        role=session.get('role'), user_id=session.get('user_id', 0))
 
 @app.route('/login', methods=['GET'])
 def login_page():
@@ -161,18 +160,112 @@ def logout():
     session.clear()
     return redirect(url_for('login_page'))
 
-# ═══════════════════════════════════════════
-# API — PERFORACIONES
-# ═══════════════════════════════════════════
+# ── BOMBAS ──
+@app.route('/api/bombas', methods=['GET'])
+@login_required
+def get_bombas():
+    db = get_db()
+    rows = db.execute('''
+        SELECT b.*, a.estado as estado_actual, a.fecha_montaje, a.fecha_desmontaje,
+               a.id as asignacion_id, p.calle, p.entre, p.y_col, p.zona, p.id as perforacion_id
+        FROM bombas b
+        LEFT JOIN asignaciones a ON a.bomba_id = b.id
+            AND a.id = (SELECT id FROM asignaciones WHERE bomba_id = b.id ORDER BY id DESC LIMIT 1)
+        LEFT JOIN perforaciones p ON a.perforacion_id = p.id
+        ORDER BY b.marca, b.modelo
+    ''').fetchall()
+    db.close()
+    return jsonify([row_to_dict(r) for r in rows])
 
-def row_to_dict(row):
-    return dict(row)
+@app.route('/api/bombas/<int:bid>', methods=['GET'])
+@login_required
+def get_bomba(bid):
+    db = get_db()
+    row = db.execute('SELECT * FROM bombas WHERE id = ?', (bid,)).fetchone()
+    if not row:
+        db.close()
+        return jsonify({'error': 'No encontrado'}), 404
+    bomba = row_to_dict(row)
+    hist = db.execute('''
+        SELECT a.*, p.calle, p.entre, p.y_col, p.zona, p.id as perforacion_id
+        FROM asignaciones a
+        LEFT JOIN perforaciones p ON a.perforacion_id = p.id
+        WHERE a.bomba_id = ? ORDER BY a.id DESC
+    ''', (bid,)).fetchall()
+    bomba['historial'] = [row_to_dict(h) for h in hist]
+    db.close()
+    return jsonify(bomba)
 
+@app.route('/api/bombas', methods=['POST'])
+@editor_required
+def create_bomba():
+    data = request.get_json()
+    fields = ['n_equipo','tag','tag_extraviado','marca','modelo','hp','kw','amperes',
+              'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones']
+    vals = [data.get(f) for f in fields]
+    db = get_db()
+    try:
+        cur = db.execute(f'INSERT INTO bombas ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
+        db.commit()
+        row = db.execute('SELECT * FROM bombas WHERE id = ?', (cur.lastrowid,)).fetchone()
+        db.close()
+        return jsonify(row_to_dict(row)), 201
+    except sqlite3.IntegrityError:
+        db.close()
+        return jsonify({'error': 'N° de equipo ya existe'}), 409
+
+@app.route('/api/bombas/<int:bid>', methods=['PUT'])
+@editor_required
+def update_bomba(bid):
+    data = request.get_json()
+    fields = ['n_equipo','tag','tag_extraviado','marca','modelo','hp','kw','amperes',
+              'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
+    vals = [data.get(f) for f in fields] + [bid]
+    db = get_db()
+    db.execute(f'UPDATE bombas SET {sets} WHERE id = ?', vals)
+    db.commit()
+    row = db.execute('SELECT * FROM bombas WHERE id = ?', (bid,)).fetchone()
+    db.close()
+    return jsonify(row_to_dict(row))
+
+@app.route('/api/bombas/<int:bid>', methods=['DELETE'])
+@admin_required
+def delete_bomba(bid):
+    db = get_db()
+    db.execute('DELETE FROM asignaciones WHERE bomba_id = ?', (bid,))
+    db.execute('DELETE FROM bombas WHERE id = ?', (bid,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/bombas/disponibles', methods=['GET'])
+@login_required
+def get_bombas_disponibles():
+    db = get_db()
+    rows = db.execute('''
+        SELECT * FROM bombas WHERE id NOT IN
+        (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado = 'Montado')
+        ORDER BY marca, modelo, hp
+    ''').fetchall()
+    db.close()
+    return jsonify([row_to_dict(r) for r in rows])
+
+# ── PERFORACIONES ──
 @app.route('/api/perforaciones', methods=['GET'])
 @login_required
 def get_perforaciones():
     db = get_db()
-    rows = db.execute('SELECT * FROM perforaciones ORDER BY id').fetchall()
+    rows = db.execute('''
+        SELECT p.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp, b.serie, b.amperes,
+               a.estado as estado_actual, a.fecha_montaje, a.fecha_desmontaje,
+               a.id as asignacion_id, b.id as bomba_id
+        FROM perforaciones p
+        LEFT JOIN asignaciones a ON a.perforacion_id = p.id
+            AND a.id = (SELECT id FROM asignaciones WHERE perforacion_id = p.id ORDER BY id DESC LIMIT 1)
+        LEFT JOIN bombas b ON a.bomba_id = b.id
+        ORDER BY p.zona, p.calle, p.y_col
+    ''').fetchall()
     db.close()
     return jsonify([row_to_dict(r) for r in rows])
 
@@ -181,28 +274,31 @@ def get_perforaciones():
 def get_perforacion(pid):
     db = get_db()
     row = db.execute('SELECT * FROM perforaciones WHERE id = ?', (pid,)).fetchone()
-    db.close()
     if not row:
+        db.close()
         return jsonify({'error': 'No encontrado'}), 404
-    return jsonify(row_to_dict(row))
+    perf = row_to_dict(row)
+    hist = db.execute('''
+        SELECT a.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp, b.serie, b.id as bomba_id
+        FROM asignaciones a
+        LEFT JOIN bombas b ON a.bomba_id = b.id
+        WHERE a.perforacion_id = ? ORDER BY a.id DESC
+    ''', (pid,)).fetchall()
+    perf['historial'] = [row_to_dict(h) for h in hist]
+    db.close()
+    return jsonify(perf)
 
 @app.route('/api/perforaciones', methods=['POST'])
 @editor_required
 def create_perforacion():
     data = request.get_json()
-    fields = ['n_equipo','tag','tag_extraviado','zona','estado','denominacion','calle','entre','y_col',
-              'bombeo','marca','modelo','hp','kw','amperes','serie','salida','tazones','largo_mm',
-              'ubicacion_actual','notificada_por','relevado_el','candado','tipo_cañeria','mts_cañeria',
-              'prof_trabajo_mts','Q_m3h','H_mca','nivel_estatico','nivel_dinamico','fecha_lectura',
-              'fecha_notif','observaciones','id_estadio','sap_id']
+    fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
+              'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
     vals = [data.get(f) for f in fields]
-    placeholders = ','.join(['?']*len(fields))
-    cols = ','.join(fields)
     db = get_db()
-    cur = db.execute(f'INSERT INTO perforaciones ({cols}) VALUES ({placeholders})', vals)
+    cur = db.execute(f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
     db.commit()
-    new_id = cur.lastrowid
-    row = db.execute('SELECT * FROM perforaciones WHERE id = ?', (new_id,)).fetchone()
+    row = db.execute('SELECT * FROM perforaciones WHERE id = ?', (cur.lastrowid,)).fetchone()
     db.close()
     return jsonify(row_to_dict(row)), 201
 
@@ -210,67 +306,100 @@ def create_perforacion():
 @editor_required
 def update_perforacion(pid):
     data = request.get_json()
-    fields = ['n_equipo','tag','tag_extraviado','zona','estado','denominacion','calle','entre','y_col',
-              'bombeo','marca','modelo','hp','kw','amperes','serie','salida','tazones','largo_mm',
-              'ubicacion_actual','notificada_por','relevado_el','candado','tipo_cañeria','mts_cañeria',
-              'prof_trabajo_mts','Q_m3h','H_mca','nivel_estatico','nivel_dinamico','fecha_lectura',
-              'fecha_notif','observaciones','id_estadio','sap_id']
-    sets = ', '.join([f'{f} = ?' for f in fields])
-    sets += ', updated_at = CURRENT_TIMESTAMP'
+    fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
+              'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
     vals = [data.get(f) for f in fields] + [pid]
     db = get_db()
     db.execute(f'UPDATE perforaciones SET {sets} WHERE id = ?', vals)
     db.commit()
     row = db.execute('SELECT * FROM perforaciones WHERE id = ?', (pid,)).fetchone()
     db.close()
-    if not row:
-        return jsonify({'error': 'No encontrado'}), 404
     return jsonify(row_to_dict(row))
 
 @app.route('/api/perforaciones/<int:pid>', methods=['DELETE'])
 @admin_required
 def delete_perforacion(pid):
     db = get_db()
+    db.execute('DELETE FROM asignaciones WHERE perforacion_id = ?', (pid,))
     db.execute('DELETE FROM perforaciones WHERE id = ?', (pid,))
     db.commit()
     db.close()
     return jsonify({'ok': True})
 
-@app.route('/api/perforaciones/<int:pid>/estado', methods=['PATCH'])
+# ── ASIGNACIONES ──
+@app.route('/api/asignaciones', methods=['POST'])
 @editor_required
-def cambiar_estado(pid):
+def create_asignacion():
     data = request.get_json()
-    nuevo_estado = data.get('estado')
-    if not nuevo_estado:
-        return jsonify({'error': 'Estado requerido'}), 400
+    bomba_id = data.get('bomba_id')
+    perforacion_id = data.get('perforacion_id')
+    if not bomba_id or not perforacion_id:
+        return jsonify({'error': 'bomba_id y perforacion_id requeridos'}), 400
     db = get_db()
-    db.execute('UPDATE perforaciones SET estado = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-               (nuevo_estado, pid))
+    active = db.execute('''
+        SELECT a.id, p.calle, p.y_col FROM asignaciones a
+        JOIN perforaciones p ON a.perforacion_id = p.id
+        WHERE a.bomba_id = ? AND a.estado = 'Montado'
+    ''', (bomba_id,)).fetchone()
+    if active:
+        db.close()
+        return jsonify({'error': f'La bomba ya está montada en {active["calle"]} y {active["y_col"]}'}), 409
+    cur = db.execute('''
+        INSERT INTO asignaciones (bomba_id, perforacion_id, estado, fecha_montaje, fecha_desmontaje, notificada_por, notas)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (bomba_id, perforacion_id, data.get('estado','Montado'),
+          data.get('fecha_montaje'), data.get('fecha_desmontaje'),
+          data.get('notificada_por'), data.get('notas')))
     db.commit()
-    row = db.execute('SELECT * FROM perforaciones WHERE id = ?', (pid,)).fetchone()
+    row = db.execute('''
+        SELECT a.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp,
+               p.calle, p.y_col, p.zona
+        FROM asignaciones a
+        JOIN bombas b ON a.bomba_id = b.id
+        JOIN perforaciones p ON a.perforacion_id = p.id
+        WHERE a.id = ?
+    ''', (cur.lastrowid,)).fetchone()
+    db.close()
+    return jsonify(row_to_dict(row)), 201
+
+@app.route('/api/asignaciones/<int:aid>', methods=['PUT'])
+@editor_required
+def update_asignacion(aid):
+    data = request.get_json()
+    fields = ['estado','fecha_montaje','fecha_desmontaje','notificada_por','relevado_el','notas']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
+    vals = [data.get(f) for f in fields] + [aid]
+    db = get_db()
+    db.execute(f'UPDATE asignaciones SET {sets} WHERE id = ?', vals)
+    db.commit()
+    row = db.execute('SELECT * FROM asignaciones WHERE id = ?', (aid,)).fetchone()
     db.close()
     return jsonify(row_to_dict(row))
 
-@app.route('/api/perforaciones/historial', methods=['GET'])
-@login_required
-def get_historial():
-    calle = request.args.get('calle','').strip()
-    y_col = request.args.get('y_col','').strip()
-    exclude_id = request.args.get('exclude_id', type=int)
-    if not calle or not y_col:
-        return jsonify([])
+@app.route('/api/asignaciones/<int:aid>/desmontar', methods=['POST'])
+@editor_required
+def desmontar(aid):
+    data = request.get_json() or {}
     db = get_db()
-    rows = db.execute(
-        'SELECT * FROM perforaciones WHERE calle = ? AND y_col = ? AND id != ? ORDER BY fecha_notif DESC',
-        (calle, y_col, exclude_id or 0)
-    ).fetchall()
+    db.execute('''UPDATE asignaciones SET estado='Desmontado', fecha_desmontaje=?,
+        notas=COALESCE(?,notas), updated_at=CURRENT_TIMESTAMP WHERE id=?''',
+        (data.get('fecha_desmontaje'), data.get('notas'), aid))
+    db.commit()
+    row = db.execute('SELECT * FROM asignaciones WHERE id = ?', (aid,)).fetchone()
     db.close()
-    return jsonify([row_to_dict(r) for r in rows])
+    return jsonify(row_to_dict(row))
 
-# ═══════════════════════════════════════════
-# API — CATÁLOGO
-# ═══════════════════════════════════════════
+@app.route('/api/asignaciones/<int:aid>', methods=['DELETE'])
+@admin_required
+def delete_asignacion(aid):
+    db = get_db()
+    db.execute('DELETE FROM asignaciones WHERE id = ?', (aid,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
 
+# ── CATALOGO ──
 @app.route('/api/catalogo', methods=['GET'])
 @login_required
 def get_catalogo():
@@ -285,78 +414,59 @@ def get_catalogo():
         result.append(d)
     return jsonify(result)
 
-@app.route('/api/catalogo/<int:cid>', methods=['GET'])
-@login_required
-def get_catalogo_item(cid):
-    db = get_db()
-    row = db.execute('SELECT * FROM catalogo WHERE id = ?', (cid,)).fetchone()
-    db.close()
-    if not row:
-        return jsonify({'error': 'No encontrado'}), 404
-    d = row_to_dict(row)
-    d['curva'] = json.loads(d['curva_json']) if d.get('curva_json') else []
-    del d['curva_json']
-    return jsonify(d)
-
-# ═══════════════════════════════════════════
-# API — IMPORTAR EXCEL (JSON payload)
-# ═══════════════════════════════════════════
-
-@app.route('/api/import/perforaciones', methods=['POST'])
-@admin_required
-def import_perforaciones():
-    data = request.get_json()
-    records = data.get('records', [])
-    if not records:
-        return jsonify({'error': 'Sin datos'}), 400
-    db = get_db()
-    # Clear and reimport
-    db.execute('DELETE FROM perforaciones')
-    fields = ['n_equipo','tag','tag_extraviado','zona','estado','denominacion','calle','entre','y_col',
-              'bombeo','marca','modelo','hp','kw','amperes','serie','salida','tazones','largo_mm',
-              'ubicacion_actual','notificada_por','relevado_el','candado','tipo_cañeria','mts_cañeria',
-              'prof_trabajo_mts','Q_m3h','H_mca','nivel_estatico','nivel_dinamico','fecha_lectura',
-              'fecha_notif','observaciones','id_estadio','sap_id']
-    placeholders = ','.join(['?']*len(fields))
-    cols = ','.join(fields)
-    for r in records:
-        vals = [r.get(f) for f in fields]
-        db.execute(f'INSERT INTO perforaciones ({cols}) VALUES ({placeholders})', vals)
-    db.commit()
-    count = db.execute('SELECT COUNT(*) FROM perforaciones').fetchone()[0]
-    db.close()
-    return jsonify({'ok': True, 'count': count})
-
 @app.route('/api/import/catalogo', methods=['POST'])
 @admin_required
 def import_catalogo():
     data = request.get_json()
     records = data.get('records', [])
-    if not records:
-        return jsonify({'error': 'Sin datos'}), 400
     db = get_db()
     db.execute('DELETE FROM catalogo')
     for r in records:
-        db.execute(
-            'INSERT INTO catalogo (marca, modelo, para, hp, etapas, descarga, largo_mm, curva_json) VALUES (?,?,?,?,?,?,?,?)',
-            (r.get('marca'), r.get('modelo'), r.get('para'), r.get('hp'),
-             r.get('etapas'), r.get('descarga'), r.get('largo_mm'),
-             json.dumps(r.get('curva', [])))
-        )
+        db.execute('INSERT INTO catalogo (marca,modelo,para,hp,etapas,descarga,largo_mm,curva_json) VALUES (?,?,?,?,?,?,?,?)',
+            (r.get('marca'),r.get('modelo'),r.get('para'),r.get('hp'),
+             r.get('etapas'),r.get('descarga'),r.get('largo_mm'),json.dumps(r.get('curva',[]))))
     db.commit()
     count = db.execute('SELECT COUNT(*) FROM catalogo').fetchone()[0]
     db.close()
     return jsonify({'ok': True, 'count': count})
 
-# ═══════════════════════════════════════════
-# API — USUARIOS (solo admin)
-# ═══════════════════════════════════════════
+# ── STATS ──
+@app.route('/api/stats', methods=['GET'])
+@login_required
+def get_stats():
+    db = get_db()
+    stats = {
+        'total_bombas': db.execute('SELECT COUNT(*) FROM bombas').fetchone()[0],
+        'total_perforaciones': db.execute('SELECT COUNT(*) FROM perforaciones').fetchone()[0],
+        'montadas': db.execute("SELECT COUNT(*) FROM asignaciones WHERE estado='Montado'").fetchone()[0],
+        'disponibles': db.execute('''SELECT COUNT(*) FROM bombas WHERE id NOT IN
+            (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado='Montado')''').fetchone()[0],
+        'por_zona': [row_to_dict(r) for r in db.execute('''
+            SELECT p.zona, COUNT(*) as n FROM asignaciones a
+            JOIN perforaciones p ON a.perforacion_id=p.id
+            WHERE a.estado='Montado' GROUP BY p.zona''').fetchall()],
+        'por_hp': [row_to_dict(r) for r in db.execute('''
+            SELECT b.hp, COUNT(*) as n FROM asignaciones a
+            JOIN bombas b ON a.bomba_id=b.id
+            WHERE a.estado='Montado' AND b.hp IS NOT NULL GROUP BY b.hp ORDER BY b.hp''').fetchall()],
+        'por_marca': [row_to_dict(r) for r in db.execute('''
+            SELECT marca, COUNT(*) as n FROM bombas WHERE marca IS NOT NULL
+            GROUP BY marca ORDER BY n DESC''').fetchall()],
+        'modelos_top': [row_to_dict(r) for r in db.execute('''
+            SELECT b.modelo, COUNT(*) as n FROM asignaciones a
+            JOIN bombas b ON a.bomba_id=b.id
+            WHERE a.estado='Montado' AND b.modelo IS NOT NULL
+            GROUP BY b.modelo ORDER BY n DESC LIMIT 10''').fetchall()],
+    }
+    db.close()
+    return jsonify(stats)
 
+# ── USERS ──
 @app.route('/api/users', methods=['GET'])
 @admin_required
 def get_users():
     db = get_db()
-    rows = db.execute('SELECT id, username, role FROM users').fetchall()
+    rows = db.execute('SELECT id,username,role FROM users').fetchall()
     db.close()
     return jsonify([row_to_dict(r) for r in rows])
 
@@ -366,12 +476,12 @@ def create_user():
     data = request.get_json()
     username = data.get('username','').strip()
     password = data.get('password','')
-    role = data.get('role', 'user')
+    role = data.get('role','viewer')
     if not username or not password:
         return jsonify({'error': 'Usuario y contraseña requeridos'}), 400
     db = get_db()
     try:
-        db.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+        db.execute('INSERT INTO users (username,password_hash,role) VALUES (?,?,?)',
                    (username, generate_password_hash(password), role))
         db.commit()
     except sqlite3.IntegrityError:
@@ -396,12 +506,12 @@ def delete_user(uid):
 def change_role(uid):
     data = request.get_json()
     new_role = data.get('role','').strip()
-    if new_role not in ('viewer', 'editor', 'admin'):
-        return jsonify({'error': 'Rol inválido. Usar: viewer, editor, admin'}), 400
+    if new_role not in ('viewer','editor','admin'):
+        return jsonify({'error': 'Rol inválido'}), 400
     if uid == session.get('user_id'):
         return jsonify({'error': 'No podés cambiar tu propio rol'}), 400
     db = get_db()
-    db.execute('UPDATE users SET role = ? WHERE id = ?', (new_role, uid))
+    db.execute('UPDATE users SET role=? WHERE id=?', (new_role, uid))
     db.commit()
     db.close()
     return jsonify({'ok': True})
@@ -413,30 +523,17 @@ def change_password():
     current = data.get('current','')
     new_pw = data.get('new','')
     if not new_pw or len(new_pw) < 6:
-        return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres'}), 400
+        return jsonify({'error': 'Mínimo 6 caracteres'}), 400
     db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+    user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
     if not user or not check_password_hash(user['password_hash'], current):
         db.close()
         return jsonify({'error': 'Contraseña actual incorrecta'}), 401
-    db.execute('UPDATE users SET password_hash = ? WHERE id = ?',
+    db.execute('UPDATE users SET password_hash=? WHERE id=?',
                (generate_password_hash(new_pw), session['user_id']))
     db.commit()
     db.close()
     return jsonify({'ok': True})
-
-# ═══════════════════════════════════════════
-# API — SESSION INFO
-# ═══════════════════════════════════════════
-
-@app.route('/api/me')
-@login_required
-def me():
-    return jsonify({'username': session['username'], 'role': session['role']})
-
-# ═══════════════════════════════════════════
-# INIT & RUN
-# ═══════════════════════════════════════════
 
 if __name__ == '__main__':
     init_db()
