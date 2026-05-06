@@ -425,12 +425,29 @@ function barChart(elId,dataObj,colorMap,sortByKey=false){
 }
 
 function interpH(curva,q){
+  // Given Q → returns H (for buscar equivalente)
   if(!curva||!curva.length)return null;
   if(q<=curva[0][0])return curva[0][1];
   for(let i=1;i<curva.length;i++){
     if(q<=curva[i][0]){const t=(q-curva[i-1][0])/(curva[i][0]-curva[i-1][0]);return curva[i-1][1]+t*(curva[i][1]-curva[i-1][1]);}
   }
   return 0;
+}
+function interpQ(curva,h){
+  // Given H → returns Q (for caudal estimation from depth)
+  // curva is [[Q,H],...] where H decreases as Q increases
+  if(!curva||!curva.length)return null;
+  const hMax=curva[0][1], hMin=curva[curva.length-1][1];
+  if(h>hMax||h<hMin)return null;
+  for(let i=0;i<curva.length-1;i++){
+    const h1=curva[i][1], h2=curva[i+1][1];
+    const q1=curva[i][0], q2=curva[i+1][0];
+    if(h<=h1&&h>=h2){
+      const t=(h1-h)/(h1-h2);
+      return q1+t*(q2-q1);
+    }
+  }
+  return null;
 }
 
 function normModelo(m){
@@ -645,7 +662,7 @@ async function showPerf(pid){
     const cat=findCat(asigActual.modelo);
     if(cat&&p.prof_trabajo_mts){
       const hEst=p.nivel_dinamico?p.prof_trabajo_mts+p.nivel_dinamico:p.prof_trabajo_mts;
-      const qEst=interpH(cat.curva,hEst);
+      const qEst=interpQ(cat.curva,hEst);
       const hMax=cat.curva[0][1];
       let rc='range-ok',rt='✅ En rango';
       if(hEst>hMax){rc='range-err';rt='❌ Fuera de rango';}
@@ -1219,7 +1236,7 @@ function autoFillDir(){
   if(p.Q_m3h)document.getElementById('bQ').value=p.Q_m3h;
   const cat=findCat(p.modelo);
   let qEstHTML='—';
-  if(cat&&hEst){const qE=interpH(cat.curva,hEst);if(qE>0)qEstHTML=`~${qE.toFixed(1)} m³/h`;}
+  if(cat&&hEst){const qE=interpQ(cat.curva,hEst);if(qE>0)qEstHTML=`~${qE.toFixed(1)} m³/h`;}
   infoDiv.style.display='block';
   infoDiv.innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
     <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Bomba actual</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${p.modelo||'—'} · ${p.hp||'?'} HP</div></div>
@@ -1305,7 +1322,7 @@ function renderFueraRango(){
   for(const p of montadas){
     const cat=findCat(p.modelo);if(!cat||!cat.curva||!cat.curva.length)continue;
     const hEst=p.nivel_dinamico?(p.prof_trabajo_mts||0)+p.nivel_dinamico:p.prof_trabajo_mts;
-    const qEst=interpH(cat.curva,hEst);const hMax=cat.curva[0][1];const qMax=cat.curva[cat.curva.length-1][0];
+    const qEst=interpQ(cat.curva,hEst);const hMax=cat.curva[0][1];const qMax=cat.curva[cat.curva.length-1][0];
     let est='ok';
     if(hEst>hMax)est='err';
     else if(hEst>hMax*0.88||qEst<qMax*0.08)est='warn';
