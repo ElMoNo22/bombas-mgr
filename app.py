@@ -1,4 +1,5 @@
 import os, json, re
+import turso as db_driver
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -7,43 +8,22 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024')
 
 # ── DB CONNECTION ──
-TURSO_URL   = os.environ.get('TURSO_URL', '')
-TURSO_TOKEN = os.environ.get('TURSO_TOKEN', '')
-DB_PATH     = os.environ.get('DB_PATH', 'bombas.db')
-
 def get_db():
-    if TURSO_URL and TURSO_TOKEN:
-        import libsql_experimental as libsql
-        conn = libsql.connect('bombas-local.db', sync_url=TURSO_URL, auth_token=TURSO_TOKEN)
-        conn.sync()
-        return conn
-    else:
-        import sqlite3
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+    return db_driver.connect()
 
 def db_commit(conn):
     conn.commit()
-    if TURSO_URL and TURSO_TOKEN:
-        conn.sync()
 
 def row_to_dict(row):
     if row is None: return None
-    if hasattr(row, 'keys'):
-        return dict(row)
-    # libsql returns tuples - we handle via description
     return dict(row)
 
 def fetchall_dicts(cursor):
-    cols = [d[0] for d in cursor.description]
-    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    return [dict(r) for r in cursor.fetchall()]
 
 def fetchone_dict(cursor):
-    cols = [d[0] for d in cursor.description]
     row = cursor.fetchone()
-    return dict(zip(cols, row)) if row else None
+    return dict(row) if row else None
 
 def init_db():
     conn = get_db()
