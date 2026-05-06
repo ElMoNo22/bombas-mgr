@@ -170,7 +170,11 @@ def get_bombas():
                a.id as asignacion_id, p.calle, p.entre, p.y_col, p.zona, p.id as perforacion_id
         FROM bombas b
         LEFT JOIN asignaciones a ON a.bomba_id = b.id
-            AND a.id = (SELECT id FROM asignaciones WHERE bomba_id = b.id ORDER BY id DESC LIMIT 1)
+            AND a.id = (
+                SELECT id FROM asignaciones WHERE bomba_id = b.id
+                ORDER BY CASE WHEN estado = 'Montado' THEN 0 ELSE 1 END, id DESC
+                LIMIT 1
+            )
         LEFT JOIN perforaciones p ON a.perforacion_id = p.id
         ORDER BY b.marca, b.modelo
     ''').fetchall()
@@ -190,7 +194,10 @@ def get_bomba(bid):
         SELECT a.*, p.calle, p.entre, p.y_col, p.zona, p.id as perforacion_id
         FROM asignaciones a
         LEFT JOIN perforaciones p ON a.perforacion_id = p.id
-        WHERE a.bomba_id = ? ORDER BY a.id DESC
+        WHERE a.bomba_id = ?
+        ORDER BY CASE WHEN a.estado = 'Montado' THEN 0 ELSE 1 END,
+                 CASE WHEN a.fecha_montaje IS NULL THEN 1 ELSE 0 END,
+                 a.fecha_montaje DESC, a.id DESC
     ''', (bid,)).fetchall()
     bomba['historial'] = [row_to_dict(h) for h in hist]
     db.close()
@@ -244,8 +251,9 @@ def delete_bomba(bid):
 def get_bombas_disponibles():
     db = get_db()
     rows = db.execute('''
-        SELECT * FROM bombas WHERE id NOT IN
-        (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado = 'Montado')
+        SELECT * FROM bombas WHERE id NOT IN (
+            SELECT DISTINCT bomba_id FROM asignaciones WHERE estado = 'Montado'
+        )
         ORDER BY marca, modelo, hp
     ''').fetchall()
     db.close()
@@ -262,7 +270,12 @@ def get_perforaciones():
                a.id as asignacion_id, b.id as bomba_id
         FROM perforaciones p
         LEFT JOIN asignaciones a ON a.perforacion_id = p.id
-            AND a.id = (SELECT id FROM asignaciones WHERE perforacion_id = p.id ORDER BY id DESC LIMIT 1)
+            AND a.id = (
+                SELECT id FROM asignaciones
+                WHERE perforacion_id = p.id
+                ORDER BY CASE WHEN estado = 'Montado' THEN 0 ELSE 1 END, id DESC
+                LIMIT 1
+            )
         LEFT JOIN bombas b ON a.bomba_id = b.id
         ORDER BY p.zona, p.calle, p.y_col
     ''').fetchall()
@@ -282,7 +295,10 @@ def get_perforacion(pid):
         SELECT a.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp, b.serie, b.id as bomba_id
         FROM asignaciones a
         LEFT JOIN bombas b ON a.bomba_id = b.id
-        WHERE a.perforacion_id = ? ORDER BY a.id DESC
+        WHERE a.perforacion_id = ?
+        ORDER BY CASE WHEN a.estado = 'Montado' THEN 0 ELSE 1 END,
+                 CASE WHEN a.fecha_montaje IS NULL THEN 1 ELSE 0 END,
+                 a.fecha_montaje DESC, a.id DESC
     ''', (pid,)).fetchall()
     perf['historial'] = [row_to_dict(h) for h in hist]
     db.close()

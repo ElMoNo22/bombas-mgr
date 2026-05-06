@@ -86,4 +86,26 @@ else:
     print(f"✓ Asignaciones ya existen")
 
 db.close()
+
+# ── POST-SEED: Fix casos con doble Montado ──
+db = get_db()
+probs = db.execute('''
+    SELECT perforacion_id FROM asignaciones 
+    WHERE estado = 'Montado' GROUP BY perforacion_id HAVING COUNT(*) > 1
+''').fetchall()
+fixed = 0
+for p in probs:
+    pid = p['perforacion_id']
+    montados = db.execute('''
+        SELECT id FROM asignaciones WHERE perforacion_id = ? AND estado = 'Montado'
+        ORDER BY CASE WHEN fecha_montaje IS NULL THEN 1 ELSE 0 END,
+                 fecha_montaje DESC, id DESC
+    ''', (pid,)).fetchall()
+    for row in montados[1:]:
+        db.execute("UPDATE asignaciones SET estado='Desmontado' WHERE id=?", (row['id'],))
+        fixed += 1
+if fixed:
+    db.commit()
+    print(f"✓ {fixed} asignaciones duplicadas corregidas")
+db.close()
 print("✅ DB lista")
