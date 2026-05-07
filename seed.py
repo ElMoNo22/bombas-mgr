@@ -1,6 +1,7 @@
 """
-seed.py — carga inicial a Turso (o SQLite local si no hay TURSO_URL)
+seed.py — carga inicial a Turso o SQLite
 Solo inserta si las tablas están vacías.
+Usa executemany para bulk inserts eficientes.
 """
 import json, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
@@ -11,18 +12,19 @@ init_db()
 db = get_db()
 
 def count(table):
-    from app import fetchone_dict
     cur = db.execute(f'SELECT COUNT(*) as n FROM {table}')
-    return fetchone_dict(cur)['n']
+    r = fetchone_dict(cur)
+    return r['n'] if r else 0
 
 # ── CATALOGO ──
 if count('catalogo') == 0:
     with open('seed_catalogo.json', encoding='utf-8') as f:
         cat = json.load(f)
-    for r in cat:
-        db.execute('INSERT INTO catalogo (marca,modelo,para,hp,etapas,descarga,largo_mm,curva_json) VALUES (?,?,?,?,?,?,?,?)',
-            (r.get('marca'),r.get('modelo'),r.get('para'),r.get('hp'),
-             r.get('etapas'),r.get('descarga'),r.get('largo_mm'),json.dumps(r.get('curva',[]))))
+    sql = 'INSERT INTO catalogo (marca,modelo,para,hp,etapas,descarga,largo_mm,curva_json) VALUES (?,?,?,?,?,?,?,?)'
+    params = [(r.get('marca'),r.get('modelo'),r.get('para'),r.get('hp'),
+               r.get('etapas'),r.get('descarga'),r.get('largo_mm'),json.dumps(r.get('curva',[])))
+              for r in cat]
+    db.executemany(sql, params)
     db_commit(db)
     print(f"✓ {len(cat)} modelos de catálogo")
 else:
@@ -34,9 +36,9 @@ if count('bombas') == 0:
         bombas = json.load(f)
     fields = ['n_equipo','tag','tag_extraviado','marca','modelo','hp','kw','amperes',
               'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones']
-    for r in bombas:
-        vals = [r.get(f) for f in fields]
-        db.execute(f'INSERT INTO bombas ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
+    sql = f'INSERT INTO bombas ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})'
+    params = [[r.get(f) for f in fields] for r in bombas]
+    db.executemany(sql, params)
     db_commit(db)
     print(f"✓ {len(bombas)} bombas")
 else:
@@ -48,9 +50,9 @@ if count('perforaciones') == 0:
         perfs = json.load(f)
     fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
               'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado']
-    for r in perfs:
-        vals = [r.get(f) for f in fields]
-        db.execute(f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
+    sql = f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})'
+    params = [[r.get(f) for f in fields] for r in perfs]
+    db.executemany(sql, params)
     db_commit(db)
     print(f"✓ {len(perfs)} perforaciones")
 else:
@@ -69,21 +71,23 @@ if count('asignaciones') == 0:
         key = f"{p['calle']}|{p['entre'] or '0'}|{p['y_col'] or '0'}"
         perfs_map[key] = p['id']
 
-    inserted = skipped = 0
+    sql = '''INSERT INTO asignaciones
+        (bomba_id,perforacion_id,estado,fecha_montaje,fecha_desmontaje,notificada_por,notas)
+        VALUES (?,?,?,?,?,?,?)'''
+    params = []
+    skipped = 0
     for a in asigs:
         bid = bombas_map.get(a.get('n_equipo'))
         pid = perfs_map.get(a.get('perf_key'))
         if not bid or not pid:
             skipped += 1
             continue
-        db.execute('''INSERT INTO asignaciones
-            (bomba_id, perforacion_id, estado, fecha_montaje, fecha_desmontaje, notificada_por, notas)
-            VALUES (?,?,?,?,?,?,?)''',
-            (bid, pid, a.get('estado','Desmontado'), a.get('fecha_montaje'),
-             a.get('fecha_desmontaje'), a.get('notificada_por'), a.get('notas')))
-        inserted += 1
+        params.append((bid, pid, a.get('estado','Desmontado'), a.get('fecha_montaje'),
+                       a.get('fecha_desmontaje'), a.get('notificada_por'), a.get('notas')))
+
+    db.executemany(sql, params)
     db_commit(db)
-    print(f"✓ {inserted} asignaciones ({skipped} sin match)")
+    print(f"✓ {len(params)} asignaciones ({skipped} sin match)")
 else:
     print(f"✓ Asignaciones ya existen ({count('asignaciones')})")
 
@@ -105,6 +109,7 @@ for p in probs:
     for row in montados[1:]:
         db.execute("UPDATE asignaciones SET estado='Desmontado' WHERE id=?", (row['id'],))
         fixed += 1
+
 if fixed:
     db_commit(db)
     print(f"✓ {fixed} asignaciones duplicadas corregidas")

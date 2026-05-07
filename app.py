@@ -19,11 +19,23 @@ def row_to_dict(row):
     return dict(row)
 
 def fetchall_dicts(cursor):
-    return [dict(r) for r in cursor.fetchall()]
+    rows = cursor.fetchall()
+    result = []
+    for r in rows:
+        try:
+            result.append(dict(r))
+        except Exception:
+            # sqlite3.Row needs keys()
+            result.append({k: r[k] for k in r.keys()})
+    return result
 
 def fetchone_dict(cursor):
     row = cursor.fetchone()
-    return dict(row) if row else None
+    if row is None: return None
+    try:
+        return dict(row)
+    except Exception:
+        return {k: row[k] for k in row.keys()}
 
 def init_db():
     conn = get_db()
