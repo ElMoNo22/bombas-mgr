@@ -8,6 +8,19 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024')
 
 # ── DB CONNECTION ──
+def norm_fecha(s):
+    """Normalize date to yyyy-mm-dd internally (for correct DB sorting)"""
+    import re
+    if not s: return None
+    s = str(s).strip()
+    if s in ('nan','NaT','None',''): return None
+    # dd/mm/yyyy or dd-mm-yyyy → yyyy-mm-dd
+    m = re.match(r'^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$', s)
+    if m: return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
+    # Already yyyy-mm-dd
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', s): return s
+    return s
+
 def get_db():
     return db_driver.connect()
 
@@ -221,8 +234,8 @@ def get_bomba(bid):
         FROM asignaciones a LEFT JOIN perforaciones p ON a.perforacion_id = p.id
         WHERE a.bomba_id = ?
         ORDER BY CASE WHEN a.estado='Montado' THEN 0 ELSE 1 END,
-        CASE WHEN COALESCE(a.fecha_desmontaje,a.fecha_montaje) IS NULL THEN 1 ELSE 0 END,
-        COALESCE(a.fecha_desmontaje,a.fecha_montaje) DESC, a.id DESC
+        CASE WHEN a.fecha_montaje IS NULL THEN 1 ELSE 0 END,
+        a.fecha_montaje DESC, a.id DESC
     ''', (bid,))
     bomba['historial'] = fetchall_dicts(cur2)
     conn.close()
@@ -324,8 +337,8 @@ def get_perforacion(pid):
         FROM asignaciones a LEFT JOIN bombas b ON a.bomba_id = b.id
         WHERE a.perforacion_id = ?
         ORDER BY CASE WHEN a.estado='Montado' THEN 0 ELSE 1 END,
-        CASE WHEN COALESCE(a.fecha_desmontaje,a.fecha_montaje) IS NULL THEN 1 ELSE 0 END,
-        COALESCE(a.fecha_desmontaje,a.fecha_montaje) DESC, a.id DESC
+        CASE WHEN a.fecha_montaje IS NULL THEN 1 ELSE 0 END,
+        a.fecha_montaje DESC, a.id DESC
     ''', (pid,))
     perf['historial'] = fetchall_dicts(cur2)
     conn.close()
@@ -395,7 +408,7 @@ def create_asignacion():
         INSERT INTO asignaciones (bomba_id, perforacion_id, estado, fecha_montaje, fecha_desmontaje, notificada_por, notas)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (bomba_id, perforacion_id, data.get('estado','Montado'),
-          data.get('fecha_montaje'), data.get('fecha_desmontaje'),
+          norm_fecha(data.get('fecha_montaje')), norm_fecha(data.get('fecha_desmontaje')),
           data.get('notificada_por'), data.get('notas')))
     db_commit(conn)
     cur2 = conn.execute('''
@@ -413,7 +426,11 @@ def update_asignacion(aid):
     data = request.get_json()
     fields = ['estado','fecha_montaje','fecha_desmontaje','notificada_por','relevado_el','notas']
     sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
-    vals = [data.get(f) for f in fields] + [aid]
+    raw = [data.get(f) for f in fields]
+    # Normalize date fields
+    raw[1] = norm_fecha(raw[1])  # fecha_montaje
+    raw[2] = norm_fecha(raw[2])  # fecha_desmontaje
+    vals = raw + [aid]
     conn = get_db()
     conn.execute(f'UPDATE asignaciones SET {sets} WHERE id = ?', vals)
     db_commit(conn)
@@ -429,7 +446,7 @@ def desmontar(aid):
     conn = get_db()
     conn.execute('''UPDATE asignaciones SET estado='Desmontado', fecha_desmontaje=?,
         notas=COALESCE(?,notas), updated_at=CURRENT_TIMESTAMP WHERE id=?''',
-        (data.get('fecha_desmontaje'), data.get('notas'), aid))
+        (norm_fecha(data.get('fecha_desmontaje')), data.get('notas'), aid))
     db_commit(conn)
     cur = conn.execute('SELECT * FROM asignaciones WHERE id = ?', (aid,))
     row = fetchone_dict(cur)
@@ -586,6 +603,25 @@ def change_password():
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True})
+
+@app.route('/api/admin/fix-fechas', methods=['POST'])
+@admin_required
+def fix_fechas():
+    """Normalize all dates in asignaciones to yyyy-mm-dd format"""
+    conn = get_db()
+    cur = conn.execute('SELECT id, fecha_montaje, fecha_desmontaje FROM asignaciones')
+    rows = fetchall_dicts(cur)
+    fixed = 0
+    for r in rows:
+        fm = norm_fecha(r.get('fecha_montaje'))
+        fd = norm_fecha(r.get('fecha_desmontaje'))
+        if fm != r.get('fecha_montaje') or fd != r.get('fecha_desmontaje'):
+            conn.execute('UPDATE asignaciones SET fecha_montaje=?, fecha_desmontaje=? WHERE id=?',
+                        (fm, fd, r['id']))
+            fixed += 1
+    db_commit(conn)
+    conn.close()
+    return jsonify({'ok': True, 'fixed': fixed})
 
 if __name__ == '__main__':
     init_db()
