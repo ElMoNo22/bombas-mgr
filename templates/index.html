@@ -450,6 +450,28 @@ function interpQ(curva,h){
   return null;
 }
 
+function normFecha(s){
+  // Store as yyyy-mm-dd internally for correct DB sorting
+  if(!s||s==='—')return null;
+  s=s.trim();
+  if(!s)return null;
+  // dd/mm/yyyy or dd-mm-yyyy → yyyy-mm-dd
+  const sep=s.includes('/')?'/':'-';
+  const p=s.split(sep);
+  if(p.length===3&&p[2].length===4){
+    return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  }
+  // already yyyy-mm-dd
+  if(p.length===3&&p[0].length===4)return s;
+  return s;
+}
+function fmtFechaDisplay(s){
+  // Display yyyy-mm-dd as dd-mm-yyyy
+  if(!s||s==='—')return'—';
+  const p=s.split('-');
+  if(p.length===3&&p[0].length===4)return p[2]+'-'+p[1]+'-'+p[0];
+  return s;
+}
 function normModelo(m){
   if(!m)return'';
   let s=m.toLowerCase().replace(/^bms\s*/,'').replace(/["\s]/g,'').trim();
@@ -691,8 +713,8 @@ async function showPerf(pid){
               <div class="tl-title">${h.n_equipo||'—'} · ${h.modelo||'—'} · ${h.marca||''} ${estadoBadge(h.estado)}</div>
               <div class="tl-meta">
                 ${h.hp?h.hp+' HP · ':''}TAG: ${h.tag||'—'}
-                ${h.fecha_montaje?` · Montada: ${h.fecha_montaje}`:''}
-                ${h.fecha_desmontaje?` · Desmontada: ${h.fecha_desmontaje}`:''}
+                ${h.fecha_montaje?` · Montada: ${fmtFechaDisplay(h.fecha_montaje)}`:''}
+                ${h.fecha_desmontaje?` · Desmontada: ${fmtFechaDisplay(h.fecha_desmontaje)}`:''}
                 ${h.notificada_por?` · Por: ${h.notificada_por}`:''}
               </div>
               ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
@@ -767,8 +789,8 @@ async function showBomba(bid){
               <div class="tl-title">📍 ${locH||'—'} ${estadoBadge(h.estado)}</div>
               <div class="tl-meta">
                 ${h.zona?normZona(h.zona)+' · ':''}
-                ${h.fecha_montaje?'Montada: '+h.fecha_montaje:'Sin fecha montaje'}
-                ${h.fecha_desmontaje?' → Desmontada: '+h.fecha_desmontaje:''}
+                ${h.fecha_montaje?'Montada: '+fmtFechaDisplay(h.fecha_montaje):'Sin fecha montaje'}
+                ${h.fecha_desmontaje?' → Desmontada: '+fmtFechaDisplay(h.fecha_desmontaje):''}
                 ${h.notificada_por?' · Por: '+h.notificada_por:''}
               </div>
               ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
@@ -878,7 +900,7 @@ async function confirmarAsignar(perfId){
     bomba_id:window._asigSelected,
     perforacion_id:perfId,
     estado:'Montado',
-    fecha_montaje:document.getElementById('asig-fecha').value||null,
+    fecha_montaje:normFecha(document.getElementById('asig-fecha').value)||null,
     notificada_por:document.getElementById('asig-noti').value||null,
     notas:document.getElementById('asig-notas').value||null,
   };
@@ -947,7 +969,7 @@ async function confirmarAsignarBomba(bombaId){
     bomba_id:bombaId,
     perforacion_id:window._asigPerfSelected,
     estado:'Montado',
-    fecha_montaje:document.getElementById('asig2-fecha').value||null,
+    fecha_montaje:normFecha(document.getElementById('asig2-fecha').value)||null,
     notificada_por:document.getElementById('asig2-noti').value||null,
     notas:document.getElementById('asig2-notas').value||null,
   };
@@ -978,7 +1000,7 @@ async function desmontarModal(asigId,event){
 }
 
 async function confirmarDesmontar(asigId){
-  const fecha=document.getElementById('des-fecha').value||null;
+  const fecha=normFecha(document.getElementById('des-fecha').value)||null;
   const notas=document.getElementById('des-notas').value||null;
   const res=await api(`/api/asignaciones/${asigId}/desmontar`,'POST',{fecha_desmontaje:fecha,notas});
   if(!res||!res.ok){toast('Error','err');return;}
@@ -1014,8 +1036,8 @@ async function guardarAsignacion(aid){
   const data={
     estado:document.getElementById('ea-estado').value,
     notificada_por:document.getElementById('ea-noti').value||null,
-    fecha_montaje:document.getElementById('ea-fmont').value||null,
-    fecha_desmontaje:document.getElementById('ea-fdes').value||null,
+    fecha_montaje:normFecha(document.getElementById('ea-fmont').value)||null,
+    fecha_desmontaje:normFecha(document.getElementById('ea-fdes').value)||null,
     notas:document.getElementById('ea-notas').value||null,
   };
   const res=await api(`/api/asignaciones/${aid}`,'PUT',data);
