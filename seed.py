@@ -85,9 +85,18 @@ if count('asignaciones') == 0:
         params.append((bid, pid, a.get('estado','Desmontado'), a.get('fecha_montaje'),
                        a.get('fecha_desmontaje'), a.get('notificada_por'), a.get('notas')))
 
-    db.executemany(sql, params)
-    db_commit(db)
-    print(f"✓ {len(params)} asignaciones ({skipped} sin match)")
+    inserted = 0
+    failed = 0
+    for p in params:
+        try:
+            db.execute(sql, p)
+            db_commit(db)
+            inserted += 1
+        except Exception as e:
+            failed += 1
+            import sys
+            print(f"Skip asignacion: {e}", file=sys.stderr)
+    print(f"✓ {inserted} asignaciones ({skipped} sin match, {failed} errores)")
 else:
     print(f"✓ Asignaciones ya existen ({count('asignaciones')})")
 

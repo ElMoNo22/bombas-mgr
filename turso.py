@@ -19,19 +19,13 @@ def _send_stmts(stmts):
     """Send list of {sql, args} to Turso, return list of result dicts"""
     requests_payload = [{'type': 'execute', 'stmt': s} for s in stmts]
     requests_payload.append({'type': 'close'})
-    try:
-        resp = req_lib.post(_http_url(), headers=_headers(),
-                            json={'requests': requests_payload}, timeout=30)
-        if resp.status_code == 400:
-            # Log the SQL that caused the error for debugging
-            import sys
-            sqls = [s.get('sql','')[:100] for s in stmts]
-            print(f"Turso 400 error for statements: {sqls}", file=sys.stderr)
-            print(f"Response body: {resp.text[:500]}", file=sys.stderr)
-        resp.raise_for_status()
-        return resp.json()['results']
-    except req_lib.exceptions.HTTPError as e:
-        raise
+    resp = req_lib.post(_http_url(), headers=_headers(),
+                        json={'requests': requests_payload}, timeout=30)
+    if not resp.ok:
+        import sys
+        print(f"Turso {resp.status_code}: {resp.text[:300]}", file=sys.stderr)
+    resp.raise_for_status()
+    return resp.json()['results']
 
 def _parse_result(result):
     """Parse a single Turso result into list of dicts"""
@@ -67,8 +61,12 @@ def _build_args(params):
         elif isinstance(p, int):
             args.append({'type': 'integer', 'value': p})
         elif isinstance(p, float):
-            args.append({'type': 'float', 'value': p})
+            if p != p:  # NaN check
+                args.append({'type': 'null'})
+            else:
+                args.append({'type': 'float', 'value': p})
         else:
+            # Ensure string, strip any problematic chars
             args.append({'type': 'text', 'value': str(p)})
     return args
 
@@ -112,8 +110,8 @@ class TursoConnection:
         return TursoCursor(rows)
 
     def executemany(self, sql, seq_of_params):
-        """Batch insert in chunks to avoid Turso request size limits"""
-        CHUNK_SIZE = 50
+        """Batch insert in small chunks, fall back to one-by-one on error"""
+        CHUNK_SIZE = 10
         params_list = list(seq_of_params)
         for i in range(0, len(params_list), CHUNK_SIZE):
             chunk = params_list[i:i+CHUNK_SIZE]
@@ -123,10 +121,18 @@ class TursoConnection:
                 if params:
                     stmt['args'] = _build_args(params)
                 stmts.append(stmt)
-            if stmts:
+            if not stmts:
+                continue
+            try:
                 results = _send_stmts(stmts)
                 for r in results:
                     _parse_result(r)
+            except Exception:
+                # Fall back to one by one
+                for stmt in stmts:
+                    results = _send_stmts([stmt])
+                    for r in results:
+                        _parse_result(r)
 
     def executescript(self, sql):
         """Split on ';' and send each statement individually to avoid Turso batch errors"""
