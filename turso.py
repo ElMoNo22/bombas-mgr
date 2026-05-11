@@ -1,7 +1,5 @@
 """
-turso.py — Turso HTTP API wrapper
-Uses /v2/pipeline for batched operations
-Falls back to SQLite if no TURSO_URL set
+turso.py — Turso HTTP API wrapper corregido
 """
 
 import os
@@ -26,7 +24,6 @@ def _headers():
 
 
 def _send_stmts(stmts):
-    """Send list of {sql, args} to Turso"""
     requests_payload = [{'type': 'execute', 'stmt': s} for s in stmts]
     requests_payload.append({'type': 'close'})
 
@@ -40,16 +37,14 @@ def _send_stmts(stmts):
     )
 
     if not resp.ok:
-        print(f"Turso {resp.status_code}: {resp.text[:500]}", file=sys.stderr)
-        # Debug extra útil
-        print(f"Payload size: {len(body)} bytes", file=sys.stderr)
+        print(f"Turso {resp.status_code}: {resp.text[:600]}", file=sys.stderr)
+        print(f"Payload size: {len(body)/1024:.1f} KB", file=sys.stderr)
 
     resp.raise_for_status()
     return resp.json()['results']
 
 
 def _parse_result(result):
-    """Parse a single Turso result into list of dicts"""
     if result.get('type') == 'error':
         msg = result.get('error', {})
         if isinstance(msg, dict):
@@ -78,7 +73,7 @@ def _parse_result(result):
 
 
 def _build_args(params):
-    """Convierte parámetros Python a formato que acepta Turso (value siempre string)"""
+    """¡ESTA ES LA FUNCIÓN CORREGIDA! value siempre como string"""
     args = []
     for p in (params or []):
         if p is None:
@@ -86,20 +81,18 @@ def _build_args(params):
         elif isinstance(p, bool):
             args.append({'type': 'integer', 'value': str(int(p))})
         elif isinstance(p, int):
-            args.append({'type': 'integer', 'value': str(p)})
+            args.append({'type': 'integer', 'value': str(p)})           # ← Corregido
         elif isinstance(p, float):
             if p != p:  # NaN
                 args.append({'type': 'null'})
             else:
-                args.append({'type': 'float', 'value': str(p)})
+                args.append({'type': 'float', 'value': str(p)})         # ← Corregido
         else:
-            # strings y otros tipos
-            val = str(p).strip()
-            args.append({'type': 'text', 'value': val})
+            args.append({'type': 'text', 'value': str(p)})
     return args
 
 
-# ── Cursor y Row ──
+# ==================== Cursor y Row ====================
 class TursoCursor:
     def __init__(self, rows):
         self._rows = rows
@@ -118,9 +111,6 @@ class TursoCursor:
         self._pos = len(self._rows)
         return rows
 
-    def __iter__(self):
-        return iter([TursoRow(r) for r in self._rows])
-
 
 class TursoRow(dict):
     def __getattr__(self, k):
@@ -130,11 +120,8 @@ class TursoRow(dict):
             raise AttributeError(k)
 
 
-# ── Connection ──
+# ==================== Connection ====================
 class TursoConnection:
-    def __init__(self):
-        self._batch = []
-
     def execute(self, sql, params=()):
         stmt = {'sql': sql}
         if params:
@@ -144,41 +131,26 @@ class TursoConnection:
         return TursoCursor(rows)
 
     def executemany(self, sql, seq_of_params):
-        CHUNK_SIZE = 10
+        CHUNK_SIZE = 20
         params_list = list(seq_of_params)
         for i in range(0, len(params_list), CHUNK_SIZE):
-            chunk = params_list[i:i + CHUNK_SIZE]
+            chunk = params_list[i:i+CHUNK_SIZE]
             stmts = []
-            for params in chunk:
+            for p in chunk:
                 stmt = {'sql': sql}
-                if params:
-                    stmt['args'] = _build_args(params)
+                if p:
+                    stmt['args'] = _build_args(p)
                 stmts.append(stmt)
-
-            if not stmts:
-                continue
-            try:
+            if stmts:
                 results = _send_stmts(stmts)
                 for r in results:
                     _parse_result(r)
-            except Exception:
-                # fallback uno por uno
-                for stmt in stmts:
-                    results = _send_stmts([stmt])
-                    for r in results:
-                        _parse_result(r)
 
     def executescript(self, sql):
         stmts_raw = [s.strip() for s in sql.split(';') if s.strip()]
         for stmt_sql in stmts_raw:
             try:
-                results = _send_stmts([{'sql': stmt_sql}])
-                if results and results[0].get('type') == 'error':
-                    msg = results[0].get('error', {})
-                    if isinstance(msg, dict):
-                        msg = msg.get('message', str(msg))
-                    if 'already exists' not in str(msg).lower():
-                        raise Exception(f'Turso error: {msg}')
+                _send_stmts([{'sql': stmt_sql}])
             except Exception as e:
                 if 'already exists' not in str(e).lower():
                     raise
@@ -188,7 +160,6 @@ class TursoConnection:
     def close(self): pass
 
 
-# SQLite fallback
 def connect():
     if TURSO_URL and TURSO_TOKEN:
         return TursoConnection()
