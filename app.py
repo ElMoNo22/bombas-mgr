@@ -598,6 +598,48 @@ def change_password():
     conn.close()
     return jsonify({'ok': True})
 
+@app.route('/api/admin/reseed-asignaciones', methods=['POST'])
+@admin_required
+def reseed_asignaciones():
+    """Re-insert asignaciones if table is empty"""
+    import json as json_lib, os
+    conn = get_db()
+    cur = conn.execute('SELECT COUNT(*) as n FROM asignaciones')
+    count = fetchone_dict(cur)['n']
+    if count > 0:
+        conn.close()
+        return jsonify({'ok': True, 'msg': f'Ya existen {count} asignaciones, no se reinsertaron'})
+    # Load seed file
+    seed_path = os.path.join(os.path.dirname(__file__), 'seed_asignaciones.json')
+    with open(seed_path, encoding='utf-8') as f:
+        asigs = json_lib.load(f)
+    cur_b = conn.execute('SELECT id, n_equipo FROM bombas')
+    bombas_map = {r['n_equipo']: r['id'] for r in fetchall_dicts(cur_b)}
+    cur_p = conn.execute('SELECT id, calle, entre, y_col FROM perforaciones')
+    perfs_map = {}
+    for p in fetchall_dicts(cur_p):
+        key = f"{p['calle']}|{p['entre'] or '0'}|{p['y_col'] or '0'}"
+        perfs_map[key] = p['id']
+    inserted = skipped = failed = 0
+    for a in asigs:
+        bid = bombas_map.get(a.get('n_equipo'))
+        pid = perfs_map.get(a.get('perf_key'))
+        if not bid or not pid:
+            skipped += 1
+            continue
+        try:
+            conn.execute('''INSERT INTO asignaciones
+                (bomba_id,perforacion_id,estado,fecha_montaje,fecha_desmontaje,notificada_por,notas)
+                VALUES (?,?,?,?,?,?,?)''',
+                (bid, pid, a.get('estado','Desmontado'), a.get('fecha_montaje'),
+                 a.get('fecha_desmontaje'), a.get('notificada_por'), a.get('notas')))
+            db_commit(conn)
+            inserted += 1
+        except Exception as e:
+            failed += 1
+    conn.close()
+    return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped, 'failed': failed})
+
 @app.route('/api/admin/fix-fechas', methods=['POST'])
 @admin_required
 def fix_fechas():

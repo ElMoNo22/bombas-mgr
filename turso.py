@@ -17,10 +17,13 @@ def _headers():
 
 def _send_stmts(stmts):
     """Send list of {sql, args} to Turso, return list of result dicts"""
+    import json as json_lib
     requests_payload = [{'type': 'execute', 'stmt': s} for s in stmts]
     requests_payload.append({'type': 'close'})
-    resp = req_lib.post(_http_url(), headers=_headers(),
-                        json={'requests': requests_payload}, timeout=30)
+    body = json_lib.dumps({'requests': requests_payload}, ensure_ascii=False).encode('utf-8')
+    resp = req_lib.post(_http_url(),
+                        headers={**_headers(), 'Content-Type': 'application/json; charset=utf-8'},
+                        data=body, timeout=30)
     if not resp.ok:
         import sys
         print(f"Turso {resp.status_code}: {resp.text[:300]}", file=sys.stderr)
@@ -66,8 +69,9 @@ def _build_args(params):
             else:
                 args.append({'type': 'float', 'value': p})
         else:
-            # Ensure string, strip any problematic chars
-            args.append({'type': 'text', 'value': str(p)})
+            # Encode to UTF-8 explicitly to handle special chars
+            val = str(p).encode('utf-8').decode('utf-8')
+            args.append({'type': 'text', 'value': val})
     return args
 
 # ── Cursor ──
