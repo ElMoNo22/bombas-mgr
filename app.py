@@ -601,29 +601,41 @@ def change_password():
 @app.route('/api/admin/reseed-asignaciones', methods=['POST'])
 @admin_required
 def reseed_asignaciones():
-    """Re-insert asignaciones if table is empty"""
-    import json as json_lib, os
+    """Re-insert asignaciones if table is empty, using bomba/perf data already in DB"""
     conn = get_db()
     cur = conn.execute('SELECT COUNT(*) as n FROM asignaciones')
     count = fetchone_dict(cur)['n']
     if count > 0:
         conn.close()
-        return jsonify({'ok': True, 'msg': f'Ya existen {count} asignaciones, no se reinsertaron'})
-    # Load seed file
-    seed_path = os.path.join(os.path.dirname(__file__), 'seed_asignaciones.json')
-    with open(seed_path, encoding='utf-8') as f:
-        asigs = json_lib.load(f)
+        return jsonify({'ok': True, 'msg': f'Ya existen {count} asignaciones'})
+
+    # Load from seed file if available, otherwise return error
+    import os, json as json_lib
+    seed_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'seed_asignaciones.json')
+    if not os.path.exists(seed_path):
+        conn.close()
+        return jsonify({'error': f'Archivo no encontrado: {seed_path}'}), 404
+
+    try:
+        with open(seed_path, encoding='utf-8') as f:
+            asigs = json_lib.load(f)
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': f'Error leyendo archivo: {str(e)}'}), 500
+
     cur_b = conn.execute('SELECT id, n_equipo FROM bombas')
-    bombas_map = {r['n_equipo']: r['id'] for r in fetchall_dicts(cur_b)}
+    bombas_map = {str(r['n_equipo']): r['id'] for r in fetchall_dicts(cur_b)}
     cur_p = conn.execute('SELECT id, calle, entre, y_col FROM perforaciones')
     perfs_map = {}
     for p in fetchall_dicts(cur_p):
         key = f"{p['calle']}|{p['entre'] or '0'}|{p['y_col'] or '0'}"
         perfs_map[key] = p['id']
+
     inserted = skipped = failed = 0
+    errors = []
     for a in asigs:
-        bid = bombas_map.get(a.get('n_equipo'))
-        pid = perfs_map.get(a.get('perf_key'))
+        bid = bombas_map.get(str(a.get('n_equipo','')))
+        pid = perfs_map.get(a.get('perf_key',''))
         if not bid or not pid:
             skipped += 1
             continue
@@ -631,14 +643,18 @@ def reseed_asignaciones():
             conn.execute('''INSERT INTO asignaciones
                 (bomba_id,perforacion_id,estado,fecha_montaje,fecha_desmontaje,notificada_por,notas)
                 VALUES (?,?,?,?,?,?,?)''',
-                (bid, pid, a.get('estado','Desmontado'), a.get('fecha_montaje'),
-                 a.get('fecha_desmontaje'), a.get('notificada_por'), a.get('notas')))
+                (bid, pid, a.get('estado','Desmontado'),
+                 a.get('fecha_montaje'), a.get('fecha_desmontaje'),
+                 a.get('notificada_por'), a.get('notas')))
             db_commit(conn)
             inserted += 1
         except Exception as e:
             failed += 1
+            if len(errors) < 5:
+                errors.append(str(e))
     conn.close()
-    return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped, 'failed': failed})
+    return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped,
+                   'failed': failed, 'errors': errors})
 
 @app.route('/api/admin/fix-fechas', methods=['POST'])
 @admin_required
