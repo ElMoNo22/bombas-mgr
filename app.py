@@ -77,6 +77,7 @@ def init_db():
             sap_id TEXT,
             id_estadio TEXT,
             observaciones TEXT,
+            ubicacion_fisica TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -132,6 +133,12 @@ def init_db():
         conn.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
                    ('admin', generate_password_hash('bombas2024'), 'admin'))
         db_commit(conn)
+    # Migration: add ubicacion_fisica if not exists
+    try:
+        conn.execute('ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT')
+        db_commit(conn)
+    except Exception:
+        pass  # Column already exists
     conn.close()
 
 def login_required(f):
@@ -246,7 +253,7 @@ def get_bomba(bid):
 def create_bomba():
     data = request.get_json()
     fields = ['n_equipo','tag','tag_extraviado','marca','modelo','hp','kw','amperes',
-              'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones']
+              'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones','ubicacion_fisica']
     vals = [data.get(f) for f in fields]
     conn = get_db()
     try:
@@ -265,13 +272,27 @@ def create_bomba():
 def update_bomba(bid):
     data = request.get_json()
     fields = ['n_equipo','tag','tag_extraviado','marca','modelo','hp','kw','amperes',
-              'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones']
+              'serie','peso_kg','largo_mm','salida','tazones','sap_id','id_estadio','observaciones','ubicacion_fisica']
     sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
     vals = [data.get(f) for f in fields] + [bid]
     conn = get_db()
     conn.execute(f'UPDATE bombas SET {sets} WHERE id = ?', vals)
     db_commit(conn)
     cur = conn.execute('SELECT * FROM bombas WHERE id = ?', (bid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    return jsonify(row)
+
+@app.route('/api/bombas/<int:bid>/ubicacion', methods=['PATCH'])
+@editor_required
+def set_ubicacion(bid):
+    data = request.get_json()
+    ubicacion = data.get('ubicacion_fisica')
+    conn = get_db()
+    conn.execute('UPDATE bombas SET ubicacion_fisica=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                (ubicacion, bid))
+    db_commit(conn)
+    cur = conn.execute('SELECT * FROM bombas WHERE id=?', (bid,))
     row = fetchone_dict(cur)
     conn.close()
     return jsonify(row)
@@ -410,6 +431,9 @@ def create_asignacion():
     ''', (bomba_id, perforacion_id, data.get('estado','Montado'),
           norm_fecha(data.get('fecha_montaje')), norm_fecha(data.get('fecha_desmontaje')),
           data.get('notificada_por'), data.get('notas')))
+    # Auto-set ubicacion_fisica when mounting
+    if data.get('estado','Montado') == 'Montado':
+        conn.execute("UPDATE bombas SET ubicacion_fisica='Montada' WHERE id=?", (bomba_id,))
     db_commit(conn)
     cur2 = conn.execute('''
         SELECT a.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp, p.calle, p.y_col, p.zona
@@ -447,6 +471,11 @@ def desmontar(aid):
     conn.execute('''UPDATE asignaciones SET estado='Desmontado', fecha_desmontaje=?,
         notas=COALESCE(?,notas), updated_at=CURRENT_TIMESTAMP WHERE id=?''',
         (norm_fecha(data.get('fecha_desmontaje')), data.get('notas'), aid))
+    # Get bomba_id to reset ubicacion_fisica
+    cur_a = conn.execute('SELECT bomba_id FROM asignaciones WHERE id=?', (aid,))
+    asig = fetchone_dict(cur_a)
+    if asig:
+        conn.execute("UPDATE bombas SET ubicacion_fisica=NULL WHERE id=?", (asig['bomba_id'],))
     db_commit(conn)
     cur = conn.execute('SELECT * FROM asignaciones WHERE id = ?', (aid,))
     row = fetchone_dict(cur)
