@@ -756,7 +756,7 @@ async function showPerf(pid){
       <div class="di"><div class="di-label">Zona</div><div class="di-val">${normZona(p.zona)}</div></div>
       <div class="di"><div class="di-label">Bombeo</div><div class="di-val">${fmt(p.bombeo)}</div></div>
       <div class="di"><div class="di-label">Prof. trabajo</div><div class="di-val" style="font-family:var(--mono)">${p.prof_trabajo_mts?p.prof_trabajo_mts+' m':'—'}</div></div>
-      <div class="di"><div class="di-label">Cañería</div><div class="di-val">${fmt(p.tipo_caneria)}</div></div>
+      <div class="di"><div class="di-label">Cañería</div><div class="di-val">${fmt(p.tipo_cañeria)}</div></div>
       <div class="di"><div class="di-label">Nivel estático</div><div class="di-val" style="font-family:var(--mono)">${p.nivel_estatico?p.nivel_estatico+' m':'—'}</div></div>
       <div class="di"><div class="di-label">Nivel dinámico</div><div class="di-val" style="font-family:var(--mono)">${p.nivel_dinamico?p.nivel_dinamico+' m':'—'}</div></div>
     </div>
@@ -1125,7 +1125,7 @@ function perfFormHTML(p){
     <div class="g3" style="margin-bottom:10px">
       <div><label>Q medido (m³/h)</label><input type="number" id="pf-q" value="${v('Q_m3h')}" step=".5"></div>
       <div><label>H medida (mca)</label><input type="number" id="pf-h" value="${v('H_mca')}" step="1"></div>
-      <div><label>Tipo cañería</label><input id="pf-can" value="${v('tipo_caneria')}"></div>
+      <div><label>Tipo cañería</label><input id="pf-can" value="${v('tipo_cañeria')}"></div>
     </div>
     <div style="margin-bottom:12px"><label>Observaciones</label><textarea id="pf-obs">${v('observaciones')}</textarea></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1139,7 +1139,7 @@ async function guardarPerf(){
   const data={calle:str('pf-calle'),entre:str('pf-entre'),y_col:str('pf-y'),zona:str('pf-zona'),
     bombeo:str('pf-bombeo'),candado:str('pf-candado'),prof_trabajo_mts:num('pf-prof'),
     nivel_estatico:num('pf-ne'),nivel_dinamico:num('pf-nd'),Q_m3h:num('pf-q'),H_mca:num('pf-h'),
-    tipo_caneria:str('pf-can'),observaciones:str('pf-obs')};
+    tipo_cañeria:str('pf-can'),observaciones:str('pf-obs')};
   const res=currentPerfId?await api(`/api/perforaciones/${currentPerfId}`,'PUT',data):await api('/api/perforaciones','POST',data);
   if(!res||!res.ok){toast('Error al guardar','err');return;}
   const saved=await res.json();
@@ -1460,7 +1460,7 @@ function renderEstadisticas(){
 function exportarExcel(){
   const data=perfsFiltered.length?perfsFiltered:PERFS;
   const headers=['Calle','Entre','Y','Zona','Estado','Modelo','Marca','HP','N° Equipo','TAG','Serie','Prof.(m)','N.Estático','N.Dinámico','Q m³/h','H mca','Cañería'];
-  const rows=data.map(p=>[p.calle,p.entre,p.y_col,normZona(p.zona),p.estado_actual||'—',p.modelo,p.marca,p.hp,p.n_equipo,p.tag,p.serie,p.prof_trabajo_mts,p.nivel_estatico,p.nivel_dinamico,p.Q_m3h,p.H_mca,p.tipo_caneria]);
+  const rows=data.map(p=>[p.calle,p.entre,p.y_col,normZona(p.zona),p.estado_actual||'—',p.modelo,p.marca,p.hp,p.n_equipo,p.tag,p.serie,p.prof_trabajo_mts,p.nivel_estatico,p.nivel_dinamico,p.Q_m3h,p.H_mca,p.tipo_cañeria]);
   const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
   ws['!cols']=[8,8,8,14,12,14,12,6,12,10,10,10,10,10,10,10,20].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Inventario');
