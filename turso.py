@@ -19,10 +19,19 @@ def _send_stmts(stmts):
     """Send list of {sql, args} to Turso, return list of result dicts"""
     requests_payload = [{'type': 'execute', 'stmt': s} for s in stmts]
     requests_payload.append({'type': 'close'})
-    resp = req_lib.post(_http_url(), headers=_headers(),
-                        json={'requests': requests_payload}, timeout=30)
-    resp.raise_for_status()
-    return resp.json()['results']
+    try:
+        resp = req_lib.post(_http_url(), headers=_headers(),
+                            json={'requests': requests_payload}, timeout=30)
+        if resp.status_code == 400:
+            # Log the SQL that caused the error for debugging
+            import sys
+            sqls = [s.get('sql','')[:100] for s in stmts]
+            print(f"Turso 400 error for statements: {sqls}", file=sys.stderr)
+            print(f"Response body: {resp.text[:500]}", file=sys.stderr)
+        resp.raise_for_status()
+        return resp.json()['results']
+    except req_lib.exceptions.HTTPError as e:
+        raise
 
 def _parse_result(result):
     """Parse a single Turso result into list of dicts"""
@@ -103,17 +112,21 @@ class TursoConnection:
         return TursoCursor(rows)
 
     def executemany(self, sql, seq_of_params):
-        """Batch insert — sends all in one HTTP call"""
-        stmts = []
-        for params in seq_of_params:
-            stmt = {'sql': sql}
-            if params:
-                stmt['args'] = _build_args(params)
-            stmts.append(stmt)
-        if stmts:
-            results = _send_stmts(stmts)
-            for r in results:
-                _parse_result(r)
+        """Batch insert in chunks to avoid Turso request size limits"""
+        CHUNK_SIZE = 50
+        params_list = list(seq_of_params)
+        for i in range(0, len(params_list), CHUNK_SIZE):
+            chunk = params_list[i:i+CHUNK_SIZE]
+            stmts = []
+            for params in chunk:
+                stmt = {'sql': sql}
+                if params:
+                    stmt['args'] = _build_args(params)
+                stmts.append(stmt)
+            if stmts:
+                results = _send_stmts(stmts)
+                for r in results:
+                    _parse_result(r)
 
     def executescript(self, sql):
         """Split on ';' and send each statement individually to avoid Turso batch errors"""

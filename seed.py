@@ -49,7 +49,7 @@ if count('perforaciones') == 0:
     with open('seed_perforaciones.json', encoding='utf-8') as f:
         perfs = json.load(f)
     fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
-              'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado']
+              'tipo_caneria','mts_caneria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado']
     sql = f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})'
     params = [[r.get(f) for f in fields] for r in perfs]
     db.executemany(sql, params)

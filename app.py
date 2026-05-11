@@ -67,8 +67,8 @@ def init_db():
         '''CREATE TABLE IF NOT EXISTS perforaciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             calle TEXT, entre TEXT, y_col TEXT, zona TEXT, bombeo TEXT,
-            denominacion TEXT, prof_trabajo_mts REAL, tipo_cañeria TEXT,
-            mts_cañeria TEXT, nivel_estatico REAL, nivel_dinamico REAL,
+            denominacion TEXT, prof_trabajo_mts REAL, tipo_caneria TEXT,
+            mts_caneria TEXT, nivel_estatico REAL, nivel_dinamico REAL,
             Q_m3h REAL, H_mca REAL, candado TEXT, observaciones TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
@@ -335,7 +335,7 @@ def get_perforacion(pid):
 def create_perforacion():
     data = request.get_json()
     fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
-              'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
+              'tipo_caneria','mts_caneria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
     vals = [data.get(f) for f in fields]
     conn = get_db()
     conn.execute(f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
@@ -350,7 +350,7 @@ def create_perforacion():
 def update_perforacion(pid):
     data = request.get_json()
     fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
-              'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
+              'tipo_caneria','mts_caneria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
     sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
     vals = [data.get(f) for f in fields] + [pid]
     conn = get_db()
