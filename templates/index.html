@@ -199,6 +199,18 @@ textarea{resize:vertical;min-height:60px}
       </div>
       <div class="ff"><label>Marca</label><select id="fBMarca" onchange="filtrarBombas()"><option value="">Todas</option></select></div>
       <div class="ff"><label>HP</label><select id="fBHP" onchange="filtrarBombas()"><option value="">Todos</option></select></div>
+      <div class="ff"><label>Ubicación</label>
+        <select id="fBUbic" onchange="filtrarBombas()">
+          <option value="">Todas</option>
+          <option>Montada</option>
+          <option>Pañol</option>
+          <option>Sucursal</option>
+          <option>Grúa</option>
+          <option>PSM Cañero</option>
+          <option>En reparación</option>
+          <option>Baja</option>
+        </select>
+      </div>
     </div>
     <div class="card" style="padding:.5rem 1.1rem"><div id="bombas-lista"></div></div>
     <div class="pagination">
@@ -393,6 +405,13 @@ const fmt = f => (!f||f==='NaT'||f==='null') ? '—' : f;
 const fmtLoc = r => [r.calle, r.entre&&r.entre!=='0'?`e/${r.entre}`:null, r.y_col&&r.y_col!=='0'?`y ${r.y_col}`:null].filter(Boolean).join(' ');
 const normZona = z => {if(!z)return'Sin zona';const l=z.toLowerCase();if(l.includes('sur'))return'La Plata Sur';if(l.includes('norte'))return'La Plata Norte';return z;}
 
+function ubicBadge(u){
+  if(!u)return'<span class="badge b-gray">Sin ubicación</span>';
+  if(u==='Montada')return estadoBadge('Montado');
+  if(u==='Baja')return'<span class="badge b-red">Baja</span>';
+  if(u==='En reparación')return'<span class="badge b-amber">En reparación</span>';
+  return`<span class="badge b-blue">${u}</span>`;
+}
 function estadoBadge(e){
   if(!e||e==='Desmontado')return'<span class="badge b-red">Desmontado</span>';
   if(e==='Montado')return'<span class="badge b-green">Montado</span>';
@@ -627,6 +646,7 @@ function filtrarBombas(){
   const est=document.getElementById('fBEstado').value;
   const marc=document.getElementById('fBMarca').value;
   const hp=document.getElementById('fBHP').value;
+  const ubic=document.getElementById('fBUbic').value;
   bombasFiltered=BOMBAS.filter(b=>{
     if(txt){
       const campos=[b.n_equipo||'',b.tag||'',b.tag_extraviado||'',b.modelo||'',b.marca||'',b.serie||''].map(s=>s.toLowerCase());
@@ -637,6 +657,7 @@ function filtrarBombas(){
       if(est==='disponible'&&b.estado_actual==='Montado')return false;
       if(est==='Desmontado'&&(b.estado_actual==='Montado'||!b.estado_actual))return false;
     }
+    if(ubic&&(b.ubicacion_fisica||'')!==ubic)return false;
     if(marc&&b.marca!==marc)return false;
     if(hp&&String(b.hp)!==hp)return false;
     return true;
@@ -661,7 +682,7 @@ function renderBombas(){
       </div>
       ${isMontado?`<div style="text-align:right;margin-right:8px;font-size:12px;color:var(--text3)">📍 ${loc}</div>`:''}
       <span style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-right:6px">${b.hp?b.hp+' HP':'—'}</span>
-      ${isMontado?estadoBadge('Montado'):'<span class="badge b-blue">Disponible</span>'}
+      ${isMontado?estadoBadge('Montado'):ubicBadge(b.ubicacion_fisica)}
     </div>`;
   });
   document.getElementById('bombas-lista').innerHTML=html||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
@@ -816,6 +837,15 @@ async function showBomba(bid){
       <div class="di"><div class="di-label">Amperes</div><div class="di-val" style="font-family:var(--mono)">${b.amperes||'—'}</div></div>
       <div class="di"><div class="di-label">N° Serie</div><div class="di-val" style="font-family:var(--mono)">${b.serie||'—'}</div></div>
       <div class="di"><div class="di-label">SAP ID</div><div class="di-val" style="font-family:var(--mono)">${b.sap_id||'—'}</div></div>
+      <div class="di" style="grid-column:span 2"><div class="di-label">Ubicación física</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          ${ubicBadge(b.ubicacion_fisica)}
+          ${CAN_EDIT&&!isActMontada?`<select onchange="cambiarUbicacion(${b.id},this.value)" style="max-width:180px;font-size:12px">
+            <option value="">— cambiar —</option>
+            ${['Pañol','Sucursal','Grúa','PSM Cañero','En reparación','Baja'].map(u=>`<option ${b.ubicacion_fisica===u?'selected':''}>${u}</option>`).join('')}
+          </select>`:''}
+        </div>
+      </div>
     </div>
     ${isActMontada?`
       <div style="background:rgba(52,199,123,.06);border:1px solid rgba(52,199,123,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
@@ -1157,6 +1187,12 @@ function bombaFormHTML(b){
       <div><label>SAP ID</label><input id="bf-sap" value="${v('sap_id')}"></div>
     </div>
     <div style="margin-bottom:12px"><label>Observaciones</label><textarea id="bf-obs">${v('observaciones')}</textarea></div>
+    <div style="margin-bottom:12px"><label>Ubicación física</label>
+      <select id="bf-ubic">
+        <option value="">— sin asignar —</option>
+        ${['Montada','Pañol','Sucursal','Grúa','PSM Cañero','En reparación','Baja'].map(u=>`<option ${v('ubicacion_fisica')===u?'selected':''}>${u}</option>`).join('')}
+      </select>
+    </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-sm btn-ghost" onclick="closeModal('form')">Cancelar</button>
       <button class="btn btn-sm" onclick="guardarBomba()">💾 Guardar</button>
@@ -1168,7 +1204,8 @@ async function guardarBomba(){
   const data={n_equipo:str('bf-neq'),tag:str('bf-tag'),tag_extraviado:str('bf-tagv'),
     marca:str('bf-marca'),modelo:str('bf-modelo'),hp:num('bf-hp'),kw:num('bf-kw'),
     amperes:str('bf-amp'),serie:str('bf-serie'),salida:str('bf-salida'),
-    tazones:str('bf-tazones'),sap_id:str('bf-sap'),observaciones:str('bf-obs')};
+    tazones:str('bf-tazones'),sap_id:str('bf-sap'),observaciones:str('bf-obs'),
+    ubicacion_fisica:str('bf-ubic')};
   const res=currentBombaId?await api(`/api/bombas/${currentBombaId}`,'PUT',data):await api('/api/bombas','POST',data);
   if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
   const saved=await res.json();
@@ -1176,6 +1213,18 @@ async function guardarBomba(){
   closeModal('form');
   toast(currentBombaId?'Bomba actualizada':'Bomba creada');
   await loadAll();
+}
+
+async function cambiarUbicacion(bid, ubicacion){
+  if(!ubicacion)return;
+  const res=await api(`/api/bombas/${bid}/ubicacion`,'PATCH',{ubicacion_fisica:ubicacion});
+  if(!res||!res.ok){toast('Error al cambiar ubicación','err');return;}
+  const updated=await res.json();
+  const idx=BOMBAS.findIndex(x=>x.id===bid);
+  if(idx>=0)BOMBAS[idx].ubicacion_fisica=ubicacion;
+  toast(`Ubicación → ${ubicacion}`);
+  filtrarBombas();
+  showBomba(bid);
 }
 
 async function eliminarBomba(bid){
