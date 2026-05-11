@@ -52,93 +52,58 @@ def fetchone_dict(cursor):
 
 def init_db():
     conn = get_db()
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'viewer'
-        );
-        CREATE TABLE IF NOT EXISTS bombas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            n_equipo TEXT UNIQUE,
-            tag TEXT,
-            tag_extraviado TEXT,
-            marca TEXT,
-            modelo TEXT,
-            hp REAL,
-            kw REAL,
-            amperes TEXT,
-            serie TEXT,
-            peso_kg REAL,
-            largo_mm REAL,
-            salida TEXT,
-            tazones TEXT,
-            sap_id TEXT,
-            id_estadio TEXT,
-            observaciones TEXT,
-            ubicacion_fisica TEXT,
+    tables = [
+        '''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL, role TEXT DEFAULT 'viewer')''',
+        '''CREATE TABLE IF NOT EXISTS bombas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, n_equipo TEXT UNIQUE,
+            tag TEXT, tag_extraviado TEXT, marca TEXT, modelo TEXT,
+            hp REAL, kw REAL, amperes TEXT, serie TEXT,
+            peso_kg REAL, largo_mm REAL, salida TEXT, tazones TEXT,
+            sap_id TEXT, id_estadio TEXT, observaciones TEXT, ubicacion_fisica TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS perforaciones (
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE IF NOT EXISTS perforaciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            calle TEXT,
-            entre TEXT,
-            y_col TEXT,
-            zona TEXT,
-            bombeo TEXT,
-            denominacion TEXT,
-            prof_trabajo_mts REAL,
-            tipo_cañeria TEXT,
-            mts_cañeria TEXT,
-            nivel_estatico REAL,
-            nivel_dinamico REAL,
-            Q_m3h REAL,
-            H_mca REAL,
-            candado TEXT,
-            observaciones TEXT,
+            calle TEXT, entre TEXT, y_col TEXT, zona TEXT, bombeo TEXT,
+            denominacion TEXT, prof_trabajo_mts REAL, tipo_cañeria TEXT,
+            mts_cañeria TEXT, nivel_estatico REAL, nivel_dinamico REAL,
+            Q_m3h REAL, H_mca REAL, candado TEXT, observaciones TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS asignaciones (
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE IF NOT EXISTS asignaciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bomba_id INTEGER,
-            perforacion_id INTEGER,
+            bomba_id INTEGER, perforacion_id INTEGER,
             estado TEXT DEFAULT 'Desmontado',
-            fecha_montaje TEXT,
-            fecha_desmontaje TEXT,
-            notificada_por TEXT,
-            relevado_el TEXT,
-            notas TEXT,
+            fecha_montaje TEXT, fecha_desmontaje TEXT,
+            notificada_por TEXT, relevado_el TEXT, notas TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS catalogo (
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE IF NOT EXISTS catalogo (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            marca TEXT,
-            modelo TEXT,
-            para TEXT,
-            hp REAL,
-            etapas TEXT,
-            descarga TEXT,
-            largo_mm TEXT,
-            curva_json TEXT
-        );
-    ''')
-    db_commit(conn)
+            marca TEXT, modelo TEXT, para TEXT, hp REAL,
+            etapas TEXT, descarga TEXT, largo_mm TEXT, curva_json TEXT)'''
+    ]
+    for t in tables:
+        try:
+            conn.execute(t)
+            db_commit(conn)
+        except Exception as e:
+            if 'already exists' not in str(e).lower():
+                raise
+    # Migration: add ubicacion_fisica if column missing
+    try:
+        conn.execute('ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT')
+        db_commit(conn)
+    except Exception:
+        pass
     cur = conn.execute('SELECT id FROM users WHERE username = ?', ('admin',))
     existing = fetchone_dict(cur)
     if not existing:
         conn.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
                    ('admin', generate_password_hash('bombas2024'), 'admin'))
         db_commit(conn)
-    # Migration: add ubicacion_fisica if not exists
-    try:
-        conn.execute('ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT')
-        db_commit(conn)
-    except Exception:
-        pass  # Column already exists
     conn.close()
 
 def login_required(f):

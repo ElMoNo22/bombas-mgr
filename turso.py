@@ -116,18 +116,19 @@ class TursoConnection:
                 _parse_result(r)
 
     def executescript(self, sql):
-        """Split on ';' and send all in one HTTP call"""
+        """Split on ';' and send each statement individually to avoid Turso batch errors"""
         stmts_raw = [s.strip() for s in sql.split(';') if s.strip()]
-        stmts = [{'sql': s} for s in stmts_raw]
-        if stmts:
-            results = _send_stmts(stmts)
-            for r in results:
-                if r.get('type') == 'error':
-                    msg = r.get('error', {})
+        for stmt_sql in stmts_raw:
+            try:
+                results = _send_stmts([{'sql': stmt_sql}])
+                if results and results[0].get('type') == 'error':
+                    msg = results[0].get('error', {})
                     if isinstance(msg, dict): msg = msg.get('message', str(msg))
-                    # Ignore "already exists" errors
-                    if 'already exists' not in str(msg):
+                    if 'already exists' not in str(msg).lower():
                         raise Exception(f'Turso error: {msg}')
+            except Exception as e:
+                if 'already exists' not in str(e).lower():
+                    raise
 
     def commit(self): pass
     def sync(self): pass
