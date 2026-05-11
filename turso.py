@@ -63,11 +63,11 @@ def _build_args(params):
         if p is None:
             args.append({'type': 'null'})
         elif isinstance(p, bool):
-            args.append({'type': 'integer', 'value': str(int(p))})
+            args.append({'type': 'integer', 'value': int(p)})
         elif isinstance(p, int):
-            args.append({'type': 'integer', 'value': str(p)})
+            args.append({'type': 'integer', 'value': p})
         elif isinstance(p, float):
-            args.append({'type': 'float', 'value': str(p)})
+            args.append({'type': 'float', 'value': p})
         else:
             args.append({'type': 'text', 'value': str(p)})
     return args
