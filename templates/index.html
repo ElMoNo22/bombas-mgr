@@ -221,7 +221,9 @@ textarea{resize:vertical;min-height:60px}
     </div>
   </div>
 </div>
-
+                    <li class="nav-item">
+                        <a class="nav-link" id="tab-reparaciones" onclick="showTab('reparaciones')">🔧 Reparaciones</a>
+                    </li>
 <!-- CATÁLOGO, BUSCAR, ANALÍTICA, DATOS panels (simplified placeholders filled by JS) -->
 <div class="panel" id="panel-catalogo">
   <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Catálogo Motorarg</h1><p id="cat-sub" style="font-size:12px;color:var(--text3)"></p></div>
@@ -232,7 +234,48 @@ textarea{resize:vertical;min-height:60px}
   </div>
   <div class="card" style="padding:.5rem 1.1rem"><div id="cat-lista"></div></div>
 </div>
+<!-- ====================== REPARACIONES ====================== -->
+<div id="content-reparaciones" class="tab-content" style="display: none; padding: 20px;">
+    <h2>🔧 Gestión de Reparaciones de Bombas</h2>
+    
+    <div class="mb-3">
+        <button class="btn btn-primary" onclick="nuevaReparacion()">+ Nueva Reparación</button>
+        <button class="btn btn-success ms-2" onclick="cargarListaReparaciones()">Actualizar Lista</button>
+    </div>
 
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <input type="text" id="filtro-equipo" class="form-control" placeholder="N° Equipo o Tag">
+        </div>
+        <div class="col-md-3">
+            <select id="filtro-estado" class="form-control">
+                <option value="">Todos los estados</option>
+                <option value="Entregada">Entregada</option>
+                <option value="En reparación">En reparación</option>
+                <option value="Pendiente">Pendiente</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-info" onclick="cargarListaReparaciones()">Filtrar</button>
+        </div>
+    </div>
+
+    <table class="table table-striped" id="tabla-reparaciones">
+        <thead class="table-dark">
+            <tr>
+                <th>Fecha Envío</th>
+                <th>N° Equipo</th>
+                <th>Tag</th>
+                <th>Proveedor</th>
+                <th>Estado</th>
+                <th>Solped / NP</th>
+                <th>Fecha Entrega</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
 <div class="panel" id="panel-buscar">
   <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Buscar equivalente</h1></div>
   <div class="card">
@@ -1573,6 +1616,50 @@ if(CAN_ADMIN)document.getElementById('tabUsers').style.display='';
 if(!CAN_EDIT)document.querySelectorAll('.btn-new-perf').forEach(b=>b.style.display='none');
 document.querySelector('.htab[onclick*="analitica"]').addEventListener('click',()=>setTimeout(()=>showSubAnal('rango'),100));
 loadAll();
+</script>
+<script>
+// ====================== REPARACIONES ======================
+function showTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    const content = document.getElementById(`content-${tab}`);
+    if (content) content.style.display = 'block';
+
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const active = document.getElementById(`tab-${tab}`);
+    if (active) active.classList.add('active');
+
+    if (tab === 'reparaciones') cargarListaReparaciones();
+}
+
+async function cargarListaReparaciones() {
+    try {
+        const res = await fetch('/api/reparaciones');
+        const data = await res.json();
+        const tbody = document.querySelector('#tabla-reparaciones tbody');
+        tbody.innerHTML = data.map(r => `
+            <tr>
+                <td>${r.fecha_envio || ''}</td>
+                <td><strong>${r.numero_equipo}</strong></td>
+                <td>${r.tag_principal || ''}</td>
+                <td>${r.proveedor}</td>
+                <td><span class="badge bg-${r.estado === 'Entregada' ? 'success' : 'warning'}">${r.estado}</span></td>
+                <td>${r.solped || ''}</td>
+                <td>${r.fecha_entrega || ''}</td>
+                <td><button class="btn btn-sm btn-warning" onclick="editarReparacion(${r.id})">Editar</button></td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function nuevaReparacion() {
+    alert("Nueva Reparación - En desarrollo");
+}
+
+function editarReparacion(id) {
+    alert("Editar reparación ID: " + id);
+}
 </script>
 </body>
 </html>
