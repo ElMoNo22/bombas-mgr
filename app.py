@@ -10,14 +10,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024')
 # ── DB CONNECTION ──
 def norm_fecha(s):
     """Normalize date to yyyy-mm-dd internally (for correct DB sorting)"""
-    import re
     if not s: return None
     s = str(s).strip()
     if s in ('nan','NaT','None',''): return None
-    # dd/mm/yyyy or dd-mm-yyyy → yyyy-mm-dd
     m = re.match(r'^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$', s)
     if m: return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
-    # Already yyyy-mm-dd
     if re.match(r'^\d{4}-\d{2}-\d{2}$', s): return s
     return s
 
@@ -27,10 +24,6 @@ def get_db():
 def db_commit(conn):
     conn.commit()
 
-def row_to_dict(row):
-    if row is None: return None
-    return dict(row)
-
 def fetchall_dicts(cursor):
     rows = cursor.fetchall()
     result = []
@@ -38,7 +31,6 @@ def fetchall_dicts(cursor):
         try:
             result.append(dict(r))
         except Exception:
-            # sqlite3.Row needs keys()
             result.append({k: r[k] for k in r.keys()})
     return result
 
@@ -83,7 +75,52 @@ def init_db():
         '''CREATE TABLE IF NOT EXISTS catalogo (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             marca TEXT, modelo TEXT, para TEXT, hp REAL,
-            etapas TEXT, descarga TEXT, largo_mm TEXT, curva_json TEXT)'''
+            etapas TEXT, descarga TEXT, largo_mm TEXT, curva_json TEXT)''',
+        # ── REPARACIONES ──
+        '''CREATE TABLE IF NOT EXISTS reparaciones (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha_envio          TEXT,
+            remito               TEXT,
+            proveedor            TEXT,
+            descripcion          TEXT,
+            servicio             TEXT,
+            tag_actual           TEXT,
+            tag_reemplazado      TEXT,
+            numero_equipo        TEXT,
+            marca                TEXT,
+            modelo               TEXT,
+            hp                   TEXT,
+            kw                   TEXT,
+            amperes              TEXT,
+            serie                TEXT,
+            centro               TEXT,
+            ceco                 TEXT,
+            referencia           TEXT,
+            presupuesto          TEXT,
+            fecha_cotizacion     TEXT,
+            costo_usd            REAL,
+            estado_autorizacion  TEXT,
+            fecha_autorizacion   TEXT,
+            om                   TEXT,
+            solped               TEXT,
+            fecha_solped         TEXT,
+            liberacion           TEXT,
+            fecha_liberacion     TEXT,
+            estadio              TEXT,
+            gcp                  TEXT,
+            nota_justificacion   TEXT,
+            np                   TEXT,
+            fecha_np_generacion  TEXT,
+            fecha_np_envio_prov  TEXT,
+            estado_entrega       TEXT,
+            fecha_entrega        TEXT,
+            remito_entrega       TEXT,
+            observaciones        TEXT,
+            responsable          TEXT,
+            estado               TEXT DEFAULT 'En reparación',
+            usuario_registro     TEXT,
+            created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
     ]
     for t in tables:
         try:
@@ -92,20 +129,24 @@ def init_db():
         except Exception as e:
             if 'already exists' not in str(e).lower():
                 raise
-    # Migration: add ubicacion_fisica if column missing
-    try:
-        conn.execute('ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT')
-        db_commit(conn)
-    except Exception:
-        pass
+    # Migrations
+    for migration in [
+        'ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT',
+    ]:
+        try:
+            conn.execute(migration)
+            db_commit(conn)
+        except Exception:
+            pass
+
     cur = conn.execute('SELECT id FROM users WHERE username = ?', ('admin',))
-    existing = fetchone_dict(cur)
-    if not existing:
+    if not fetchone_dict(cur):
         conn.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
                    ('admin', generate_password_hash('bombas2024'), 'admin'))
         db_commit(conn)
     conn.close()
 
+# ── AUTH DECORATORS ──
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -136,6 +177,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+# ── PAGES ──
 @app.route('/')
 @login_required
 def index():
@@ -396,7 +438,6 @@ def create_asignacion():
     ''', (bomba_id, perforacion_id, data.get('estado','Montado'),
           norm_fecha(data.get('fecha_montaje')), norm_fecha(data.get('fecha_desmontaje')),
           data.get('notificada_por'), data.get('notas')))
-    # Auto-set ubicacion_fisica when mounting
     if data.get('estado','Montado') == 'Montado':
         conn.execute("UPDATE bombas SET ubicacion_fisica='Montada' WHERE id=?", (bomba_id,))
     db_commit(conn)
@@ -416,9 +457,8 @@ def update_asignacion(aid):
     fields = ['estado','fecha_montaje','fecha_desmontaje','notificada_por','relevado_el','notas']
     sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
     raw = [data.get(f) for f in fields]
-    # Normalize date fields
-    raw[1] = norm_fecha(raw[1])  # fecha_montaje
-    raw[2] = norm_fecha(raw[2])  # fecha_desmontaje
+    raw[1] = norm_fecha(raw[1])
+    raw[2] = norm_fecha(raw[2])
     vals = raw + [aid]
     conn = get_db()
     conn.execute(f'UPDATE asignaciones SET {sets} WHERE id = ?', vals)
@@ -436,7 +476,6 @@ def desmontar(aid):
     conn.execute('''UPDATE asignaciones SET estado='Desmontado', fecha_desmontaje=?,
         notas=COALESCE(?,notas), updated_at=CURRENT_TIMESTAMP WHERE id=?''',
         (norm_fecha(data.get('fecha_desmontaje')), data.get('notas'), aid))
-    # Get bomba_id to reset ubicacion_fisica
     cur_a = conn.execute('SELECT bomba_id FROM asignaciones WHERE id=?', (aid,))
     asig = fetchone_dict(cur_a)
     if asig:
@@ -456,7 +495,7 @@ def delete_asignacion(aid):
     conn.close()
     return jsonify({'ok': True})
 
-# ── CATALOGO ──
+# ── CATÁLOGO ──
 @app.route('/api/catalogo', methods=['GET'])
 @login_required
 def get_catalogo():
@@ -518,9 +557,183 @@ def get_stats():
             JOIN bombas b ON a.bomba_id=b.id
             WHERE a.estado='Montado' AND b.modelo IS NOT NULL
             GROUP BY b.modelo ORDER BY n DESC LIMIT 10'''),
+        'en_reparacion': scalar("SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')"),
     }
     conn.close()
     return jsonify(stats)
+
+# ── REPARACIONES ──
+ESTADOS_REPARACION = [
+    'Pendiente cotización',
+    'En reparación',
+    'Esperando SOLPED',
+    'Esperando NP',
+    'Esperando retiro',
+    'Entregada',
+    'Cancelada',
+]
+
+REP_FIELDS = [
+    'fecha_envio','remito','proveedor','descripcion','servicio',
+    'tag_actual','tag_reemplazado','numero_equipo','marca','modelo',
+    'hp','kw','amperes','serie','centro','ceco','referencia',
+    'presupuesto','fecha_cotizacion','costo_usd',
+    'estado_autorizacion','fecha_autorizacion',
+    'om','solped','fecha_solped','liberacion','fecha_liberacion',
+    'estadio','gcp','nota_justificacion',
+    'np','fecha_np_generacion','fecha_np_envio_prov',
+    'estado_entrega','fecha_entrega','remito_entrega',
+    'observaciones','responsable','estado','usuario_registro'
+]
+REP_DATE_FIELDS = {
+    'fecha_envio','fecha_cotizacion','fecha_autorizacion','fecha_solped',
+    'fecha_liberacion','fecha_np_generacion','fecha_np_envio_prov','fecha_entrega'
+}
+
+@app.route('/api/reparaciones', methods=['GET'])
+@login_required
+def get_reparaciones():
+    conn = get_db()
+    numero_equipo = request.args.get('numero_equipo', '').strip()
+    estado        = request.args.get('estado', '').strip()
+    proveedor     = request.args.get('proveedor', '').strip()
+    activa        = request.args.get('activa', '').strip()
+
+    query = 'SELECT * FROM reparaciones WHERE 1=1'
+    params = []
+    if numero_equipo:
+        query += ' AND numero_equipo LIKE ?'
+        params.append(f'%{numero_equipo}%')
+    if estado:
+        query += ' AND estado = ?'
+        params.append(estado)
+    if proveedor:
+        query += ' AND proveedor LIKE ?'
+        params.append(f'%{proveedor}%')
+    if activa == '1':
+        query += " AND estado NOT IN ('Entregada','Cancelada')"
+    elif activa == '0':
+        query += " AND estado IN ('Entregada','Cancelada')"
+    query += ' ORDER BY fecha_envio DESC, id DESC'
+
+    cur = conn.execute(query, params)
+    rows = fetchall_dicts(cur)
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/reparaciones/<int:rid>', methods=['GET'])
+@login_required
+def get_reparacion(rid):
+    conn = get_db()
+    cur = conn.execute('SELECT * FROM reparaciones WHERE id = ?', (rid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    if not row:
+        return jsonify({'error': 'No encontrado'}), 404
+    return jsonify(row)
+
+@app.route('/api/reparaciones', methods=['POST'])
+@editor_required
+def create_reparacion():
+    data = request.get_json()
+    fields = REP_FIELDS
+    vals = []
+    for f in fields:
+        v = data.get(f)
+        if f in REP_DATE_FIELDS:
+            v = norm_fecha(v)
+        if f == 'usuario_registro' and not v:
+            v = session.get('username', 'sistema')
+        vals.append(v)
+    conn = get_db()
+    try:
+        conn.execute(
+            f'INSERT INTO reparaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})',
+            vals
+        )
+        db_commit(conn)
+        cur = conn.execute('SELECT * FROM reparaciones ORDER BY id DESC LIMIT 1')
+        row = fetchone_dict(cur)
+        conn.close()
+        return jsonify(row), 201
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reparaciones/<int:rid>', methods=['PUT'])
+@editor_required
+def update_reparacion(rid):
+    data = request.get_json()
+    fields = [f for f in REP_FIELDS if f != 'usuario_registro']
+    vals = []
+    for f in fields:
+        v = data.get(f)
+        if f in REP_DATE_FIELDS:
+            v = norm_fecha(v)
+        vals.append(v)
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
+    vals.append(rid)
+    conn = get_db()
+    conn.execute(f'UPDATE reparaciones SET {sets} WHERE id = ?', vals)
+    db_commit(conn)
+    cur = conn.execute('SELECT * FROM reparaciones WHERE id = ?', (rid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    return jsonify(row)
+
+@app.route('/api/reparaciones/<int:rid>', methods=['DELETE'])
+@admin_required
+def delete_reparacion(rid):
+    conn = get_db()
+    conn.execute('DELETE FROM reparaciones WHERE id = ?', (rid,))
+    db_commit(conn)
+    conn.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/reparaciones/estados', methods=['GET'])
+@login_required
+def get_estados_reparacion():
+    return jsonify(ESTADOS_REPARACION)
+
+@app.route('/api/import/reparaciones', methods=['POST'])
+@admin_required
+def import_reparaciones():
+    """Importa registros desde seed_reparaciones.json al DB."""
+    import os as _os
+    seed_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'seed_reparaciones.json')
+    if not _os.path.exists(seed_path):
+        return jsonify({'error': f'No se encontró {seed_path}'}), 404
+    try:
+        with open(seed_path, encoding='utf-8') as f:
+            records = json.load(f)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    conn = get_db()
+    inserted = skipped = errors = 0
+    err_list = []
+    for r in records:
+        cur = conn.execute(
+            'SELECT id FROM reparaciones WHERE remito=? AND numero_equipo=?',
+            (r.get('remito'), r.get('numero_equipo'))
+        )
+        if cur.fetchone():
+            skipped += 1
+            continue
+        vals = [r.get(f) for f in REP_FIELDS]
+        try:
+            conn.execute(
+                f'INSERT INTO reparaciones ({",".join(REP_FIELDS)}) VALUES ({",".join(["?"]*len(REP_FIELDS))})',
+                vals
+            )
+            db_commit(conn)
+            inserted += 1
+        except Exception as e:
+            errors += 1
+            if len(err_list) < 5:
+                err_list.append(str(e))
+    conn.close()
+    return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped,
+                    'errors': errors, 'error_list': err_list})
 
 # ── USERS ──
 @app.route('/api/users', methods=['GET'])
@@ -546,7 +759,7 @@ def create_user():
         conn.execute('INSERT INTO users (username,password_hash,role) VALUES (?,?,?)',
                    (username, generate_password_hash(password), role))
         db_commit(conn)
-    except Exception as e:
+    except Exception:
         conn.close()
         return jsonify({'error': 'Usuario ya existe'}), 409
     conn.close()
@@ -598,31 +811,26 @@ def change_password():
     conn.close()
     return jsonify({'ok': True})
 
+# ── ADMIN UTILS ──
 @app.route('/api/admin/reseed-asignaciones', methods=['POST'])
 @admin_required
 def reseed_asignaciones():
-    """Re-insert asignaciones if table is empty, using bomba/perf data already in DB"""
     conn = get_db()
     cur = conn.execute('SELECT COUNT(*) as n FROM asignaciones')
     count = fetchone_dict(cur)['n']
     if count > 0:
         conn.close()
         return jsonify({'ok': True, 'msg': f'Ya existen {count} asignaciones'})
-
-    # Load from seed file if available, otherwise return error
-    import os, json as json_lib
     seed_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'seed_asignaciones.json')
     if not os.path.exists(seed_path):
         conn.close()
         return jsonify({'error': f'Archivo no encontrado: {seed_path}'}), 404
-
     try:
         with open(seed_path, encoding='utf-8') as f:
-            asigs = json_lib.load(f)
+            asigs = json.load(f)
     except Exception as e:
         conn.close()
         return jsonify({'error': f'Error leyendo archivo: {str(e)}'}), 500
-
     cur_b = conn.execute('SELECT id, n_equipo FROM bombas')
     bombas_map = {str(r['n_equipo']): r['id'] for r in fetchall_dicts(cur_b)}
     cur_p = conn.execute('SELECT id, calle, entre, y_col FROM perforaciones')
@@ -630,7 +838,6 @@ def reseed_asignaciones():
     for p in fetchall_dicts(cur_p):
         key = f"{p['calle']}|{p['entre'] or '0'}|{p['y_col'] or '0'}"
         perfs_map[key] = p['id']
-
     inserted = skipped = failed = 0
     errors = []
     for a in asigs:
@@ -659,7 +866,6 @@ def reseed_asignaciones():
 @app.route('/api/admin/fix-fechas', methods=['POST'])
 @admin_required
 def fix_fechas():
-    """Normalize all dates in asignaciones to yyyy-mm-dd format"""
     conn = get_db()
     cur = conn.execute('SELECT id, fecha_montaje, fecha_desmontaje FROM asignaciones')
     rows = fetchall_dicts(cur)
@@ -674,63 +880,6 @@ def fix_fechas():
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True, 'fixed': fixed})
-# ====================== REPARACIONES ======================
-
-@app.route('/api/reparaciones', methods=['GET'])
-@login_required
-def get_reparaciones():
-    try:
-        numero_equipo = request.args.get('numero_equipo')
-        
-        query = """
-            SELECT r.*, e.tag_principal, e.marca, e.modelo 
-            FROM reparaciones r
-            LEFT JOIN equipos_bombas e ON r.numero_equipo = e.numero_equipo
-            ORDER BY r.fecha_envio DESC, r.id DESC
-        """
-        if numero_equipo:
-            query = """
-                SELECT r.*, e.tag_principal, e.marca, e.modelo 
-                FROM reparaciones r
-                LEFT JOIN equipos_bombas e ON r.numero_equipo = e.numero_equipo
-                WHERE r.numero_equipo LIKE ?
-                ORDER BY r.fecha_envio DESC, r.id DESC
-            """
-            return jsonify(fetchall_dicts(query, [f"%{numero_equipo}%"]))
-        
-        return jsonify(fetchall_dicts(query))
-    except Exception as e:
-        print("Error en get_reparaciones:", str(e))
-        return jsonify([]), 500
-
-
-@app.route('/api/reparaciones', methods=['POST'])
-@login_required
-def create_reparacion():
-    try:
-        data = request.get_json()
-        query = """
-            INSERT INTO reparaciones 
-            (numero_equipo, proveedor, remito, fecha_envio, descripcion, servicio, 
-             presupuesto, costo_sin_iva, solped, fecha_solped, np, fecha_np, 
-             liberacion, estado, fecha_entrega, responsable, nota_justificacion, 
-             observaciones, usuario_registro)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        params = [
-            data.get('numero_equipo'), data.get('proveedor'), data.get('remito'),
-            data.get('fecha_envio'), data.get('descripcion'), data.get('servicio'),
-            data.get('presupuesto'), data.get('costo_sin_iva'), data.get('solped'),
-            data.get('fecha_solped'), data.get('np'), data.get('fecha_np'),
-            data.get('liberacion'), data.get('estado'), data.get('fecha_entrega'),
-            data.get('responsable'), data.get('nota_justificacion'), 
-            data.get('observaciones'), session.get('username', 'admin')
-        ]
-        execute_query(query, params)
-        return jsonify({"status": "success", "message": "Reparación registrada"})
-    except Exception as e:
-        print("Error en create_reparacion:", str(e))
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     init_db()
