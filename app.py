@@ -677,7 +677,7 @@ def fix_fechas():
 # ====================== REPARACIONES ======================
 
 @app.route('/api/reparaciones', methods=['GET'])
-@token_required
+@login_required   # ← Cambiado aquí
 def get_reparaciones():
     numero_equipo = request.args.get('numero_equipo')
     estado = request.args.get('estado')
@@ -701,7 +701,7 @@ def get_reparaciones():
 
 
 @app.route('/api/reparaciones', methods=['POST'])
-@token_required
+@login_required   # ← Cambiado aquí
 def create_reparacion():
     data = request.get_json()
     query = """
@@ -719,14 +719,14 @@ def create_reparacion():
         data.get('fecha_solped'), data.get('np'), data.get('fecha_np'),
         data.get('liberacion'), data.get('estado'), data.get('fecha_entrega'),
         data.get('responsable'), data.get('nota_justificacion'), 
-        data.get('observaciones'), g.current_user['username']
+        data.get('observaciones'), session.get('username')   # ← Adaptado a tu sistema
     ]
     execute_query(query, params)
     return jsonify({"status": "success", "message": "Reparación registrada correctamente"})
 
 
 @app.route('/api/reparaciones/<int:id>', methods=['PUT'])
-@token_required
+@login_required
 def update_reparacion(id):
     data = request.get_json()
     query = """
@@ -750,7 +750,7 @@ def update_reparacion(id):
 
 
 @app.route('/api/reparaciones/<int:id>', methods=['DELETE'])
-@token_required
+@login_required
 def delete_reparacion(id):
     execute_query("DELETE FROM reparaciones WHERE id = ?", [id])
     return jsonify({"status": "success", "message": "Reparación eliminada"})
