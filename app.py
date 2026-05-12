@@ -674,6 +674,86 @@ def fix_fechas():
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True, 'fixed': fixed})
+# ====================== REPARACIONES ======================
+
+@app.route('/api/reparaciones', methods=['GET'])
+@token_required
+def get_reparaciones():
+    numero_equipo = request.args.get('numero_equipo')
+    estado = request.args.get('estado')
+    
+    query = """
+        SELECT r.*, e.tag_principal, e.marca, e.modelo 
+        FROM reparaciones r
+        LEFT JOIN equipos_bombas e ON r.numero_equipo = e.numero_equipo
+        WHERE 1=1
+    """
+    params = []
+    if numero_equipo:
+        query += " AND r.numero_equipo LIKE ?"
+        params.append(f"%{numero_equipo}%")
+    if estado:
+        query += " AND r.estado = ?"
+        params.append(estado)
+    
+    query += " ORDER BY COALESCE(r.fecha_envio, r.fecha_registro) DESC"
+    return jsonify(fetchall_dicts(query, params))
+
+
+@app.route('/api/reparaciones', methods=['POST'])
+@token_required
+def create_reparacion():
+    data = request.get_json()
+    query = """
+        INSERT INTO reparaciones 
+        (numero_equipo, proveedor, remito, fecha_envio, descripcion, servicio, 
+         presupuesto, costo_sin_iva, solped, fecha_solped, np, fecha_np, 
+         liberacion, estado, fecha_entrega, responsable, nota_justificacion, 
+         observaciones, usuario_registro)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    params = [
+        data.get('numero_equipo'), data.get('proveedor'), data.get('remito'),
+        data.get('fecha_envio'), data.get('descripcion'), data.get('servicio'),
+        data.get('presupuesto'), data.get('costo_sin_iva'), data.get('solped'),
+        data.get('fecha_solped'), data.get('np'), data.get('fecha_np'),
+        data.get('liberacion'), data.get('estado'), data.get('fecha_entrega'),
+        data.get('responsable'), data.get('nota_justificacion'), 
+        data.get('observaciones'), g.current_user['username']
+    ]
+    execute_query(query, params)
+    return jsonify({"status": "success", "message": "Reparación registrada correctamente"})
+
+
+@app.route('/api/reparaciones/<int:id>', methods=['PUT'])
+@token_required
+def update_reparacion(id):
+    data = request.get_json()
+    query = """
+        UPDATE reparaciones 
+        SET proveedor=?, remito=?, fecha_envio=?, descripcion=?, servicio=?,
+            presupuesto=?, costo_sin_iva=?, solped=?, fecha_solped=?, np=?, 
+            fecha_np=?, liberacion=?, estado=?, fecha_entrega=?, responsable=?,
+            nota_justificacion=?, observaciones=?
+        WHERE id = ?
+    """
+    params = [
+        data.get('proveedor'), data.get('remito'), data.get('fecha_envio'),
+        data.get('descripcion'), data.get('servicio'), data.get('presupuesto'),
+        data.get('costo_sin_iva'), data.get('solped'), data.get('fecha_solped'),
+        data.get('np'), data.get('fecha_np'), data.get('liberacion'),
+        data.get('estado'), data.get('fecha_entrega'), data.get('responsable'),
+        data.get('nota_justificacion'), data.get('observaciones'), id
+    ]
+    execute_query(query, params)
+    return jsonify({"status": "success", "message": "Reparación actualizada"})
+
+
+@app.route('/api/reparaciones/<int:id>', methods=['DELETE'])
+@token_required
+def delete_reparacion(id):
+    execute_query("DELETE FROM reparaciones WHERE id = ?", [id])
+    return jsonify({"status": "success", "message": "Reparación eliminada"})
 
 if __name__ == '__main__':
     init_db()
