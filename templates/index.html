@@ -345,6 +345,12 @@ textarea{resize:vertical;min-height:60px}
     <button class="stab" id="tabUsers" style="display:none" onclick="showSubDatos('usuarios')">Usuarios</button>
   </div>
   <div id="subdatos-catalogo">
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title">Importar historial de reparaciones</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Carga el historial completo desde <span style="font-family:var(--mono);color:var(--accent)">seed_reparaciones.json</span> a Turso. Salta duplicados — se puede correr más de una vez sin problema.</p>
+      <button class="btn btn-sm" onclick="importarReparaciones()" id="btn-import-rep">⬆ Importar reparaciones</button>
+      <div id="import-rep-status" style="margin-top:8px;font-size:13px;font-family:var(--mono)"></div>
+    </div>
     <div class="card">
       <div class="card-title">Importar catálogo de bombas (curvas H-Q)</div>
       <div style="border:2px dashed var(--border2);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;background:var(--bg3);position:relative" id="dropCat"
@@ -1700,6 +1706,32 @@ function exportarExcel(){
   const ws=XLSX.utils.json_to_sheet(data);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Bombas');
   XLSX.writeFile(wb,'inventario_bombas.xlsx');
+}
+
+// ══ IMPORT REPARACIONES ══
+async function importarReparaciones(){
+  const btn=document.getElementById('btn-import-rep');
+  const status=document.getElementById('import-rep-status');
+  btn.disabled=true;btn.textContent='Importando...';
+  status.innerHTML='<span style="color:var(--amber)">⏳ Conectando con Turso...</span>';
+  try{
+    const res=await api('/api/import/reparaciones','POST');
+    if(!res||!res.ok){
+      const e=await res.json();
+      status.innerHTML=`<span style="color:var(--red)">❌ Error: ${e.error||'desconocido'}</span>`;
+      return;
+    }
+    const d=await res.json();
+    status.innerHTML=`<span style="color:var(--green)">✅ Insertados: ${d.inserted} · Duplicados saltados: ${d.skipped} · Errores: ${d.errors}</span>`;
+    toast(`${d.inserted} reparaciones importadas`);
+    // Reload reparaciones data
+    const rr=await api('/api/reparaciones');
+    if(rr&&rr.ok){REPARACIONES=await rr.json();initRepFilters();filtrarReps();}
+  }catch(err){
+    status.innerHTML=`<span style="color:var(--red)">❌ ${err.message}</span>`;
+  }finally{
+    btn.disabled=false;btn.textContent='⬆ Importar reparaciones';
+  }
 }
 
 // ══ INIT ══
