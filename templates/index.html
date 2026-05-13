@@ -785,6 +785,7 @@ function renderReps(){
   let html='';
   repsFiltered.slice(start,end).forEach(r=>{
     const solpedNP=[r.solped?`S:${r.solped}`:null,r.np?`NP:${r.np}`:null].filter(Boolean).join(' / ')||'—';
+    const remEnt=r.remito_entrega?`R.ent:${r.remito_entrega}`:null;
     const bombaInfo=[r.marca,r.modelo].filter(Boolean).join(' ')||'—';
     html+=`<tr onclick="showRep(${r.id})" style="cursor:pointer">
       <td class="mono">${fmtFechaDisplay(r.fecha_envio)}</td>
@@ -843,10 +844,16 @@ function repFormHTML(r){
     <div class="g3" style="margin-bottom:10px;margin-top:10px">
       <div><label>N° SOLPED</label><input id="rf-solped" value="${v('solped')}"></div>
       <div><label>Fecha SOLPED</label><input id="rf-fsolped" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_solped')}"></div>
-      <div></div>
+      <div><label>GCp</label><input id="rf-gcp" value="${v('gcp')}"></div>
       <div><label>N° NP</label><input id="rf-np" value="${v('np')}"></div>
-      <div><label>Fecha NP</label><input id="rf-fnp" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_np')}"></div>
+      <div><label>Fecha generación NP</label><input id="rf-fnpgen" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_np_generacion')}"></div>
+      <div><label>Fecha envío NP prov.</label><input id="rf-fnpenv" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_np_envio_prov')}"></div>
+    </div>
+    <div class="section-divider" style="margin-top:4px">Datos de entrega</div>
+    <div class="g3" style="margin-bottom:10px;margin-top:10px">
+      <div><label>Remito de entrega</label><input id="rf-remito-ent" value="${v('remito_entrega')}"></div>
       <div><label>Fecha entrega</label><input id="rf-fentrega" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_entrega')}"></div>
+      <div><label>Estado entrega</label><input id="rf-est-ent" value="${v('estado_entrega')}"></div>
     </div>
     <div style="margin-bottom:12px"><label>Nota / justificación</label><input id="rf-nota" value="${v('nota_justificacion')}"></div>
     <div style="margin-bottom:14px"><label>Observaciones</label><textarea id="rf-obs" style="min-height:50px">${v('observaciones')}</textarea></div>
@@ -880,8 +887,12 @@ async function guardarRep(){
     fecha_envio:normFecha(str('rf-fenvio')),descripcion:str('rf-desc'),servicio:str('rf-serv'),
     presupuesto:str('rf-presup'),costo_usd:num('rf-costo'),
     solped:str('rf-solped'),fecha_solped:normFecha(str('rf-fsolped')),
-    np:str('rf-np'),fecha_np:normFecha(str('rf-fnp')),
+    np:str('rf-np'),
+    fecha_np_generacion:normFecha(str('rf-fnpgen')),
+    fecha_np_envio_prov:normFecha(str('rf-fnpenv')),
+    gcp:str('rf-gcp'),
     liberacion:str('rf-liber'),estado:str('rf-estado'),
+    remito_entrega:str('rf-remito-ent'),estado_entrega:str('rf-est-ent'),
     fecha_entrega:normFecha(str('rf-fentrega')),responsable:str('rf-resp'),
     nota_justificacion:str('rf-nota'),observaciones:str('rf-obs'),
   };
@@ -927,9 +938,16 @@ async function showRep(rid){
     <div class="section-divider">Gestión administrativa</div>
     <div class="g3" style="margin:10px 0">
       <div class="di"><div class="di-label">SOLPED</div><div class="di-val mono">${r.solped||'—'}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${fmtFechaDisplay(r.fecha_solped)}</div></div>
-      <div class="di"><div class="di-label">NP</div><div class="di-val mono">${r.np||'—'}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${fmtFechaDisplay(r.fecha_np)}</div></div>
-      <div class="di"><div class="di-label">Registrada por</div><div class="di-val">${r.usuario_registro||'—'}</div></div>
+      <div class="di"><div class="di-label">NP</div><div class="di-val mono">${r.np||'—'}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Generación: ${fmtFechaDisplay(r.fecha_np_generacion)}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">Envío prov.: ${fmtFechaDisplay(r.fecha_np_envio_prov)}</div></div>
+      <div class="di"><div class="di-label">GCp / Responsable</div><div class="di-val">${r.gcp||r.usuario_registro||'—'}</div></div>
     </div>
+    ${r.estado==='Entregada'||r.remito_entrega||r.fecha_entrega?`
+    <div class="section-divider">Datos de entrega</div>
+    <div class="g3" style="margin:10px 0">
+      <div class="di"><div class="di-label">Remito de entrega</div><div class="di-val mono" style="color:var(--green)">${r.remito_entrega||'—'}</div></div>
+      <div class="di"><div class="di-label">Fecha de entrega</div><div class="di-val mono" style="color:var(--green)">${fmtFechaDisplay(r.fecha_entrega)}</div></div>
+      <div class="di"><div class="di-label">Estado entrega</div><div class="di-val">${r.estado_entrega||r.estado||'—'}</div></div>
+    </div>`:''}
     ${r.nota_justificacion||r.observaciones?`<div class="obs-box">⚠ ${r.nota_justificacion||r.observaciones}</div>`:''}
     ${CAN_EDIT?`<div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-sm btn-ghost" onclick="closeModal('rep');editarRep(${r.id})">✏ Editar</button>
@@ -953,9 +971,11 @@ function exportarExcelRep(){
     'Fecha Envío':fmtFechaDisplay(r.fecha_envio),'N° Equipo':r.numero_equipo,'Marca':r.marca,
     'Modelo':r.modelo,'TAG':r.tag,'Proveedor':r.proveedor,'Servicio':r.servicio,
     'Estado':r.estado,'SOLPED':r.solped,'Fecha SOLPED':fmtFechaDisplay(r.fecha_solped),
-    'NP':r.np,'Fecha NP':fmtFechaDisplay(r.fecha_np),'Costo sin IVA':r.costo_usd,
-    'Liberación':r.liberacion,'Fecha Entrega':fmtFechaDisplay(r.fecha_entrega),
-    'Responsable':r.responsable,'Observaciones':r.observaciones
+    'NP':r.np,'Fecha generación NP':fmtFechaDisplay(r.fecha_np_generacion),
+    'Fecha envío NP prov.':fmtFechaDisplay(r.fecha_np_envio_prov),
+    'Costo U$D':r.costo_usd,'Liberación':r.liberacion,
+    'Remito entrega':r.remito_entrega,'Fecha Entrega':fmtFechaDisplay(r.fecha_entrega),
+    'GCp':r.gcp,'Responsable':r.responsable,'Observaciones':r.observaciones
   }));
   const ws=XLSX.utils.json_to_sheet(data);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Reparaciones');
