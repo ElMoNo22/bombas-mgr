@@ -332,17 +332,37 @@ def get_bomba(bid):
     ''', (bid,))
     bomba['historial'] = fetchall_dicts(cur2)
     # Reparación activa
+    neq = norm_neq(bomba.get('n_equipo'))
     cur3 = conn.execute('''
         SELECT * FROM reparaciones
-        WHERE numero_equipo = ?
+        WHERE REPLACE(numero_equipo,'.0','') = ?
         AND estado NOT IN ('Entregada', 'Cancelada')
         ORDER BY id DESC LIMIT 1
-    ''', (bomba.get('n_equipo'),))
+    ''', (neq,))
     rep_activa = fetchone_dict(cur3)
     if rep_activa:
         bomba['rep_activa'] = rep_activa
         if bomba.get('estado_actual') != 'Montado':
             bomba['ubicacion_fisica'] = 'En reparación'
+    # Garantía
+    from datetime import date, timedelta
+    rep_gar = check_garantia(neq, conn)
+    if rep_gar:
+        fecha_ent = rep_gar.get('fecha_entrega','')
+        try:
+            hasta = (date.fromisoformat(fecha_ent) + timedelta(days=183)).isoformat()
+            dias = (date.fromisoformat(hasta) - date.today()).days
+        except:
+            hasta = None
+            dias = None
+        bomba['en_garantia'] = True
+        bomba['garantia_hasta'] = fecha_ent
+        bomba['garantia_rep_id'] = rep_gar['id']
+        bomba['garantia_dias'] = dias
+        bomba['garantia_proveedor'] = rep_gar.get('proveedor')
+        bomba['garantia_remito'] = rep_gar.get('remito_entrega')
+    else:
+        bomba['en_garantia'] = False
     conn.close()
     return jsonify(bomba)
 
