@@ -18,6 +18,22 @@ def norm_fecha(s):
     if re.match(r'^\d{4}-\d{2}-\d{2}$', s): return s
     return s
 
+def check_garantia(numero_equipo, conn):
+    """Devuelve la reparación más reciente entregada dentro de los 6 meses, o None."""
+    from datetime import date, timedelta
+    hoy = date.today()
+    hace_6m = (hoy - timedelta(days=183)).isoformat()
+    cur = conn.execute("""
+        SELECT id, fecha_entrega, proveedor, remito_entrega, descripcion
+        FROM reparaciones
+        WHERE numero_equipo = ?
+        AND estado = 'Entregada'
+        AND fecha_entrega IS NOT NULL
+        AND fecha_entrega >= ?
+        ORDER BY fecha_entrega DESC LIMIT 1
+    """, (numero_equipo, hace_6m))
+    return fetchone_dict(cur)
+
 def get_db():
     return db_driver.connect()
 
@@ -245,6 +261,26 @@ def get_bombas():
     for r in rows:
         if r.get('tiene_rep_activa') and r.get('estado_actual') != 'Montado':
             r['ubicacion_fisica'] = 'En reparación'
+    # Agregar info de garantía
+    from datetime import date, timedelta
+    hoy = date.today()
+    hace_6m = (hoy - timedelta(days=183)).isoformat()
+    cur_g = conn.execute("""
+        SELECT numero_equipo, fecha_entrega, id as rep_id
+        FROM reparaciones
+        WHERE estado = 'Entregada'
+        AND fecha_entrega IS NOT NULL
+        AND fecha_entrega >= ?
+    """, (hace_6m,))
+    en_garantia = {r['numero_equipo']: r for r in fetchall_dicts(cur_g)}
+    for r in rows:
+        g = en_garantia.get(r.get('n_equipo'))
+        if g:
+            r['en_garantia'] = True
+            r['garantia_hasta'] = g['fecha_entrega']  # +6m calculado en frontend
+            r['garantia_rep_id'] = g['rep_id']
+        else:
+            r['en_garantia'] = False
     conn.close()
     return jsonify(rows)
 
@@ -715,6 +751,34 @@ def delete_reparacion(rid):
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True})
+
+@app.route('/api/garantia/<n_equipo>', methods=['GET'])
+@login_required
+def check_garantia_endpoint(n_equipo):
+    conn = get_db()
+    rep = check_garantia(n_equipo, conn)
+    conn.close()
+    if rep:
+        from datetime import date, timedelta
+        fecha_ent = rep.get('fecha_entrega','')
+        try:
+            desde = date.fromisoformat(fecha_ent)
+            hasta = desde + timedelta(days=183)
+            dias_restantes = (hasta - date.today()).days
+        except:
+            hasta = None
+            dias_restantes = None
+        return jsonify({
+            'en_garantia': True,
+            'rep_id': rep['id'],
+            'fecha_entrega': rep['fecha_entrega'],
+            'hasta': hasta.isoformat() if hasta else None,
+            'dias_restantes': dias_restantes,
+            'proveedor': rep.get('proveedor'),
+            'remito_entrega': rep.get('remito_entrega'),
+            'descripcion': rep.get('descripcion'),
+        })
+    return jsonify({'en_garantia': False})
 
 @app.route('/api/reparaciones/estados', methods=['GET'])
 @login_required
