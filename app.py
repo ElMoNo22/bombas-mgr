@@ -18,20 +18,28 @@ def norm_fecha(s):
     if re.match(r'^\d{4}-\d{2}-\d{2}$', s): return s
     return s
 
+def norm_neq(v):
+    """Normaliza número de equipo: quita .0 y espacios."""
+    if v is None: return ''
+    s = str(v).strip()
+    if s.endswith('.0'): s = s[:-2]
+    return s
+
 def check_garantia(numero_equipo, conn):
     """Devuelve la reparación más reciente entregada dentro de los 6 meses, o None."""
     from datetime import date, timedelta
     hoy = date.today()
     hace_6m = (hoy - timedelta(days=183)).isoformat()
+    neq = norm_neq(numero_equipo)
     cur = conn.execute("""
         SELECT id, fecha_entrega, proveedor, remito_entrega, descripcion
         FROM reparaciones
-        WHERE numero_equipo = ?
+        WHERE REPLACE(numero_equipo, '.0', '') = ?
         AND estado = 'Entregada'
         AND fecha_entrega IS NOT NULL
         AND fecha_entrega >= ?
         ORDER BY fecha_entrega DESC LIMIT 1
-    """, (numero_equipo, hace_6m))
+    """, (neq, hace_6m))
     return fetchone_dict(cur)
 
 def get_db():
@@ -149,6 +157,21 @@ def init_db():
     for migration in [
         'ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT',
     ]:
+        try:
+            conn.execute(migration)
+            db_commit(conn)
+        except Exception:
+            pass
+    # Clean .0 suffix from n_equipo (imported from Excel as float)
+    try:
+        conn.execute("""
+            UPDATE bombas SET n_equipo = REPLACE(n_equipo, '.0', '')
+            WHERE n_equipo LIKE '%.0'
+        """)
+        db_commit(conn)
+    except Exception:
+        pass
+    for migration in []:
         try:
             conn.execute(migration)
             db_commit(conn)
@@ -272,9 +295,15 @@ def get_bombas():
         AND fecha_entrega IS NOT NULL
         AND fecha_entrega >= ?
     """, (hace_6m,))
-    en_garantia = {r['numero_equipo']: r for r in fetchall_dicts(cur_g)}
+    # Normalize: strip trailing .0 from both sides for matching
+    def norm_neq(v):
+        if v is None: return ''
+        s = str(v).strip()
+        if s.endswith('.0'): s = s[:-2]
+        return s
+    en_garantia = {norm_neq(r['numero_equipo']): r for r in fetchall_dicts(cur_g)}
     for r in rows:
-        g = en_garantia.get(r.get('n_equipo'))
+        g = en_garantia.get(norm_neq(r.get('n_equipo')))
         if g:
             r['en_garantia'] = True
             r['garantia_hasta'] = g['fecha_entrega']  # +6m calculado en frontend
@@ -756,7 +785,7 @@ def delete_reparacion(rid):
 @login_required
 def check_garantia_endpoint(n_equipo):
     conn = get_db()
-    rep = check_garantia(n_equipo, conn)
+    rep = check_garantia(norm_neq(n_equipo), conn)
     conn.close()
     if rep:
         from datetime import date, timedelta
