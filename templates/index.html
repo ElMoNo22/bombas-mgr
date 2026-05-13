@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-:root{--bg:#0f1117;--bg2:#171b26;--bg3:#1e2332;--border:#2a2f42;--border2:#353b52;--text:#e8eaf0;--text2:#8b91a8;--text3:#555d78;--accent:#4f8ef7;--accent2:#2563d4;--green:#34c77b;--red:#f05454;--amber:#f5a623;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif}
+:root{--bg:#0f1117;--bg2:#171b26;--bg3:#1e2332;--border:#2a2f42;--border2:#353b52;--text:#e8eaf0;--text2:#8b91a8;--text3:#555d78;--accent:#4f8ef7;--accent2:#2563d4;--green:#34c77b;--red:#f05454;--amber:#f5a623;--purple:#a78bfa;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
 .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:52px;position:sticky;top:0;z-index:50}
@@ -47,6 +47,7 @@ textarea{resize:vertical;min-height:60px}
 .b-red{background:rgba(240,84,84,.12);color:var(--red);border:1px solid rgba(240,84,84,.25)}
 .b-amber{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
 .b-blue{background:rgba(79,142,247,.12);color:var(--accent);border:1px solid rgba(79,142,247,.25)}
+.b-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
 .b-gray{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
 .b-empty{background:rgba(240,84,84,.05);color:var(--text3);border:1px dashed rgba(240,84,84,.3)}
 .row-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all .1s}
@@ -103,9 +104,14 @@ textarea{resize:vertical;min-height:60px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.ok{border-left:3px solid var(--green)}.toast.err{border-left:3px solid var(--red)}
 .section-divider{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:10px}
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* Tabla reparaciones */
+.rep-table{width:100%;border-collapse:collapse;font-size:12px}
+.rep-table th{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;white-space:nowrap}
+.rep-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.rep-table tr:last-child td{border-bottom:none}
+.rep-table tr:hover td{background:rgba(79,142,247,.04)}
+.rep-table .mono{font-family:var(--mono)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 @media(max-width:700px){.g4{grid-template-columns:1fr 1fr}.g3,.g2{grid-template-columns:1fr}.main{padding:.8rem}}
 </style>
 </head>
@@ -115,6 +121,7 @@ textarea{resize:vertical;min-height:60px}
   <nav class="htabs">
     <button class="htab active" onclick="showPanel('dashboard')">Dashboard</button>
     <button class="htab" onclick="showPanel('inventario')">Inventario</button>
+    <button class="htab" onclick="showPanel('reparaciones')">🔧 Reparaciones</button>
     <button class="htab" onclick="showPanel('catalogo')">Catálogo</button>
     <button class="htab" onclick="showPanel('buscar')">Equivalente</button>
     <button class="htab" onclick="showPanel('analitica')">Analítica</button>
@@ -129,7 +136,7 @@ textarea{resize:vertical;min-height:60px}
 
 <main class="main">
 
-<!-- DASHBOARD -->
+<!-- ══ DASHBOARD ══ -->
 <div class="panel active" id="panel-dashboard">
   <div style="margin-bottom:14px"><h1 style="font-size:19px;font-weight:600">Dashboard</h1></div>
   <div class="g4" style="margin-bottom:12px" id="dash-stats"></div>
@@ -143,22 +150,20 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<!-- INVENTARIO -->
+<!-- ══ INVENTARIO ══ -->
 <div class="panel" id="panel-inventario">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
     <div><h1 style="font-size:19px;font-weight:600">Inventario</h1><p id="inv-sub" style="font-size:12px;color:var(--text3)"></p></div>
     <div style="display:flex;gap:6px">
       <button class="btn btn-sm btn-ghost" onclick="exportarExcel()">↓ Excel</button>
-      <button class="btn btn-sm btn-ghost btn-new-perf" onclick="abrirNuevaPerf()">+ Perforación</button>
-      <button class="btn btn-sm btn-new-perf" onclick="abrirNuevaBomba()">+ Bomba</button>
+      <button class="btn btn-sm btn-ghost" onclick="abrirNuevaPerf()">+ Perforación</button>
+      <button class="btn btn-sm" onclick="abrirNuevaBomba()">+ Bomba</button>
     </div>
   </div>
   <div class="sub-tabs">
     <button class="stab active" onclick="showSubInv('perforaciones')">Perforaciones</button>
     <button class="stab" onclick="showSubInv('bombas')">Bombas</button>
   </div>
-
-  <!-- Sub: perforaciones -->
   <div id="sub-perforaciones">
     <div class="filters">
       <div class="ff" style="flex:1;min-width:180px"><label>Buscar</label>
@@ -166,9 +171,7 @@ textarea{resize:vertical;min-height:60px}
       </div>
       <div class="ff"><label>Estado</label>
         <select id="fPEstado" onchange="filtrarPerfs()">
-          <option value="">Todos</option>
-          <option value="Montado">Montado</option>
-          <option value="Desmontado">Desmontado / Libre</option>
+          <option value="">Todos</option><option value="Montado">Montado</option><option value="Desmontado">Desmontado / Libre</option>
         </select>
       </div>
       <div class="ff"><label>Zona</label><select id="fPZona" onchange="filtrarPerfs()"><option value="">Todas</option></select></div>
@@ -182,8 +185,6 @@ textarea{resize:vertical;min-height:60px}
       <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="perfCount"></span>
     </div>
   </div>
-
-  <!-- Sub: bombas -->
   <div id="sub-bombas" style="display:none">
     <div class="filters">
       <div class="ff" style="flex:1;min-width:180px"><label>Buscar</label>
@@ -191,24 +192,14 @@ textarea{resize:vertical;min-height:60px}
       </div>
       <div class="ff"><label>Estado</label>
         <select id="fBEstado" onchange="filtrarBombas()">
-          <option value="">Todas</option>
-          <option value="Montado">Montada</option>
-          <option value="disponible">Disponible</option>
-          <option value="Desmontado">Desmontada</option>
+          <option value="">Todas</option><option value="Montado">Montada</option><option value="disponible">Disponible</option><option value="Desmontado">Desmontada</option>
         </select>
       </div>
       <div class="ff"><label>Marca</label><select id="fBMarca" onchange="filtrarBombas()"><option value="">Todas</option></select></div>
       <div class="ff"><label>HP</label><select id="fBHP" onchange="filtrarBombas()"><option value="">Todos</option></select></div>
       <div class="ff"><label>Ubicación</label>
         <select id="fBUbic" onchange="filtrarBombas()">
-          <option value="">Todas</option>
-          <option>Montada</option>
-          <option>Pañol</option>
-          <option>Sucursal</option>
-          <option>Grúa</option>
-          <option>PSM Cañero</option>
-          <option>En reparación</option>
-          <option>Baja</option>
+          <option value="">Todas</option><option>Montada</option><option>Pañol</option><option>Sucursal</option><option>Grúa</option><option>PSM Cañero</option><option>En reparación</option><option>Baja</option>
         </select>
       </div>
     </div>
@@ -221,10 +212,81 @@ textarea{resize:vertical;min-height:60px}
     </div>
   </div>
 </div>
-                    <li class="nav-item">
-                        <a class="nav-link" id="tab-reparaciones" onclick="showTab('reparaciones')">🔧 Reparaciones</a>
-                    </li>
-<!-- CATÁLOGO, BUSCAR, ANALÍTICA, DATOS panels (simplified placeholders filled by JS) -->
+
+<!-- ══ REPARACIONES ══ -->
+<div class="panel" id="panel-reparaciones">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <h1 style="font-size:19px;font-weight:600">Reparaciones</h1>
+      <p id="rep-sub" style="font-size:12px;color:var(--text3)"></p>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm btn-ghost" onclick="exportarExcelRep()">↓ Excel</button>
+      <button class="btn btn-sm" onclick="abrirNuevaRep()" id="btn-nueva-rep">+ Nueva reparación</button>
+    </div>
+  </div>
+
+  <!-- Stats reparaciones -->
+  <div class="g4" style="margin-bottom:12px" id="rep-stats"></div>
+
+  <!-- Filtros -->
+  <div class="filters">
+    <div class="ff" style="flex:1;min-width:160px"><label>Buscar</label>
+      <input type="text" id="fRTexto" placeholder="N° equipo, TAG, proveedor..." oninput="filtrarReps()">
+    </div>
+    <div class="ff"><label>Estado</label>
+      <select id="fREstado" onchange="filtrarReps()">
+        <option value="">Todos</option>
+        <option>Pendiente cotización</option>
+        <option>En reparación</option>
+        <option>Esperando SOLPED</option>
+        <option>Esperando NP</option>
+        <option>Esperando retiro</option>
+        <option>Entregada</option>
+        <option>Cancelada</option>
+      </select>
+    </div>
+    <div class="ff"><label>Proveedor</label>
+      <select id="fRProv" onchange="filtrarReps()"><option value="">Todos</option></select>
+    </div>
+    <div class="ff"><label>Activas</label>
+      <select id="fRActiva" onchange="filtrarReps()">
+        <option value="">Todas</option>
+        <option value="1">Solo activas</option>
+        <option value="0">Solo cerradas</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table class="rep-table">
+      <thead>
+        <tr>
+          <th>Fecha envío</th>
+          <th>N° Equipo</th>
+          <th>Bomba</th>
+          <th>Proveedor</th>
+          <th>Servicio</th>
+          <th>Estado</th>
+          <th>SOLPED / NP</th>
+          <th>Costo</th>
+          <th>Entrega</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rep-tabla-body"></tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button class="pg-btn" id="btnPR" onclick="repPag(-1)">← Ant.</button>
+    <span id="pagInfoR" style="font-family:var(--mono)"></span>
+    <button class="pg-btn" id="btnNR" onclick="repPag(1)">Sig. →</button>
+    <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="repCount"></span>
+  </div>
+</div>
+
+<!-- ══ CATÁLOGO ══ -->
 <div class="panel" id="panel-catalogo">
   <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Catálogo Motorarg</h1><p id="cat-sub" style="font-size:12px;color:var(--text3)"></p></div>
   <div class="filters">
@@ -234,48 +296,8 @@ textarea{resize:vertical;min-height:60px}
   </div>
   <div class="card" style="padding:.5rem 1.1rem"><div id="cat-lista"></div></div>
 </div>
-<!-- ====================== REPARACIONES ====================== -->
-<div id="content-reparaciones" class="tab-content" style="display: none; padding: 20px;">
-    <h2>🔧 Gestión de Reparaciones de Bombas</h2>
-    
-    <div class="mb-3">
-        <button class="btn btn-primary" onclick="nuevaReparacion()">+ Nueva Reparación</button>
-        <button class="btn btn-success ms-2" onclick="cargarListaReparaciones()">Actualizar Lista</button>
-    </div>
 
-    <div class="row mb-3">
-        <div class="col-md-3">
-            <input type="text" id="filtro-equipo" class="form-control" placeholder="N° Equipo o Tag">
-        </div>
-        <div class="col-md-3">
-            <select id="filtro-estado" class="form-control">
-                <option value="">Todos los estados</option>
-                <option value="Entregada">Entregada</option>
-                <option value="En reparación">En reparación</option>
-                <option value="Pendiente">Pendiente</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <button class="btn btn-info" onclick="cargarListaReparaciones()">Filtrar</button>
-        </div>
-    </div>
-
-    <table class="table table-striped" id="tabla-reparaciones">
-        <thead class="table-dark">
-            <tr>
-                <th>Fecha Envío</th>
-                <th>N° Equipo</th>
-                <th>Tag</th>
-                <th>Proveedor</th>
-                <th>Estado</th>
-                <th>Solped / NP</th>
-                <th>Fecha Entrega</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
+<!-- ══ BUSCAR EQUIVALENTE ══ -->
 <div class="panel" id="panel-buscar">
   <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Buscar equivalente</h1></div>
   <div class="card">
@@ -297,6 +319,7 @@ textarea{resize:vertical;min-height:60px}
   <div class="chart-wrap" id="chartBuscarWrap" style="display:none"><canvas id="chartBuscar"></canvas></div>
 </div>
 
+<!-- ══ ANALÍTICA ══ -->
 <div class="panel" id="panel-analitica">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <h1 style="font-size:19px;font-weight:600">Analítica</h1>
@@ -314,6 +337,7 @@ textarea{resize:vertical;min-height:60px}
   <div id="subanal-estadisticas" style="display:none"></div>
 </div>
 
+<!-- ══ DATOS ══ -->
 <div class="panel" id="panel-datos">
   <div style="margin-bottom:12px"><h1 style="font-size:19px;font-weight:600">Datos</h1></div>
   <div class="sub-tabs" id="datos-tabs">
@@ -364,7 +388,7 @@ textarea{resize:vertical;min-height:60px}
 
 </main>
 
-<!-- MODAL PERFORACIÓN -->
+<!-- ══ MODALES ══ -->
 <div class="modal-bg" id="modal-perf" onclick="if(event.target===this)closeModal('perf')">
   <div class="modal" style="width:min(760px,95vw)">
     <div class="modal-header">
@@ -378,7 +402,6 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<!-- MODAL BOMBA -->
 <div class="modal-bg" id="modal-bomba" onclick="if(event.target===this)closeModal('bomba')">
   <div class="modal" style="width:min(760px,95vw)">
     <div class="modal-header">
@@ -392,7 +415,6 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<!-- MODAL FORM GENÉRICO -->
 <div class="modal-bg" id="modal-form" onclick="if(event.target===this)closeModal('form')">
   <div class="modal">
     <div class="modal-header">
@@ -403,7 +425,6 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<!-- MODAL ASIGNAR BOMBA -->
 <div class="modal-bg" id="modal-asignar" onclick="if(event.target===this)closeModal('asignar')">
   <div class="modal">
     <div class="modal-header">
@@ -414,7 +435,6 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 
-<!-- MODAL CATÁLOGO DETALLE -->
 <div class="modal-bg" id="modal-cat" onclick="if(event.target===this)closeModal('cat')">
   <div class="modal">
     <div class="modal-header">
@@ -423,6 +443,17 @@ textarea{resize:vertical;min-height:60px}
     </div>
     <div id="modal-cat-body"></div>
     <div class="chart-wrap" style="height:220px;margin-top:12px"><canvas id="modal-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- Modal reparación -->
+<div class="modal-bg" id="modal-rep" onclick="if(event.target===this)closeModal('rep')">
+  <div class="modal" style="width:min(820px,95vw)">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-rep-title">Reparación</div>
+      <button class="modal-close" onclick="closeModal('rep')">✕</button>
+    </div>
+    <div id="modal-rep-body"></div>
   </div>
 </div>
 
@@ -435,18 +466,34 @@ const USER_ID = {{ user_id }};
 const CAN_EDIT = ['editor','admin'].includes(USER_ROLE);
 const CAN_ADMIN = USER_ROLE === 'admin';
 
-let PERFS = [], BOMBAS = [], CATALOGO = [];
-let perfsFiltered = [], bombasFiltered = [];
-let perfPage = 0, bombaPage = 0;
+let PERFS = [], BOMBAS = [], CATALOGO = [], REPARACIONES = [];
+let perfsFiltered = [], bombasFiltered = [], repsFiltered = [];
+let perfPage = 0, bombaPage = 0, repPage = 0;
 const PER = 20;
-let chartBuscar = null, chartModal = null, chartComp = null;
+let chartBuscar = null, chartModal = null;
 const COLORS = ['#4f8ef7','#34c77b','#f5a623','#f05454','#9b59b6','#1abc9c'];
-let currentPerfId = null, currentBombaId = null;
+let currentPerfId = null, currentBombaId = null, currentRepId = null;
+
+const ESTADOS_REP = [
+  'Pendiente cotización','En reparación','Esperando SOLPED',
+  'Esperando NP','Esperando retiro','Entregada','Cancelada'
+];
+const PROVEEDORES = ['Motorarg','Argenbom','Hídrica Sur','Otro'];
 
 // ══ UTILS ══
-const fmt = f => (!f||f==='NaT'||f==='null') ? '—' : f;
+const fmt = f => (!f||f==='NaT'||f==='null'||f===null) ? '—' : f;
 const fmtLoc = r => [r.calle, r.entre&&r.entre!=='0'?`e/${r.entre}`:null, r.y_col&&r.y_col!=='0'?`y ${r.y_col}`:null].filter(Boolean).join(' ');
 const normZona = z => {if(!z)return'Sin zona';const l=z.toLowerCase();if(l.includes('sur'))return'La Plata Sur';if(l.includes('norte'))return'La Plata Norte';return z;}
+
+function repEstadoBadge(e){
+  if(!e)return'<span class="badge b-gray">—</span>';
+  if(e==='Entregada')return`<span class="badge b-green">${e}</span>`;
+  if(e==='Cancelada')return`<span class="badge b-red">${e}</span>`;
+  if(e==='En reparación')return`<span class="badge b-amber">${e}</span>`;
+  if(e==='Esperando SOLPED'||e==='Esperando NP')return`<span class="badge b-blue">${e}</span>`;
+  return`<span class="badge b-purple">${e}</span>`;
+}
+function repEsActiva(e){return!['Entregada','Cancelada'].includes(e);}
 
 function ubicBadge(u){
   if(!u)return'<span class="badge b-gray">Sin ubicación</span>';
@@ -486,8 +533,22 @@ function barChart(elId,dataObj,colorMap,sortByKey=false){
     <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/max*100)}%;background:${typeof colorMap==='string'?colorMap:colorMap[k]||'var(--text3)'}"></div></div></div>`).join('');
 }
 
+function normFecha(s){
+  if(!s||s==='—')return null;
+  s=s.trim();if(!s)return null;
+  const sep=s.includes('/')?'/':'-';
+  const p=s.split(sep);
+  if(p.length===3&&p[2].length===4)return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  if(p.length===3&&p[0].length===4)return s;
+  return s;
+}
+function fmtFechaDisplay(s){
+  if(!s||s==='—')return'—';
+  const p=s.split('-');
+  if(p.length===3&&p[0].length===4)return p[2]+'-'+p[1]+'-'+p[0];
+  return s;
+}
 function interpH(curva,q){
-  // Given Q → returns H (for buscar equivalente)
   if(!curva||!curva.length)return null;
   if(q<=curva[0][0])return curva[0][1];
   for(let i=1;i<curva.length;i++){
@@ -496,43 +557,14 @@ function interpH(curva,q){
   return 0;
 }
 function interpQ(curva,h){
-  // Given H → returns Q (for caudal estimation from depth)
-  // curva is [[Q,H],...] where H decreases as Q increases
   if(!curva||!curva.length)return null;
-  const hMax=curva[0][1], hMin=curva[curva.length-1][1];
+  const hMax=curva[0][1],hMin=curva[curva.length-1][1];
   if(h>hMax||h<hMin)return null;
   for(let i=0;i<curva.length-1;i++){
-    const h1=curva[i][1], h2=curva[i+1][1];
-    const q1=curva[i][0], q2=curva[i+1][0];
-    if(h<=h1&&h>=h2){
-      const t=(h1-h)/(h1-h2);
-      return q1+t*(q2-q1);
-    }
+    const h1=curva[i][1],h2=curva[i+1][1],q1=curva[i][0],q2=curva[i+1][0];
+    if(h<=h1&&h>=h2){const t=(h1-h)/(h1-h2);return q1+t*(q2-q1);}
   }
   return null;
-}
-
-function normFecha(s){
-  // Store as yyyy-mm-dd internally for correct DB sorting
-  if(!s||s==='—')return null;
-  s=s.trim();
-  if(!s)return null;
-  // dd/mm/yyyy or dd-mm-yyyy → yyyy-mm-dd
-  const sep=s.includes('/')?'/':'-';
-  const p=s.split(sep);
-  if(p.length===3&&p[2].length===4){
-    return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
-  }
-  // already yyyy-mm-dd
-  if(p.length===3&&p[0].length===4)return s;
-  return s;
-}
-function fmtFechaDisplay(s){
-  // Display yyyy-mm-dd as dd-mm-yyyy
-  if(!s||s==='—')return'—';
-  const p=s.split('-');
-  if(p.length===3&&p[0].length===4)return p[2]+'-'+p[1]+'-'+p[0];
-  return s;
 }
 function normModelo(m){
   if(!m)return'';
@@ -550,13 +582,13 @@ function findCat(modelo){
   const nr=normModelo(modelo);
   if(!nr)return null;
   const parts=nr.split('/');
-  const serR=parts[0], hpR=parts[1]?parseFloat(parts[1]):null;
+  const serR=parts[0],hpR=parts[1]?parseFloat(parts[1]):null;
   f=CATALOGO.find(b=>{
     if(!b.modelo)return false;
     const nb=normModelo(b.modelo);
     if(nb===nr)return true;
     const partsB=nb.split('/');
-    const serB=partsB[0], hpB=partsB[1]?parseFloat(partsB[1]):null;
+    const serB=partsB[0],hpB=partsB[1]?parseFloat(partsB[1]):null;
     return serB&&serR&&serB===serR&&hpB!==null&&hpR!==null&&Math.abs(hpB-hpR)<0.1;
   });
   return f||null;
@@ -565,23 +597,29 @@ function findCat(modelo){
 function showPanel(p){
   document.querySelectorAll('.htab').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-  document.querySelector(`.htab[onclick*="${p}"]`).classList.add('active');
+  document.querySelector(`.htab[onclick*="'${p}'"]`).classList.add('active');
   document.getElementById('panel-'+p).classList.add('active');
   if(p==='analitica')showSubAnal('rango');
+  if(p==='reparaciones')renderReps();
+  if(p==='datos'&&CAN_ADMIN)document.getElementById('tabUsers').style.display='inline-block';
 }
 
 // ══ LOAD ══
 async function loadAll(){
-  const [pr,br,cr]=await Promise.all([api('/api/perforaciones'),api('/api/bombas'),api('/api/catalogo')]);
+  const [pr,br,cr,rr]=await Promise.all([
+    api('/api/perforaciones'),api('/api/bombas'),api('/api/catalogo'),api('/api/reparaciones')
+  ]);
   if(pr&&pr.ok)PERFS=await pr.json();
   if(br&&br.ok)BOMBAS=await br.json();
   if(cr&&cr.ok)CATALOGO=await cr.json();
+  if(rr&&rr.ok)REPARACIONES=await rr.json();
   renderDash();
   initInvFilters();
-  filtrarPerfs();
-  filtrarBombas();
+  filtrarPerfs();filtrarBombas();
   initCatFilters();
   initBuscarSelect();
+  initRepFilters();
+  filtrarReps();
 }
 
 // ══ DASHBOARD ══
@@ -593,9 +631,8 @@ async function renderDash(){
     <div class="stat"><div class="stat-val" style="color:var(--green)">${s.montadas}</div><div class="stat-lbl">Montadas</div></div>
     <div class="stat"><div class="stat-val" style="color:var(--accent)">${s.disponibles}</div><div class="stat-lbl">Disponibles</div></div>
     <div class="stat"><div class="stat-val">${s.total_bombas}</div><div class="stat-lbl">Bombas</div></div>
-    <div class="stat"><div class="stat-val">${s.total_perforaciones}</div><div class="stat-lbl">Perforaciones</div></div>`;
-  const estados={'Montado':s.montadas,'Disponible':s.disponibles};
-  barChart('dash-estados',estados,{'Montado':'var(--green)','Disponible':'var(--accent)'});
+    <div class="stat"><div class="stat-val" style="color:var(--amber)">${s.en_reparacion||0}</div><div class="stat-lbl">En reparación</div></div>`;
+  barChart('dash-estados',{'Montado':s.montadas,'Disponible':s.disponibles},{'Montado':'var(--green)','Disponible':'var(--accent)'});
   barChart('dash-zonas',Object.fromEntries(s.por_zona.map(z=>[z.zona||'Sin zona',z.n])),'var(--accent)');
   barChart('dash-hp',Object.fromEntries(s.por_hp.map(h=>[h.hp+' HP',h.n])),'var(--amber)',true);
   const mMax=s.modelos_top[0]?.n||1;
@@ -608,22 +645,19 @@ async function renderDash(){
     </div>`).join('');
 }
 
-// ══ INVENTARIO — PERFORACIONES ══
+// ══ INVENTARIO ══
 function showSubInv(s){
-  document.querySelectorAll('.sub-tabs .stab').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`.sub-tabs .stab[onclick*="${s}"]`).classList.add('active');
+  document.querySelectorAll('#panel-inventario .sub-tabs .stab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#panel-inventario .sub-tabs .stab[onclick*="${s}"]`).classList.add('active');
   document.getElementById('sub-perforaciones').style.display=s==='perforaciones'?'block':'none';
   document.getElementById('sub-bombas').style.display=s==='bombas'?'block':'none';
 }
-
 function initInvFilters(){
   const zonas=[...new Set(PERFS.map(p=>normZona(p.zona)))].sort();
   const hps=[...new Set(BOMBAS.map(b=>b.hp).filter(Boolean))].sort((a,b)=>a-b);
   const marcas=[...new Set(BOMBAS.map(b=>b.marca).filter(Boolean))].sort();
-  populate('fPZona',zonas);
-  populate('fPHP',hps,h=>h+' HP');
-  populate('fBMarca',marcas);
-  populate('fBHP',hps,h=>h+' HP');
+  populate('fPZona',zonas);populate('fPHP',hps,h=>h+' HP');
+  populate('fBMarca',marcas);populate('fBHP',hps,h=>h+' HP');
   document.getElementById('inv-sub').textContent=`${PERFS.length} perforaciones · ${BOMBAS.length} bombas · ${BOMBAS.filter(b=>b.estado_actual==='Montado').length} montadas`;
 }
 function populate(id,items,label=null){
@@ -631,7 +665,6 @@ function populate(id,items,label=null){
   while(s.options.length>1)s.remove(1);
   items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=label?label(v):v;s.appendChild(o);});
 }
-
 function filtrarPerfs(){
   const txt=(document.getElementById('fPTexto').value||'').toLowerCase().trim();
   const est=document.getElementById('fPEstado').value;
@@ -639,45 +672,29 @@ function filtrarPerfs(){
   const hp=document.getElementById('fPHP').value;
   perfsFiltered=PERFS.filter(p=>{
     if(txt){
-      const c=String(p.calle||''),e=String(p.entre||''),y=String(p.y_col||'');
-      const dirs=[`${c} y ${y}`,`${c} ${y}`,`${c} e/${e} y ${y}`].map(s=>s.toLowerCase());
+      const dirs=[`${p.calle||''} y ${p.y_col||''}`,`${p.calle||''} e/${p.entre||''} y ${p.y_col||''}`].map(s=>s.toLowerCase());
       const campos=[p.modelo||'',p.marca||'',p.tag||'',p.n_equipo||'',p.zona||'',p.calle||'',p.y_col||''].map(s=>s.toLowerCase());
       if(![...dirs,...campos].some(x=>x.includes(txt)))return false;
     }
-    if(est){
-      const isMontado=p.estado_actual==='Montado';
-      if(est==='Montado'&&!isMontado)return false;
-      if(est==='Desmontado'&&isMontado)return false;
-    }
+    if(est){const isMontado=p.estado_actual==='Montado';if(est==='Montado'&&!isMontado)return false;if(est==='Desmontado'&&isMontado)return false;}
     if(zon&&normZona(p.zona)!==zon)return false;
     if(hp&&String(p.hp)!==hp)return false;
     return true;
   });
   perfPage=0;renderPerfs();
 }
-
 function renderPerfs(){
-  const start=perfPage*PER, end=Math.min(start+PER,perfsFiltered.length);
+  const start=perfPage*PER,end=Math.min(start+PER,perfsFiltered.length);
   document.getElementById('perfCount').textContent=`${perfsFiltered.length} resultado(s)`;
   document.getElementById('pagInfoP').textContent=`${perfPage+1}/${Math.max(1,Math.ceil(perfsFiltered.length/PER))}`;
   document.getElementById('btnPP').disabled=perfPage===0;
   document.getElementById('btnNP').disabled=end>=perfsFiltered.length;
   let html='';
   perfsFiltered.slice(start,end).forEach(p=>{
-    const loc=fmtLoc(p);
-    const isMontado=p.estado_actual==='Montado';
+    const loc=fmtLoc(p),isMontado=p.estado_actual==='Montado';
     html+=`<div class="row-item" onclick="showPerf(${p.id})">
-      <div class="ri-main">
-        <div class="ri-id">📍 ${loc||'—'}</div>
-        <div class="ri-meta">${normZona(p.zona)}${p.prof_trabajo_mts?' · '+p.prof_trabajo_mts+'m':''}</div>
-      </div>
-      ${isMontado?`
-        <div style="text-align:right;margin-right:8px">
-          <div style="font-size:13px;font-weight:500;font-family:var(--mono)">${p.modelo||'—'}</div>
-          <div style="font-size:11px;color:var(--text3)">${p.marca||''} · ${p.hp?p.hp+'HP':'—'}${p.tag?' · '+p.tag:''}</div>
-        </div>
-        ${estadoBadge('Montado')}
-      `:`<span style="margin-right:8px">${librebadge()}</span>`}
+      <div class="ri-main"><div class="ri-id">📍 ${loc||'—'}</div><div class="ri-meta">${normZona(p.zona)}${p.prof_trabajo_mts?' · '+p.prof_trabajo_mts+'m':''}</div></div>
+      ${isMontado?`<div style="text-align:right;margin-right:8px"><div style="font-size:13px;font-weight:500;font-family:var(--mono)">${p.modelo||'—'}</div><div style="font-size:11px;color:var(--text3)">${p.marca||''} · ${p.hp?p.hp+'HP':'—'}${p.tag?' · '+p.tag:''}</div></div>${estadoBadge('Montado')}`:`<span style="margin-right:8px">${librebadge()}</span>`}
     </div>`;
   });
   document.getElementById('perfs-lista').innerHTML=html||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
@@ -691,15 +708,8 @@ function filtrarBombas(){
   const hp=document.getElementById('fBHP').value;
   const ubic=document.getElementById('fBUbic').value;
   bombasFiltered=BOMBAS.filter(b=>{
-    if(txt){
-      const campos=[b.n_equipo||'',b.tag||'',b.tag_extraviado||'',b.modelo||'',b.marca||'',b.serie||''].map(s=>s.toLowerCase());
-      if(!campos.some(x=>x.includes(txt)))return false;
-    }
-    if(est){
-      if(est==='Montado'&&b.estado_actual!=='Montado')return false;
-      if(est==='disponible'&&b.estado_actual==='Montado')return false;
-      if(est==='Desmontado'&&(b.estado_actual==='Montado'||!b.estado_actual))return false;
-    }
+    if(txt){const campos=[b.n_equipo||'',b.tag||'',b.tag_extraviado||'',b.modelo||'',b.marca||'',b.serie||''].map(s=>s.toLowerCase());if(!campos.some(x=>x.includes(txt)))return false;}
+    if(est){if(est==='Montado'&&b.estado_actual!=='Montado')return false;if(est==='disponible'&&b.estado_actual==='Montado')return false;if(est==='Desmontado'&&(b.estado_actual==='Montado'||!b.estado_actual))return false;}
     if(ubic&&(b.ubicacion_fisica||'')!==ubic)return false;
     if(marc&&b.marca!==marc)return false;
     if(hp&&String(b.hp)!==hp)return false;
@@ -707,22 +717,17 @@ function filtrarBombas(){
   });
   bombaPage=0;renderBombas();
 }
-
 function renderBombas(){
-  const start=bombaPage*PER, end=Math.min(start+PER,bombasFiltered.length);
+  const start=bombaPage*PER,end=Math.min(start+PER,bombasFiltered.length);
   document.getElementById('bombaCount').textContent=`${bombasFiltered.length} resultado(s)`;
   document.getElementById('pagInfoB').textContent=`${bombaPage+1}/${Math.max(1,Math.ceil(bombasFiltered.length/PER))}`;
   document.getElementById('btnPB').disabled=bombaPage===0;
   document.getElementById('btnNB').disabled=end>=bombasFiltered.length;
   let html='';
   bombasFiltered.slice(start,end).forEach(b=>{
-    const isMontado=b.estado_actual==='Montado';
-    const loc=b.calle?fmtLoc(b):'—';
+    const isMontado=b.estado_actual==='Montado',loc=b.calle?fmtLoc(b):'—';
     html+=`<div class="row-item" onclick="showBomba(${b.id})">
-      <div class="ri-main">
-        <div class="ri-id">${b.n_equipo||'—'} <span style="color:var(--text3);font-weight:400"> · ${b.modelo||'?'} · ${b.marca||'?'}</span></div>
-        <div class="ri-meta">TAG: ${b.tag||'—'}${b.serie?' · Serie: '+b.serie:''}</div>
-      </div>
+      <div class="ri-main"><div class="ri-id">${b.n_equipo||'—'} <span style="color:var(--text3);font-weight:400"> · ${b.modelo||'?'} · ${b.marca||'?'}</span></div><div class="ri-meta">TAG: ${b.tag||'—'}${b.serie?' · Serie: '+b.serie:''}</div></div>
       ${isMontado?`<div style="text-align:right;margin-right:8px;font-size:12px;color:var(--text3)">📍 ${loc}</div>`:''}
       <span style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-right:6px">${b.hp?b.hp+' HP':'—'}</span>
       ${isMontado?estadoBadge('Montado'):ubicBadge(b.ubicacion_fisica)}
@@ -731,6 +736,228 @@ function renderBombas(){
   document.getElementById('bombas-lista').innerHTML=html||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
 }
 function bombaPag(d){bombaPage=Math.max(0,Math.min(bombaPage+d,Math.ceil(bombasFiltered.length/PER)-1));renderBombas();}
+
+// ══ REPARACIONES ══
+function initRepFilters(){
+  const provs=[...new Set(REPARACIONES.map(r=>r.proveedor).filter(Boolean))].sort();
+  populate('fRProv',provs);
+  renderRepStats();
+}
+function renderRepStats(){
+  const activas=REPARACIONES.filter(r=>repEsActiva(r.estado));
+  const byCosto=REPARACIONES.filter(r=>r.costo_sin_iva).reduce((a,r)=>a+parseFloat(r.costo_sin_iva||0),0);
+  document.getElementById('rep-stats').innerHTML=`
+    <div class="stat"><div class="stat-val" style="color:var(--amber)">${activas.length}</div><div class="stat-lbl">Activas</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--green)">${REPARACIONES.filter(r=>r.estado==='Entregada').length}</div><div class="stat-lbl">Entregadas</div></div>
+    <div class="stat"><div class="stat-val">${REPARACIONES.length}</div><div class="stat-lbl">Total historial</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--accent);font-size:18px">$${byCosto.toLocaleString('es-AR',{maximumFractionDigits:0})}</div><div class="stat-lbl">Costo acum.</div></div>`;
+  document.getElementById('rep-sub').textContent=`${activas.length} activas · ${REPARACIONES.filter(r=>r.estado==='Entregada').length} entregadas · ${REPARACIONES.length} total`;
+}
+function filtrarReps(){
+  const txt=(document.getElementById('fRTexto').value||'').toLowerCase().trim();
+  const est=document.getElementById('fREstado').value;
+  const prov=document.getElementById('fRProv').value;
+  const activa=document.getElementById('fRActiva').value;
+  repsFiltered=REPARACIONES.filter(r=>{
+    if(txt){const campos=[r.numero_equipo||'',r.tag||'',r.marca||'',r.modelo||'',r.proveedor||'',r.servicio||'',r.solped||'',r.np||''].map(s=>s.toLowerCase());if(!campos.some(x=>x.includes(txt)))return false;}
+    if(est&&r.estado!==est)return false;
+    if(prov&&r.proveedor!==prov)return false;
+    if(activa==='1'&&!repEsActiva(r.estado))return false;
+    if(activa==='0'&&repEsActiva(r.estado))return false;
+    return true;
+  });
+  repPage=0;renderReps();
+}
+function renderReps(){
+  const start=repPage*PER,end=Math.min(start+PER,repsFiltered.length);
+  document.getElementById('repCount').textContent=`${repsFiltered.length} resultado(s)`;
+  document.getElementById('pagInfoR').textContent=`${repPage+1}/${Math.max(1,Math.ceil(repsFiltered.length/PER))}`;
+  document.getElementById('btnPR').disabled=repPage===0;
+  document.getElementById('btnNR').disabled=end>=repsFiltered.length;
+  const btn=document.getElementById('btn-nueva-rep');
+  if(btn)btn.style.display=CAN_EDIT?'inline-block':'none';
+  let html='';
+  repsFiltered.slice(start,end).forEach(r=>{
+    const solpedNP=[r.solped?`S:${r.solped}`:null,r.np?`NP:${r.np}`:null].filter(Boolean).join(' / ')||'—';
+    const bombaInfo=[r.marca,r.modelo].filter(Boolean).join(' ')||'—';
+    html+=`<tr onclick="showRep(${r.id})" style="cursor:pointer">
+      <td class="mono">${fmtFechaDisplay(r.fecha_envio)}</td>
+      <td class="mono" style="font-weight:600">${r.numero_equipo||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${bombaInfo}${r.tag?' · '+r.tag:''}</td>
+      <td>${r.proveedor||'—'}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.servicio||r.descripcion||'—'}</td>
+      <td>${repEstadoBadge(r.estado)}</td>
+      <td class="mono" style="font-size:11px">${solpedNP}</td>
+      <td class="mono" style="font-size:12px">${r.costo_sin_iva?'$'+parseFloat(r.costo_sin_iva).toLocaleString('es-AR',{maximumFractionDigits:0}):'—'}</td>
+      <td class="mono" style="font-size:11px">${fmtFechaDisplay(r.fecha_entrega)}</td>
+      <td>${CAN_EDIT?`<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editarRep(${r.id})">✏</button>`:''}
+          ${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="event.stopPropagation();eliminarRep(${r.id})" style="margin-left:4px">✕</button>`:''}</td>
+    </tr>`;
+  });
+  document.getElementById('rep-tabla-body').innerHTML=html||`<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</td></tr>`;
+}
+function repPag(d){repPage=Math.max(0,Math.min(repPage+d,Math.ceil(repsFiltered.length/PER)-1));renderReps();}
+
+function repFormHTML(r){
+  const v=(f,d='')=>r?(r[f]!==null&&r[f]!==undefined?r[f]:d):d;
+  const fmtVal=f=>fmtFechaDisplay(v(f))==='—'?'':fmtFechaDisplay(v(f));
+  // Opciones N° equipo desde bombas
+  const bombOpts=BOMBAS.map(b=>`<option value="${b.n_equipo||''}" ${v('numero_equipo')===b.n_equipo?'selected':''}>${b.n_equipo||'?'} · ${b.modelo||'?'} ${b.hp?'('+b.hp+' HP)':''}</option>`).join('');
+  return`
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>N° Equipo</label>
+        <select id="rf-neq">
+          <option value="">— elegir —</option>
+          ${bombOpts}
+        </select>
+      </div>
+      <div><label>Proveedor</label>
+        <select id="rf-prov">
+          <option value="">— elegir —</option>
+          ${PROVEEDORES.map(p=>`<option ${v('proveedor')===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div><label>Remito</label><input id="rf-remito" value="${v('remito')}"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label>Fecha envío</label><input id="rf-fenvio" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_envio')}"></div>
+      <div><label>Estado</label>
+        <select id="rf-estado">
+          ${ESTADOS_REP.map(e=>`<option ${v('estado','Pendiente cotización')===e?'selected':''}>${e}</option>`).join('')}
+        </select>
+      </div>
+      <div><label>Responsable</label><input id="rf-resp" value="${v('responsable')}"></div>
+    </div>
+    <div style="margin-bottom:10px"><label>Descripción del problema</label><textarea id="rf-desc">${v('descripcion')}</textarea></div>
+    <div style="margin-bottom:10px"><label>Servicio a realizar</label><textarea id="rf-serv" style="min-height:50px">${v('servicio')}</textarea></div>
+    <div class="section-divider" style="margin-top:14px">Datos económicos</div>
+    <div class="g3" style="margin-bottom:10px;margin-top:10px">
+      <div><label>Presupuesto</label><input id="rf-presup" value="${v('presupuesto')}"></div>
+      <div><label>Costo sin IVA ($)</label><input type="number" id="rf-costo" step="0.01" value="${v('costo_sin_iva')}"></div>
+      <div><label>Liberación</label><input id="rf-liber" value="${v('liberacion')}"></div>
+    </div>
+    <div class="section-divider" style="margin-top:4px">Gestión administrativa</div>
+    <div class="g3" style="margin-bottom:10px;margin-top:10px">
+      <div><label>N° SOLPED</label><input id="rf-solped" value="${v('solped')}"></div>
+      <div><label>Fecha SOLPED</label><input id="rf-fsolped" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_solped')}"></div>
+      <div></div>
+      <div><label>N° NP</label><input id="rf-np" value="${v('np')}"></div>
+      <div><label>Fecha NP</label><input id="rf-fnp" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_np')}"></div>
+      <div><label>Fecha entrega</label><input id="rf-fentrega" placeholder="dd/mm/yyyy" value="${fmtVal('fecha_entrega')}"></div>
+    </div>
+    <div style="margin-bottom:12px"><label>Nota / justificación</label><input id="rf-nota" value="${v('nota_justificacion')}"></div>
+    <div style="margin-bottom:14px"><label>Observaciones</label><textarea id="rf-obs" style="min-height:50px">${v('observaciones')}</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm btn-ghost" onclick="closeModal('form')">Cancelar</button>
+      <button class="btn btn-sm" onclick="guardarRep()">💾 Guardar</button>
+    </div>`;
+}
+
+function abrirNuevaRep(){
+  if(!CAN_EDIT)return;
+  currentRepId=null;
+  document.getElementById('modal-form-title').textContent='Nueva reparación';
+  document.getElementById('modal-form-body').innerHTML=repFormHTML(null);
+  openModal('form');
+}
+function editarRep(rid){
+  if(!CAN_EDIT)return;
+  const r=REPARACIONES.find(x=>x.id===rid);
+  if(!r)return;
+  currentRepId=rid;
+  document.getElementById('modal-form-title').textContent=`Editar reparación · ${r.numero_equipo||'—'}`;
+  document.getElementById('modal-form-body').innerHTML=repFormHTML(r);
+  openModal('form');
+}
+async function guardarRep(){
+  const str=id=>document.getElementById(id)?.value?.trim()||null;
+  const num=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
+  const data={
+    numero_equipo:str('rf-neq'),proveedor:str('rf-prov'),remito:str('rf-remito'),
+    fecha_envio:normFecha(str('rf-fenvio')),descripcion:str('rf-desc'),servicio:str('rf-serv'),
+    presupuesto:str('rf-presup'),costo_sin_iva:num('rf-costo'),
+    solped:str('rf-solped'),fecha_solped:normFecha(str('rf-fsolped')),
+    np:str('rf-np'),fecha_np:normFecha(str('rf-fnp')),
+    liberacion:str('rf-liber'),estado:str('rf-estado'),
+    fecha_entrega:normFecha(str('rf-fentrega')),responsable:str('rf-resp'),
+    nota_justificacion:str('rf-nota'),observaciones:str('rf-obs'),
+  };
+  const res=currentRepId
+    ?await api(`/api/reparaciones/${currentRepId}`,'PUT',data)
+    :await api('/api/reparaciones','POST',data);
+  if(!res||!res.ok){const e=await res.json();toast(e.error||'Error al guardar','err');return;}
+  closeModal('form');
+  toast(currentRepId?'Reparación actualizada':'Reparación registrada');
+  const rr=await api('/api/reparaciones');
+  if(rr&&rr.ok)REPARACIONES=await rr.json();
+  initRepFilters();filtrarReps();
+}
+
+async function showRep(rid){
+  currentRepId=rid;
+  const res=await api(`/api/reparaciones/${rid}`);
+  if(!res||!res.ok)return;
+  const r=await res.json();
+  document.getElementById('modal-rep-title').innerHTML=`🔧 Reparación #${r.id} · <span style="color:var(--text2)">${r.numero_equipo||'—'}</span>`;
+  document.getElementById('modal-rep-body').innerHTML=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${repEstadoBadge(r.estado)}
+      ${r.proveedor?`<span class="badge b-blue">${r.proveedor}</span>`:''}
+      ${r.responsable?`<span class="badge b-gray">${r.responsable}</span>`:''}
+    </div>
+    <div class="dg">
+      <div class="di"><div class="di-label">N° Equipo</div><div class="di-val mono">${r.numero_equipo||'—'}</div></div>
+      <div class="di"><div class="di-label">Bomba</div><div class="di-val">${[r.marca,r.modelo].filter(Boolean).join(' ')||'—'}${r.tag?' · TAG '+r.tag:''}</div></div>
+      <div class="di"><div class="di-label">Fecha envío</div><div class="di-val mono">${fmtFechaDisplay(r.fecha_envio)}</div></div>
+      <div class="di"><div class="di-label">Fecha entrega</div><div class="di-val mono">${fmtFechaDisplay(r.fecha_entrega)}</div></div>
+      <div class="di"><div class="di-label">Remito</div><div class="di-val mono">${r.remito||'—'}</div></div>
+      <div class="di"><div class="di-label">Liberación</div><div class="di-val mono">${r.liberacion||'—'}</div></div>
+    </div>
+    ${r.descripcion?`<div style="margin-bottom:8px"><div class="di-label" style="margin-bottom:4px">Descripción del problema</div><div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-size:13px">${r.descripcion}</div></div>`:''}
+    ${r.servicio?`<div style="margin-bottom:10px"><div class="di-label" style="margin-bottom:4px">Servicio</div><div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-size:13px">${r.servicio}</div></div>`:''}
+    <div class="section-divider">Datos económicos</div>
+    <div class="g3" style="margin:10px 0">
+      <div class="di"><div class="di-label">Presupuesto</div><div class="di-val mono">${r.presupuesto||'—'}</div></div>
+      <div class="di"><div class="di-label">Costo sin IVA</div><div class="di-val mono" style="color:var(--accent)">${r.costo_sin_iva?'$'+parseFloat(r.costo_sin_iva).toLocaleString('es-AR',{maximumFractionDigits:0}):'—'}</div></div>
+      <div class="di"><div class="di-label">Liberación</div><div class="di-val mono">${r.liberacion||'—'}</div></div>
+    </div>
+    <div class="section-divider">Gestión administrativa</div>
+    <div class="g3" style="margin:10px 0">
+      <div class="di"><div class="di-label">SOLPED</div><div class="di-val mono">${r.solped||'—'}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${fmtFechaDisplay(r.fecha_solped)}</div></div>
+      <div class="di"><div class="di-label">NP</div><div class="di-val mono">${r.np||'—'}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${fmtFechaDisplay(r.fecha_np)}</div></div>
+      <div class="di"><div class="di-label">Registrada por</div><div class="di-val">${r.usuario_registro||'—'}</div></div>
+    </div>
+    ${r.nota_justificacion||r.observaciones?`<div class="obs-box">⚠ ${r.nota_justificacion||r.observaciones}</div>`:''}
+    ${CAN_EDIT?`<div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-sm btn-ghost" onclick="closeModal('rep');editarRep(${r.id})">✏ Editar</button>
+      ${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="closeModal('rep');eliminarRep(${r.id})">Eliminar</button>`:''}
+    </div>`:''}`;
+  openModal('rep');
+}
+
+async function eliminarRep(rid){
+  if(!confirm('¿Eliminar esta reparación?'))return;
+  const res=await api(`/api/reparaciones/${rid}`,'DELETE');
+  if(!res||!res.ok){toast('Error','err');return;}
+  toast('Reparación eliminada');
+  REPARACIONES=REPARACIONES.filter(r=>r.id!==rid);
+  initRepFilters();filtrarReps();
+}
+
+function exportarExcelRep(){
+  if(!XLSX)return;
+  const data=repsFiltered.map(r=>({
+    'Fecha Envío':fmtFechaDisplay(r.fecha_envio),'N° Equipo':r.numero_equipo,'Marca':r.marca,
+    'Modelo':r.modelo,'TAG':r.tag,'Proveedor':r.proveedor,'Servicio':r.servicio,
+    'Estado':r.estado,'SOLPED':r.solped,'Fecha SOLPED':fmtFechaDisplay(r.fecha_solped),
+    'NP':r.np,'Fecha NP':fmtFechaDisplay(r.fecha_np),'Costo sin IVA':r.costo_sin_iva,
+    'Liberación':r.liberacion,'Fecha Entrega':fmtFechaDisplay(r.fecha_entrega),
+    'Responsable':r.responsable,'Observaciones':r.observaciones
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Reparaciones');
+  XLSX.writeFile(wb,'reparaciones.xlsx');
+}
 
 // ══ DETALLE PERFORACIÓN ══
 async function showPerf(pid){
@@ -741,88 +968,60 @@ async function showPerf(pid){
   const loc=fmtLoc(p);
   const isMontado=p.historial&&p.historial[0]&&p.historial[0].estado==='Montado';
   const asigActual=isMontado?p.historial[0]:null;
-
-  // Estimación caudal
   let estimHTML='';
   if(asigActual&&asigActual.modelo){
     const cat=findCat(asigActual.modelo);
     if(cat&&p.prof_trabajo_mts){
-      const hEst=p.nivel_dinamico?p.prof_trabajo_mts+p.nivel_dinamico:p.prof_trabajo_mts;
+      const hEst=p.nivel_dinamico?(p.prof_trabajo_mts||0)+p.nivel_dinamico:p.prof_trabajo_mts;
       const qEst=interpQ(cat.curva,hEst);
       const hMax=cat.curva[0][1];
       let rc='range-ok',rt='✅ En rango';
       if(hEst>hMax){rc='range-err';rt='❌ Fuera de rango';}
       else if(hEst>hMax*0.88){rc='range-warn';rt='⚠ Cerca del límite';}
-      estimHTML=`<div class="estimation-box">
-        <div class="est-title">Estimación de caudal${!p.nivel_dinamico?' · <span style="color:var(--amber)">sin nivel dinámico</span>':''}</div>
+      estimHTML=`<div class="estimation-box"><div class="est-title">Estimación de caudal${!p.nivel_dinamico?' · <span style="color:var(--amber)">sin nivel dinámico</span>':''}</div>
         <div class="est-grid">
           <div class="est-item"><div class="est-lbl">H estimada</div><div class="est-val">${hEst.toFixed(1)} m</div></div>
           <div class="est-item"><div class="est-lbl">Q estimado</div><div class="est-val ${qEst>0?'range-ok':'range-err'}">${qEst>0?qEst.toFixed(1)+' m³/h':'—'}</div></div>
           <div class="est-item"><div class="est-lbl">Rango</div><div class="est-val ${rc}" style="font-size:11px">${rt}</div></div>
-        </div>
-      </div>`;
+        </div></div>`;
     }
   }
-
-  // Timeline historial
   const tlHTML=p.historial&&p.historial.length?`
-    <div style="margin-top:14px">
-      <div class="section-divider">Historial de bombas en esta perforación · ${p.historial.length} registros</div>
-      <div class="timeline">
-        ${p.historial.map((h,i)=>{
-          const isAct=i===0&&h.estado==='Montado';
-          return`<div class="tl-item">
-            <div class="tl-dot ${isAct?'active':'old'}"></div>
-            <div class="tl-card ${isAct?'active':''}">
-              <div class="tl-title">${h.n_equipo||'—'} · ${h.modelo||'—'} · ${h.marca||''} ${estadoBadge(h.estado)}</div>
-              <div class="tl-meta">
-                ${h.hp?h.hp+' HP · ':''}TAG: ${h.tag||'—'}
-                ${h.fecha_montaje?` · Montada: ${fmtFechaDisplay(h.fecha_montaje)}`:''}
-                ${h.fecha_desmontaje?` · Desmontada: ${fmtFechaDisplay(h.fecha_desmontaje)}`:''}
-                ${h.notificada_por?` · Por: ${h.notificada_por}`:''}
-              </div>
-              ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
-              ${CAN_EDIT?`<div class="tl-actions">
-                <button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>
-                ${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="eliminarAsignacion(${h.id},event)">Eliminar</button>`:''}
-              </div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`:'' ;
-
+    <div style="margin-top:14px"><div class="section-divider">Historial · ${p.historial.length} registros</div>
+    <div class="timeline">${p.historial.map((h,i)=>{
+      const isAct=i===0&&h.estado==='Montado';
+      return`<div class="tl-item"><div class="tl-dot ${isAct?'active':''}"></div>
+        <div class="tl-card ${isAct?'active':''}">
+          <div class="tl-title">${h.n_equipo||'—'} · ${h.modelo||'—'} · ${h.marca||''} ${estadoBadge(h.estado)}</div>
+          <div class="tl-meta">${h.hp?h.hp+' HP · ':''}TAG: ${h.tag||'—'}${h.fecha_montaje?' · Montada: '+fmtFechaDisplay(h.fecha_montaje):''}${h.fecha_desmontaje?' · Desmontada: '+fmtFechaDisplay(h.fecha_desmontaje):''}${h.notificada_por?' · Por: '+h.notificada_por:''}</div>
+          ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
+          ${CAN_EDIT?`<div class="tl-actions"><button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="eliminarAsignacion(${h.id},event)">Eliminar</button>`:''}</div>`:''}
+        </div></div>`;
+    }).join('')}</div></div>`:'' ;
   document.getElementById('modal-perf-title').innerHTML=`📍 ${loc||'—'} <span style="font-size:12px;font-weight:400;color:var(--text3)">· ${normZona(p.zona)}</span>`;
   document.getElementById('btn-edit-perf').style.display=CAN_EDIT?'inline-flex':'none';
   document.getElementById('modal-perf-body').innerHTML=`
     <div class="dg">
       <div class="di"><div class="di-label">Zona</div><div class="di-val">${normZona(p.zona)}</div></div>
       <div class="di"><div class="di-label">Bombeo</div><div class="di-val">${fmt(p.bombeo)}</div></div>
-      <div class="di"><div class="di-label">Prof. trabajo</div><div class="di-val" style="font-family:var(--mono)">${p.prof_trabajo_mts?p.prof_trabajo_mts+' m':'—'}</div></div>
+      <div class="di"><div class="di-label">Prof. trabajo</div><div class="di-val mono">${p.prof_trabajo_mts?p.prof_trabajo_mts+' m':'—'}</div></div>
       <div class="di"><div class="di-label">Cañería</div><div class="di-val">${fmt(p.tipo_cañeria)}</div></div>
-      <div class="di"><div class="di-label">Nivel estático</div><div class="di-val" style="font-family:var(--mono)">${p.nivel_estatico?p.nivel_estatico+' m':'—'}</div></div>
-      <div class="di"><div class="di-label">Nivel dinámico</div><div class="di-val" style="font-family:var(--mono)">${p.nivel_dinamico?p.nivel_dinamico+' m':'—'}</div></div>
+      <div class="di"><div class="di-label">Nivel estático</div><div class="di-val mono">${p.nivel_estatico?p.nivel_estatico+' m':'—'}</div></div>
+      <div class="di"><div class="di-label">Nivel dinámico</div><div class="di-val mono">${p.nivel_dinamico?p.nivel_dinamico+' m':'—'}</div></div>
     </div>
     ${isMontado&&asigActual?`
       <div style="background:rgba(52,199,123,.06);border:1px solid rgba(52,199,123,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
         <div style="font-size:11px;color:var(--green);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Bomba montada actualmente</div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:600;font-family:var(--mono)">${asigActual.n_equipo||'—'} · ${asigActual.modelo||'—'}</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:3px">${asigActual.marca||''} · ${asigActual.hp||'—'} HP · TAG: ${asigActual.tag||'—'}</div>
-          </div>
-          ${CAN_EDIT?`
-          <button class="btn btn-sm" onclick="showBomba(${asigActual.bomba_id||asigActual.id})">Ver bomba</button>
-          <button class="btn btn-sm btn-red" onclick="desmontarModal(${asigActual.id})">→ Desmontar</button>
-          `:''}
+          <div style="flex:1"><div style="font-size:14px;font-weight:600;font-family:var(--mono)">${asigActual.n_equipo||'—'} · ${asigActual.modelo||'—'}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">${asigActual.marca||''} · ${asigActual.hp||'—'} HP · TAG: ${asigActual.tag||'—'}</div></div>
+          ${CAN_EDIT?`<button class="btn btn-sm" onclick="showBomba(${asigActual.bomba_id||asigActual.id})">Ver bomba</button>
+          <button class="btn btn-sm btn-red" onclick="desmontarModal(${asigActual.id})">→ Desmontar</button>`:''}
         </div>
-      </div>
-    `:`
-      <div style="background:rgba(240,84,84,.05);border:1px dashed rgba(240,84,84,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      </div>`:`      <div style="background:rgba(240,84,84,.05);border:1px dashed rgba(240,84,84,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:13px;color:var(--text3)">Sin bomba montada actualmente</span>
         ${CAN_EDIT?`<button class="btn btn-sm" onclick="abrirAsignar(${p.id})">+ Asignar bomba</button>`:''}
-      </div>
-    `}
+      </div>`}
     ${estimHTML}
     ${tlHTML}
     ${CAN_EDIT&&!isMontado?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
@@ -839,47 +1038,31 @@ async function showBomba(bid){
   if(!res||!res.ok)return;
   const b=await res.json();
   const isActMontada=b.historial&&b.historial[0]&&b.historial[0].estado==='Montado';
-
   const tlHTML=b.historial&&b.historial.length?`
-    <div style="margin-top:14px">
-      <div class="section-divider">Historial de esta bomba · ${b.historial.length} asignaciones</div>
-      <div class="timeline">
-        ${b.historial.map((h,i)=>{
-          const isAct=i===0;
-          const locH=[h.calle,h.entre&&h.entre!=='0'?`e/${h.entre}`:null,h.y_col&&h.y_col!=='0'?`y ${h.y_col}`:null].filter(Boolean).join(' ');
-          return`<div class="tl-item">
-            <div class="tl-dot ${isAct&&h.estado==='Montado'?'active':'old'}"></div>
-            <div class="tl-card ${isAct&&h.estado==='Montado'?'active':''}">
-              <div class="tl-title">📍 ${locH||'—'} ${estadoBadge(h.estado)}</div>
-              <div class="tl-meta">
-                ${h.zona?normZona(h.zona)+' · ':''}
-                ${h.fecha_montaje?'Montada: '+fmtFechaDisplay(h.fecha_montaje):'Sin fecha montaje'}
-                ${h.fecha_desmontaje?' → Desmontada: '+fmtFechaDisplay(h.fecha_desmontaje):''}
-                ${h.notificada_por?' · Por: '+h.notificada_por:''}
-              </div>
-              ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
-              ${CAN_EDIT?`<div class="tl-actions">
-                <button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>
-                ${h.estado==='Montado'?`<button class="btn btn-sm btn-red" onclick="desmontarModal(${h.id},event)">→ Desmontar</button>`:''}
-              </div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`:'';
-
+    <div style="margin-top:14px"><div class="section-divider">Historial · ${b.historial.length} asignaciones</div>
+    <div class="timeline">${b.historial.map((h,i)=>{
+      const isAct=i===0;
+      const locH=[h.calle,h.entre&&h.entre!=='0'?`e/${h.entre}`:null,h.y_col&&h.y_col!=='0'?`y ${h.y_col}`:null].filter(Boolean).join(' ');
+      return`<div class="tl-item"><div class="tl-dot ${isAct&&h.estado==='Montado'?'active':''}"></div>
+        <div class="tl-card ${isAct&&h.estado==='Montado'?'active':''}">
+          <div class="tl-title">📍 ${locH||'—'} ${estadoBadge(h.estado)}</div>
+          <div class="tl-meta">${h.zona?normZona(h.zona)+' · ':''}${h.fecha_montaje?'Montada: '+fmtFechaDisplay(h.fecha_montaje):'Sin fecha'}${h.fecha_desmontaje?' → '+fmtFechaDisplay(h.fecha_desmontaje):''}${h.notificada_por?' · Por: '+h.notificada_por:''}</div>
+          ${h.notas?`<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ ${h.notas}</div>`:''}
+          ${CAN_EDIT?`<div class="tl-actions"><button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>${h.estado==='Montado'?`<button class="btn btn-sm btn-red" onclick="desmontarModal(${h.id},event)">→ Desmontar</button>`:''}</div>`:''}
+        </div></div>`;
+    }).join('')}</div></div>`:'';
   document.getElementById('modal-bomba-title').innerHTML=`${b.n_equipo||'—'} <span style="font-size:12px;font-weight:400;color:var(--text3)">· ${b.modelo||'—'} · ${b.marca||'—'}</span>`;
   document.getElementById('btn-edit-bomba').style.display=CAN_EDIT?'inline-flex':'none';
   document.getElementById('modal-bomba-body').innerHTML=`
     <div class="dg">
-      <div class="di"><div class="di-label">TAG actual</div><div class="di-val" style="font-family:var(--mono)">${b.tag||'—'}</div></div>
-      <div class="di"><div class="di-label">TAG anterior/extraviado</div><div class="di-val" style="font-family:var(--mono)">${b.tag_extraviado||'—'}</div></div>
+      <div class="di"><div class="di-label">TAG actual</div><div class="di-val mono">${b.tag||'—'}</div></div>
+      <div class="di"><div class="di-label">TAG anterior</div><div class="di-val mono">${b.tag_extraviado||'—'}</div></div>
       <div class="di"><div class="di-label">Marca</div><div class="di-val">${b.marca||'—'}</div></div>
-      <div class="di"><div class="di-label">Modelo</div><div class="di-val" style="font-family:var(--mono)">${b.modelo||'—'}</div></div>
-      <div class="di"><div class="di-label">Potencia</div><div class="di-val" style="font-family:var(--mono)">${b.hp?b.hp+' HP':'—'}${b.kw?' / '+b.kw+' kW':''}</div></div>
-      <div class="di"><div class="di-label">Amperes</div><div class="di-val" style="font-family:var(--mono)">${b.amperes||'—'}</div></div>
-      <div class="di"><div class="di-label">N° Serie</div><div class="di-val" style="font-family:var(--mono)">${b.serie||'—'}</div></div>
-      <div class="di"><div class="di-label">SAP ID</div><div class="di-val" style="font-family:var(--mono)">${b.sap_id||'—'}</div></div>
+      <div class="di"><div class="di-label">Modelo</div><div class="di-val mono">${b.modelo||'—'}</div></div>
+      <div class="di"><div class="di-label">Potencia</div><div class="di-val mono">${b.hp?b.hp+' HP':'—'}${b.kw?' / '+b.kw+' kW':''}</div></div>
+      <div class="di"><div class="di-label">Amperes</div><div class="di-val mono">${b.amperes||'—'}</div></div>
+      <div class="di"><div class="di-label">N° Serie</div><div class="di-val mono">${b.serie||'—'}</div></div>
+      <div class="di"><div class="di-label">SAP ID</div><div class="di-val mono">${b.sap_id||'—'}</div></div>
       <div class="di" style="grid-column:span 2"><div class="di-label">Ubicación física</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
           ${ubicBadge(b.ubicacion_fisica)}
@@ -895,10 +1078,7 @@ async function showBomba(bid){
         <div style="font-size:11px;color:var(--green);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Montada actualmente en</div>
         <div style="font-size:14px;font-weight:600;font-family:var(--mono)">📍 ${[b.historial[0].calle,b.historial[0].y_col&&b.historial[0].y_col!=='0'?'y '+b.historial[0].y_col:null].filter(Boolean).join(' ')}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:3px">${normZona(b.historial[0].zona)}</div>
-      </div>
-    `:`<div style="background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px">
-        🔵 Disponible para ser asignada
-      </div>`}
+      </div>`:`<div style="background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px">🔵 Disponible para ser asignada</div>`}
     ${b.observaciones?`<div class="obs-box">⚠ ${b.observaciones}</div>`:''}
     ${tlHTML}
     ${CAN_EDIT?`<div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
@@ -909,20 +1089,16 @@ async function showBomba(bid){
   openModal('bomba');
 }
 
-// ══ ASIGNAR BOMBA ══
+// ══ ASIGNAR ══
 async function abrirAsignar(perfId){
-  // Load available bombas
   const res=await api('/api/bombas/disponibles');
   if(!res||!res.ok)return;
   const disponibles=await res.json();
   const perf=PERFS.find(p=>p.id===perfId);
   document.getElementById('modal-asignar-title').textContent=`Asignar bomba a ${fmtLoc(perf)||'perforación'}`;
   document.getElementById('modal-asignar-body').innerHTML=`
-    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">${disponibles.length} bombas disponibles en el inventario</p>
-    <div style="margin-bottom:12px">
-      <label>Buscar bomba disponible</label>
-      <input type="text" id="asig-search" placeholder="N° equipo, TAG, modelo..." oninput="filtrarAsigDisp()">
-    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">${disponibles.length} bombas disponibles</p>
+    <div style="margin-bottom:12px"><label>Buscar bomba</label><input type="text" id="asig-search" placeholder="N° equipo, TAG, modelo..." oninput="filtrarAsigDisp()"></div>
     <div class="card" style="padding:.5rem 1rem;max-height:240px;overflow-y:auto" id="asig-lista"></div>
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
       <div class="section-divider">Datos de la asignación</div>
@@ -935,66 +1111,42 @@ async function abrirAsignar(perfId){
         <button class="btn btn-sm btn-ghost" onclick="closeModal('asignar')">Cancelar</button>
         <button class="btn btn-sm" onclick="confirmarAsignar(${perfId})">Confirmar asignación</button>
       </div>
-    </div>
-  `;
-  // Store disponibles for filtering
-  window._asigDisp = disponibles;
-  window._asigSelected = null;
+    </div>`;
+  window._asigDisp=disponibles; window._asigSelected=null;
   renderAsigDisp(disponibles);
   openModal('asignar');
 }
-
 function renderAsigDisp(lista){
   document.getElementById('asig-lista').innerHTML=lista.map(b=>`
     <div class="row-item" onclick="selAsig(${b.id},this)" id="asig-item-${b.id}">
-      <div class="ri-main">
-        <div class="ri-id">${b.n_equipo||'—'} · ${b.modelo||'?'}</div>
-        <div class="ri-meta">${b.marca||'?'} · ${b.hp?b.hp+'HP':''} · TAG: ${b.tag||'—'}</div>
-      </div>
+      <div class="ri-main"><div class="ri-id">${b.n_equipo||'—'} · ${b.modelo||'?'}</div><div class="ri-meta">${b.marca||'?'} · ${b.hp?b.hp+'HP':''} · TAG: ${b.tag||'—'}</div></div>
     </div>`).join('')||'<div style="padding:1rem;color:var(--text3);text-align:center">Sin resultados</div>';
 }
-
 function filtrarAsigDisp(){
   const txt=(document.getElementById('asig-search').value||'').toLowerCase();
-  renderAsigDisp(window._asigDisp.filter(b=>
-    [b.n_equipo,b.tag,b.modelo,b.marca,b.serie].some(v=>v&&v.toLowerCase().includes(txt))
-  ));
+  renderAsigDisp(window._asigDisp.filter(b=>[b.n_equipo,b.tag,b.modelo,b.marca,b.serie].some(v=>v&&v.toLowerCase().includes(txt))));
 }
-
 function selAsig(id,el){
   document.querySelectorAll('[id^="asig-item-"]').forEach(e=>e.style.background='');
   el.style.background='rgba(79,142,247,.1)';
   window._asigSelected=id;
 }
-
 async function confirmarAsignar(perfId){
   if(!window._asigSelected){toast('Seleccioná una bomba','err');return;}
-  const data={
-    bomba_id:window._asigSelected,
-    perforacion_id:perfId,
-    estado:'Montado',
+  const data={bomba_id:window._asigSelected,perforacion_id:perfId,estado:'Montado',
     fecha_montaje:normFecha(document.getElementById('asig-fecha').value)||null,
     notificada_por:document.getElementById('asig-noti').value||null,
-    notas:document.getElementById('asig-notas').value||null,
-  };
+    notas:document.getElementById('asig-notas').value||null};
   const res=await api('/api/asignaciones','POST',data);
   if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
-  closeModal('asignar');
-  closeModal('perf');
-  toast('Bomba asignada correctamente');
-  await loadAll();
-  showPerf(perfId);
+  closeModal('asignar');closeModal('perf');
+  toast('Bomba asignada');await loadAll();showPerf(perfId);
 }
-
 async function abrirAsignarBomba(bombaId){
-  // Assign a specific bomba to a perforacion
   const perf_opts=PERFS.filter(p=>p.estado_actual!=='Montado');
   document.getElementById('modal-asignar-title').textContent='Asignar a perforación';
   document.getElementById('modal-asignar-body').innerHTML=`
-    <div style="margin-bottom:12px">
-      <label>Buscar perforación libre</label>
-      <input type="text" id="asig-perf-search" placeholder="Calle, zona..." oninput="filtrarAsigPerf()">
-    </div>
+    <div style="margin-bottom:12px"><label>Buscar perforación libre</label><input type="text" id="asig-perf-search" placeholder="Calle, zona..." oninput="filtrarAsigPerf()"></div>
     <div class="card" style="padding:.5rem 1rem;max-height:240px;overflow-y:auto" id="asig-perf-lista"></div>
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
       <div class="g3">
@@ -1007,52 +1159,35 @@ async function abrirAsignarBomba(bombaId){
         <button class="btn btn-sm" onclick="confirmarAsignarBomba(${bombaId})">Confirmar</button>
       </div>
     </div>`;
-  window._asigPerfDisp=perf_opts;
-  window._asigPerfSelected=null;
+  window._asigPerfDisp=perf_opts; window._asigPerfSelected=null;
   renderAsigPerf(perf_opts);
   openModal('asignar');
 }
-
 function renderAsigPerf(lista){
   document.getElementById('asig-perf-lista').innerHTML=lista.map(p=>`
     <div class="row-item" onclick="selAsigPerf(${p.id},this)" id="asig-perf-${p.id}">
-      <div class="ri-main">
-        <div class="ri-id">📍 ${fmtLoc(p)}</div>
-        <div class="ri-meta">${normZona(p.zona)}${p.prof_trabajo_mts?' · '+p.prof_trabajo_mts+'m':''}</div>
-      </div>
+      <div class="ri-main"><div class="ri-id">📍 ${fmtLoc(p)}</div><div class="ri-meta">${normZona(p.zona)}${p.prof_trabajo_mts?' · '+p.prof_trabajo_mts+'m':''}</div></div>
     </div>`).join('')||'<div style="padding:1rem;color:var(--text3);text-align:center">Sin perforaciones libres</div>';
 }
-
 function filtrarAsigPerf(){
   const txt=(document.getElementById('asig-perf-search').value||'').toLowerCase();
-  renderAsigPerf(window._asigPerfDisp.filter(p=>
-    [p.calle,p.y_col,p.zona,p.entre].some(v=>v&&v.toLowerCase().includes(txt))
-  ));
+  renderAsigPerf(window._asigPerfDisp.filter(p=>[p.calle,p.y_col,p.zona,p.entre].some(v=>v&&v.toLowerCase().includes(txt))));
 }
-
 function selAsigPerf(id,el){
   document.querySelectorAll('[id^="asig-perf-"]').forEach(e=>e.style.background='');
   el.style.background='rgba(79,142,247,.1)';
   window._asigPerfSelected=id;
 }
-
 async function confirmarAsignarBomba(bombaId){
   if(!window._asigPerfSelected){toast('Seleccioná una perforación','err');return;}
-  const data={
-    bomba_id:bombaId,
-    perforacion_id:window._asigPerfSelected,
-    estado:'Montado',
+  const data={bomba_id:bombaId,perforacion_id:window._asigPerfSelected,estado:'Montado',
     fecha_montaje:normFecha(document.getElementById('asig2-fecha').value)||null,
     notificada_por:document.getElementById('asig2-noti').value||null,
-    notas:document.getElementById('asig2-notas').value||null,
-  };
+    notas:document.getElementById('asig2-notas').value||null};
   const res=await api('/api/asignaciones','POST',data);
   if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
-  closeModal('asignar');
-  closeModal('bomba');
-  toast('Bomba asignada correctamente');
-  await loadAll();
-  showBomba(bombaId);
+  closeModal('asignar');closeModal('bomba');
+  toast('Bomba asignada');await loadAll();showBomba(bombaId);
 }
 
 // ══ DESMONTAR ══
@@ -1071,17 +1206,13 @@ async function desmontarModal(asigId,event){
     </div>`;
   openModal('form');
 }
-
 async function confirmarDesmontar(asigId){
   const fecha=normFecha(document.getElementById('des-fecha').value)||null;
   const notas=document.getElementById('des-notas').value||null;
   const res=await api(`/api/asignaciones/${asigId}/desmontar`,'POST',{fecha_desmontaje:fecha,notas});
   if(!res||!res.ok){toast('Error','err');return;}
-  closeModal('form');
-  closeModal('perf');
-  closeModal('bomba');
-  toast('Bomba desmontada');
-  await loadAll();
+  closeModal('form');closeModal('perf');closeModal('bomba');
+  toast('Bomba desmontada');await loadAll();
 }
 
 // ══ EDITAR ASIGNACIÓN ══
@@ -1104,49 +1235,31 @@ async function editarAsignacion(asigId,event){
     </div>`;
   openModal('form');
 }
-
 async function guardarAsignacion(aid){
-  const data={
-    estado:document.getElementById('ea-estado').value,
+  const data={estado:document.getElementById('ea-estado').value,
     notificada_por:document.getElementById('ea-noti').value||null,
     fecha_montaje:normFecha(document.getElementById('ea-fmont').value)||null,
     fecha_desmontaje:normFecha(document.getElementById('ea-fdes').value)||null,
-    notas:document.getElementById('ea-notas').value||null,
-  };
+    notas:document.getElementById('ea-notas').value||null};
   const res=await api(`/api/asignaciones/${aid}`,'PUT',data);
   if(!res||!res.ok){toast('Error','err');return;}
-  closeModal('form');
-  toast('Asignación actualizada');
-  await loadAll();
+  closeModal('form');toast('Asignación actualizada');await loadAll();
   if(currentPerfId)showPerf(currentPerfId);
   else if(currentBombaId)showBomba(currentBombaId);
 }
-
 async function eliminarAsignacion(aid,event){
   if(event)event.stopPropagation();
   if(!confirm('¿Eliminar este registro del historial?'))return;
   const res=await api(`/api/asignaciones/${aid}`,'DELETE');
   if(!res||!res.ok){toast('Error','err');return;}
-  toast('Registro eliminado');
-  await loadAll();
+  toast('Registro eliminado');await loadAll();
   if(currentPerfId)showPerf(currentPerfId);
   else if(currentBombaId)showBomba(currentBombaId);
 }
 
 // ══ CRUD PERFORACIÓN ══
-function abrirNuevaPerf(){
-  currentPerfId=null;
-  document.getElementById('modal-form-title').textContent='Nueva perforación';
-  document.getElementById('modal-form-body').innerHTML=perfFormHTML(null);
-  openModal('form');
-}
-function editarPerfActual(){
-  const p=PERFS.find(x=>x.id===currentPerfId);
-  if(!p)return;
-  document.getElementById('modal-form-title').textContent=`Editar: ${fmtLoc(p)}`;
-  document.getElementById('modal-form-body').innerHTML=perfFormHTML(p);
-  closeModal('perf');openModal('form');
-}
+function abrirNuevaPerf(){currentPerfId=null;document.getElementById('modal-form-title').textContent='Nueva perforación';document.getElementById('modal-form-body').innerHTML=perfFormHTML(null);openModal('form');}
+function editarPerfActual(){const p=PERFS.find(x=>x.id===currentPerfId);if(!p)return;document.getElementById('modal-form-title').textContent=`Editar: ${fmtLoc(p)}`;document.getElementById('modal-form-body').innerHTML=perfFormHTML(p);closeModal('perf');openModal('form');}
 function perfFormHTML(p){
   const v=(f,d='')=>p?p[f]??d:d;
   return`
@@ -1185,34 +1298,20 @@ async function guardarPerf(){
     tipo_cañeria:str('pf-can'),observaciones:str('pf-obs')};
   const res=currentPerfId?await api(`/api/perforaciones/${currentPerfId}`,'PUT',data):await api('/api/perforaciones','POST',data);
   if(!res||!res.ok){toast('Error al guardar','err');return;}
-  const saved=await res.json();
-  closeModal('form');
-  toast(currentPerfId?'Perforación actualizada':'Perforación creada');
-  await loadAll();
-  if(currentPerfId)showPerf(currentPerfId);
+  closeModal('form');toast(currentPerfId?'Perforación actualizada':'Perforación creada');
+  await loadAll();if(currentPerfId)showPerf(currentPerfId);
 }
 
 // ══ CRUD BOMBA ══
-function abrirNuevaBomba(){
-  currentBombaId=null;
-  document.getElementById('modal-form-title').textContent='Nueva bomba';
-  document.getElementById('modal-form-body').innerHTML=bombaFormHTML(null);
-  openModal('form');
-}
-function editarBombaActual(){
-  const b=BOMBAS.find(x=>x.id===currentBombaId);
-  if(!b)return;
-  document.getElementById('modal-form-title').textContent=`Editar: ${b.n_equipo||'bomba'}`;
-  document.getElementById('modal-form-body').innerHTML=bombaFormHTML(b);
-  closeModal('bomba');openModal('form');
-}
+function abrirNuevaBomba(){currentBombaId=null;document.getElementById('modal-form-title').textContent='Nueva bomba';document.getElementById('modal-form-body').innerHTML=bombaFormHTML(null);openModal('form');}
+function editarBombaActual(){const b=BOMBAS.find(x=>x.id===currentBombaId);if(!b)return;document.getElementById('modal-form-title').textContent=`Editar: ${b.n_equipo||'bomba'}`;document.getElementById('modal-form-body').innerHTML=bombaFormHTML(b);closeModal('bomba');openModal('form');}
 function bombaFormHTML(b){
   const v=(f,d='')=>b?b[f]??d:d;
   return`
     <div class="g3" style="margin-bottom:10px">
       <div><label>N° Equipo</label><input id="bf-neq" value="${v('n_equipo')}"></div>
       <div><label>TAG actual</label><input id="bf-tag" value="${v('tag')}"></div>
-      <div><label>TAG anterior/extraviado</label><input id="bf-tagv" value="${v('tag_extraviado')}"></div>
+      <div><label>TAG anterior</label><input id="bf-tagv" value="${v('tag_extraviado')}"></div>
     </div>
     <div class="g3" style="margin-bottom:10px">
       <div><label>Marca</label><input id="bf-marca" value="${v('marca')}"></div>
@@ -1231,8 +1330,7 @@ function bombaFormHTML(b){
     </div>
     <div style="margin-bottom:12px"><label>Observaciones</label><textarea id="bf-obs">${v('observaciones')}</textarea></div>
     <div style="margin-bottom:12px"><label>Ubicación física</label>
-      <select id="bf-ubic">
-        <option value="">— sin asignar —</option>
+      <select id="bf-ubic"><option value="">— sin asignar —</option>
         ${['Montada','Pañol','Sucursal','Grúa','PSM Cañero','En reparación','Baja'].map(u=>`<option ${v('ubicacion_fisica')===u?'selected':''}>${u}</option>`).join('')}
       </select>
     </div>
@@ -1251,25 +1349,18 @@ async function guardarBomba(){
     ubicacion_fisica:str('bf-ubic')};
   const res=currentBombaId?await api(`/api/bombas/${currentBombaId}`,'PUT',data):await api('/api/bombas','POST',data);
   if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
-  const saved=await res.json();
-  currentBombaId=saved.id;
-  closeModal('form');
-  toast(currentBombaId?'Bomba actualizada':'Bomba creada');
-  await loadAll();
+  const saved=await res.json();currentBombaId=saved.id;
+  closeModal('form');toast(currentBombaId?'Bomba actualizada':'Bomba creada');await loadAll();
 }
-
-async function cambiarUbicacion(bid, ubicacion){
+async function cambiarUbicacion(bid,ubicacion){
   if(!ubicacion)return;
   const res=await api(`/api/bombas/${bid}/ubicacion`,'PATCH',{ubicacion_fisica:ubicacion});
   if(!res||!res.ok){toast('Error al cambiar ubicación','err');return;}
-  const updated=await res.json();
+  toast(`Ubicación → ${ubicacion}`);
   const idx=BOMBAS.findIndex(x=>x.id===bid);
   if(idx>=0)BOMBAS[idx].ubicacion_fisica=ubicacion;
-  toast(`Ubicación → ${ubicacion}`);
-  filtrarBombas();
-  showBomba(bid);
+  filtrarBombas();showBomba(bid);
 }
-
 async function eliminarBomba(bid){
   if(!confirm('¿Eliminar esta bomba y todo su historial?'))return;
   const res=await api(`/api/bombas/${bid}`,'DELETE');
@@ -1282,7 +1373,7 @@ function initCatFilters(){
   const hps=[...new Set(CATALOGO.map(b=>b.hp).filter(Boolean))].sort((a,b)=>a-b);
   const descs=[...new Set(CATALOGO.map(b=>b.descarga).filter(Boolean))].sort();
   populate('cHP',hps,h=>h+' HP');populate('cDesc',descs);
-  document.getElementById('cat-sub').textContent=`${CATALOGO.length} modelos · Ø 6"`;
+  document.getElementById('cat-sub').textContent=`${CATALOGO.length} modelos`;
   filtrarCat();
 }
 function filtrarCat(){
@@ -1298,9 +1389,9 @@ function filtrarCat(){
   document.getElementById('cat-lista').innerHTML=fil.map(b=>{
     const qMax=b.curva?.[b.curva.length-1]?.[0]||0,hMax=b.curva?.[0]?.[1]||0;
     return`<div class="row-item" onclick="showCatDet(${b.id})">
-      <div class="ri-main"><div class="ri-id">${b.modelo}</div><div class="ri-meta">Q: 0–${qMax} m³/h · H máx: ${hMax} m · ${b.etapas} et. · ${b.descarga}</div></div>
+      <div class="ri-main"><div class="ri-id">${b.modelo}</div><div class="ri-meta">Q: 0–${qMax} m³/h · H máx: ${hMax} m · ${b.etapas||'?'} et. · ${b.descarga||'?'}</div></div>
       <span class="badge b-amber" style="margin-right:6px">${b.hp} HP</span>
-      <span class="badge b-blue">${b.descarga}</span>
+      <span class="badge b-blue">${b.descarga||'?'}</span>
     </div>`;
   }).join('')||'<div style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</div>';
 }
@@ -1310,12 +1401,12 @@ function showCatDet(id){
   document.getElementById('modal-cat-body').innerHTML=`
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
       <span class="badge b-amber">${b.hp} HP</span>
-      <span class="badge b-blue">${b.descarga}</span>
-      <span class="badge b-gray">${b.etapas} etapas</span>
+      <span class="badge b-blue">${b.descarga||'?'}</span>
+      <span class="badge b-gray">${b.etapas||'?'} etapas</span>
     </div>
     <div class="dg">
-      <div class="di"><div class="di-label">Q máximo</div><div class="di-val" style="font-family:var(--mono)">${b.curva?.[b.curva.length-1]?.[0]||'—'} m³/h</div></div>
-      <div class="di"><div class="di-label">H máxima</div><div class="di-val" style="font-family:var(--mono)">${b.curva?.[0]?.[1]||'—'} m</div></div>
+      <div class="di"><div class="di-label">Q máximo</div><div class="di-val mono">${b.curva?.[b.curva.length-1]?.[0]||'—'} m³/h</div></div>
+      <div class="di"><div class="di-label">H máxima</div><div class="di-val mono">${b.curva?.[0]?.[1]||'—'} m</div></div>
     </div>`;
   openModal('cat');
   setTimeout(()=>{
@@ -1323,8 +1414,8 @@ function showCatDet(id){
     chartModal=new Chart(document.getElementById('modal-chart'),{type:'scatter',
       data:{datasets:[{label:'H-Q',data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,.1)',tension:.4,showLine:true,fill:true,pointRadius:3}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
-                y:{title:{display:true,text:'H (m)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
+        scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8'},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
+                y:{title:{display:true,text:'H (m)',color:'#8b91a8'},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
   },100);
 }
 
@@ -1356,10 +1447,9 @@ function autoFillDir(){
     <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Bomba actual</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${p.modelo||'—'} · ${p.hp||'?'} HP</div></div>
     <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Prof. trabajo</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${p.prof_trabajo_mts?p.prof_trabajo_mts+' m':'—'}</div></div>
     <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">H estimada</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${hEst?hEst.toFixed(1)+' m':'—'}${!p.nivel_dinamico?' <span style="color:var(--amber);font-size:10px">sin ND</span>':''}</div></div>
-    <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Q estimado actual</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${qEstHTML}</div></div>
+    <div><div style="color:var(--text3);font-size:10px;text-transform:uppercase;font-family:var(--mono)">Q estimado</div><div style="font-size:13px;font-weight:500;margin-top:3px;font-family:var(--mono)">${qEstHTML}</div></div>
   </div>`;
 }
-
 function buscarEq(){
   const q=parseFloat(document.getElementById('bQ').value);
   const h=parseFloat(document.getElementById('bH').value);
@@ -1398,13 +1488,13 @@ function buscarEq(){
       <div style="display:flex;align-items:center;gap:10px">
         <div class="${scC(b.sc)}" style="font-size:24px;font-weight:700;font-family:var(--mono);min-width:54px">${b.sc}%</div>
         <div style="flex:1"><div style="font-size:14px;font-weight:600;font-family:var(--mono)">${b.modelo}${b.enCampo?` <span class="badge b-green" style="font-size:10px">${b.enCampo} en campo</span>`:''}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px">${b.hp} HP · ${b.etapas} et. · ${b.descarga}</div></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${b.hp} HP · ${b.etapas||'?'} et. · ${b.descarga||'?'}</div></div>
         ${i===0?'<span class="badge b-blue">Mejor match</span>':''}
       </div>
       <div style="display:grid;grid-template-columns:repeat(${b.ganHTML?5:4},1fr);gap:6px;margin-top:10px">
-        <div class="di"><div class="di-label">H @ Q</div><div class="di-val" style="font-family:var(--mono)">${b.hEnQ} m</div></div>
-        <div class="di"><div class="di-label">Dif. H</div><div class="di-val" style="font-family:var(--mono)">${b.errH}%</div></div>
-        <div class="di"><div class="di-label">Q máx.</div><div class="di-val" style="font-family:var(--mono)">${b.curva[b.curva.length-1][0]} m³/h</div></div>
+        <div class="di"><div class="di-label">H @ Q</div><div class="di-val mono">${b.hEnQ} m</div></div>
+        <div class="di"><div class="di-label">Dif. H</div><div class="di-val mono">${b.errH}%</div></div>
+        <div class="di"><div class="di-label">Q máx.</div><div class="di-val mono">${b.curva[b.curva.length-1][0]} m³/h</div></div>
         <div class="di"><div class="di-label">Rango</div><div class="di-val ${b.rc}" style="font-size:11px">${b.rt}</div></div>
         ${b.ganHTML}
       </div>
@@ -1414,101 +1504,87 @@ function buscarEq(){
   const ds=res.slice(0,4).map((b,i)=>({label:`${b.modelo}(${b.hp}HP)`,data:b.curva.map(p=>({x:p[0],y:p[1]})),borderColor:COLORS[i],backgroundColor:'transparent',tension:.4,pointRadius:2,fill:false,showLine:true}));
   if(catAct&&catAct.curva)ds.push({label:`Actual: ${catAct.modelo}`,data:catAct.curva.map(p=>({x:p[0],y:p[1]})),borderColor:'#fff',backgroundColor:'transparent',borderDash:[6,3],tension:.4,pointRadius:0,fill:false,showLine:true});
   ds.push({label:'Pto. requerido',data:[{x:q,y:h}],borderColor:'#f05454',backgroundColor:'#f05454',pointRadius:9,pointStyle:'crossRot',showLine:false});
-  chartBuscar=new Chart(document.getElementById('chartBuscar'),{type:'scatter',data:{datasets:ds},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#8b91a8',font:{size:11},boxWidth:10}}},
-      scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
-              y:{title:{display:true,text:'H (m)',color:'#8b91a8',font:{size:11}},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
+  chartBuscar=new Chart(document.getElementById('chartBuscar'),{type:'scatter',
+    data:{datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b91a8',font:{size:11}}}},
+      scales:{x:{title:{display:true,text:'Q (m³/h)',color:'#8b91a8'},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}},
+              y:{title:{display:true,text:'H (m)',color:'#8b91a8'},min:0,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8b91a8'}}}}});
 }
 
 // ══ ANALÍTICA ══
 function showSubAnal(s){
   document.querySelectorAll('#anal-tabs .stab').forEach(b=>b.classList.remove('active'));
   document.querySelector(`#anal-tabs .stab[onclick*="${s}"]`).classList.add('active');
-  ['rango','faltantes','antiguedad','estadisticas'].forEach(x=>{document.getElementById('subanal-'+x).style.display=x===s?'block':'none';});
-  if(s==='rango')renderFueraRango();
-  if(s==='faltantes')renderFaltantes();
-  if(s==='antiguedad')renderAntiguedad();
-  if(s==='estadisticas')renderEstadisticas();
+  ['rango','faltantes','antiguedad','estadisticas'].forEach(x=>document.getElementById('subanal-'+x).style.display=x===s?'block':'none');
+  if(s==='rango')renderAnalRango();
+  else if(s==='faltantes')renderAnalFaltantes();
+  else if(s==='antiguedad')renderAnalAntiguedad();
+  else if(s==='estadisticas')renderAnalEstadisticas();
 }
-function renderFueraRango(){
-  const montadas=PERFS.filter(p=>p.estado_actual==='Montado'&&p.prof_trabajo_mts&&p.modelo);
-  const res=[];
-  for(const p of montadas){
-    const cat=findCat(p.modelo);if(!cat||!cat.curva||!cat.curva.length)continue;
+function renderAnalRango(){
+  const montadas=PERFS.filter(p=>p.estado_actual==='Montado'&&p.prof_trabajo_mts);
+  const fuera=[];
+  montadas.forEach(p=>{
+    const cat=findCat(p.modelo);
+    if(!cat||!cat.curva)return;
+    const hMax=cat.curva[0][1];
     const hEst=p.nivel_dinamico?(p.prof_trabajo_mts||0)+p.nivel_dinamico:p.prof_trabajo_mts;
-    const qEst=interpQ(cat.curva,hEst);const hMax=cat.curva[0][1];const qMax=cat.curva[cat.curva.length-1][0];
-    let est='ok';
-    if(hEst>hMax)est='err';
-    else if(hEst>hMax*0.88||qEst<qMax*0.08)est='warn';
-    if(est!=='ok')res.push({p,cat,hEst,qEst,hMax,qMax,est});
-  }
-  res.sort((a,b)=>a.est==='err'?-1:1);
-  const div=document.getElementById('subanal-rango');
-  if(!res.length){div.innerHTML=`<div class="card"><div style="text-align:center;padding:2rem;color:var(--green)">✅ Todas las bombas con datos completos están dentro del rango operativo</div></div>`;return;}
-  div.innerHTML=`<div class="card"><div class="card-title">Bombas montadas fuera o cerca del límite (${res.length})</div>`+
-    res.map(({p,cat,hEst,qEst,hMax,est})=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <span class="badge ${est==='err'?'b-red':'b-amber'}">${est==='err'?'❌ Fuera':'⚠ Límite'}</span>
-      <div style="flex:1"><div style="font-family:var(--mono);font-size:13px">${p.modelo} · ${p.hp||'—'} HP</div>
-      <div style="font-size:12px;color:var(--text3)">📍 ${fmtLoc(p)} · ${normZona(p.zona)} · H=${hEst.toFixed(1)}m (máx ${hMax}m)</div></div>
-      <button class="btn btn-sm btn-ghost" onclick="showPerf(${p.id})">Ver</button>
-    </div>`).join('')+`</div>`;
+    if(hEst>hMax)fuera.push({p,hEst,hMax,diff:hEst-hMax});
+  });
+  document.getElementById('subanal-rango').innerHTML=fuera.length?`
+    <div style="margin-bottom:8px;font-size:12px;color:var(--red)">⚠ ${fuera.length} bomba(s) fuera de rango</div>
+    <div class="card" style="padding:.5rem 1.1rem">
+      ${fuera.sort((a,b)=>b.diff-a.diff).map(({p,hEst,hMax,diff})=>`
+        <div class="row-item" onclick="showPerf(${p.id})">
+          <div class="ri-main"><div class="ri-id">📍 ${fmtLoc(p)}</div><div class="ri-meta">${p.modelo||'?'} · ${normZona(p.zona)}</div></div>
+          <div style="text-align:right;margin-right:8px;font-size:12px">
+            <div style="color:var(--red);font-family:var(--mono)">H=${hEst.toFixed(0)}m > Hmáx=${hMax}m</div>
+            <div style="color:var(--text3)">Exceso: +${diff.toFixed(0)}m</div>
+          </div>
+          <span class="badge b-red">Fuera</span>
+        </div>`).join('')}
+    </div>`:`<div class="card"><p style="text-align:center;padding:1.5rem;color:var(--green)">✅ Todas las bombas dentro del rango operativo</p></div>`;
 }
-function renderFaltantes(){
-  const campos=[
-    {k:'prof_trabajo_mts',l:'Sin profundidad',src:'perfs'},
-    {k:'nivel_dinamico',l:'Sin nivel dinámico',src:'perfs'},
-    {k:'nivel_estatico',l:'Sin nivel estático',src:'perfs'},
-    {k:'Q_m3h',l:'Sin Q medido',src:'perfs'},
-    {k:'serie',l:'Sin N° serie (bomba)',src:'bombas'},
-    {k:'tag',l:'Sin TAG (bomba)',src:'bombas'},
-  ];
-  const montadas=PERFS.filter(p=>p.estado_actual==='Montado');
-  const div=document.getElementById('subanal-faltantes');
-  div.innerHTML=`<div class="card"><div class="card-title">Filtrar por datos faltantes</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">`+
-    campos.map(c=>{
-      const src=c.src==='perfs'?montadas:BOMBAS.filter(b=>b.estado_actual==='Montado');
-      const n=src.filter(r=>!r[c.k]).length;
-      return`<button class="btn btn-sm btn-ghost" onclick="mostrarFaltante('${c.k}','${c.l}','${c.src}')">
-        ${c.l} <span style="background:var(--red);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:4px">${n}</span>
-      </button>`;
-    }).join('')+`</div><div id="falt-lista"><p style="font-size:13px;color:var(--text3)">Seleccioná un campo.</p></div></div>`;
+function renderAnalFaltantes(){
+  const sinHP=BOMBAS.filter(b=>!b.hp);
+  const sinModelo=BOMBAS.filter(b=>!b.modelo);
+  const sinNivel=PERFS.filter(p=>p.estado_actual==='Montado'&&(!p.nivel_dinamico||!p.prof_trabajo_mts));
+  document.getElementById('subanal-faltantes').innerHTML=`
+    <div class="g3">
+      <div class="card"><div class="card-title">Bombas sin HP</div>
+        ${sinHP.length?sinHP.slice(0,10).map(b=>`<div class="row-item" onclick="showBomba(${b.id})"><div class="ri-main"><div class="ri-id">${b.n_equipo||'—'}</div><div class="ri-meta">${b.modelo||'?'} · ${b.marca||'?'}</div></div></div>`).join(''):`<p style="color:var(--green);font-size:12px">✅ Ninguna</p>`}
+      </div>
+      <div class="card"><div class="card-title">Bombas sin modelo</div>
+        ${sinModelo.length?sinModelo.slice(0,10).map(b=>`<div class="row-item" onclick="showBomba(${b.id})"><div class="ri-main"><div class="ri-id">${b.n_equipo||'—'}</div><div class="ri-meta">TAG: ${b.tag||'—'}</div></div></div>`).join(''):`<p style="color:var(--green);font-size:12px">✅ Ninguna</p>`}
+      </div>
+      <div class="card"><div class="card-title">Pozos sin nivel dinámico</div>
+        ${sinNivel.length?sinNivel.slice(0,10).map(p=>`<div class="row-item" onclick="showPerf(${p.id})"><div class="ri-main"><div class="ri-id">📍 ${fmtLoc(p)}</div><div class="ri-meta">${normZona(p.zona)}</div></div></div>`).join(''):`<p style="color:var(--green);font-size:12px">✅ Ninguno</p>`}
+      </div>
+    </div>`;
 }
-function mostrarFaltante(campo,label,src){
-  const montadas=PERFS.filter(p=>p.estado_actual==='Montado');
-  const lista=(src==='perfs'?montadas:BOMBAS.filter(b=>b.estado_actual==='Montado')).filter(r=>!r[campo]);
-  document.getElementById('falt-lista').innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:8px">${lista.length} con ${label}</div>`+
-    lista.slice(0,50).map(r=>src==='perfs'?`<div class="row-item" onclick="showPerf(${r.id})">
-      <div class="ri-main"><div class="ri-id">📍 ${fmtLoc(r)}</div><div class="ri-meta">${normZona(r.zona)} · ${r.modelo||'—'}</div></div>
-    </div>`:`<div class="row-item" onclick="showBomba(${r.id})">
-      <div class="ri-main"><div class="ri-id">${r.n_equipo||'—'} · ${r.modelo||'—'}</div><div class="ri-meta">TAG: ${r.tag||'—'}</div></div>
-    </div>`).join('');
+function renderAnalAntiguedad(){
+  const withDate=BOMBAS.filter(b=>b.fecha_montaje||b.historial?.[0]?.fecha_montaje).slice(0,20);
+  document.getElementById('subanal-antiguedad').innerHTML=`<div class="card"><p style="color:var(--text3);font-size:13px;padding:.5rem">Módulo de antigüedad en desarrollo — requiere datos de fecha de montaje inicial.</p></div>`;
 }
-function renderAntiguedad(){
-  document.getElementById('subanal-antiguedad').innerHTML=`<div class="card"><p style="font-size:13px;color:var(--text3)">Función disponible próximamente.</p></div>`;
-}
-function renderEstadisticas(){
-  const montadas=PERFS.filter(p=>p.estado_actual==='Montado');
-  const total=montadas.length;
-  const campos=[{k:'prof_trabajo_mts',l:'Profundidad'},{k:'nivel_dinamico',l:'Nivel dinámico'},{k:'Q_m3h',l:'Q medido'}];
-  const compHTML=campos.map(c=>{const n=montadas.filter(r=>r[c.k]).length;const pct=Math.round(n/(total||1)*100);const col=pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
-    return`<div class="bar-row"><div class="bar-label"><span>${c.l}</span><span style="font-family:var(--mono)">${n}/${total} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;}).join('');
-  const marcaMap=BOMBAS.reduce((a,b)=>{if(b.marca){a[b.marca]=(a[b.marca]||0)+1;}return a;},{});
-  const marcaMax=Math.max(...Object.values(marcaMap),1);
-  const marcaHTML=Object.entries(marcaMap).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`<div class="bar-row"><div class="bar-label"><span>${m}</span><span style="font-family:var(--mono)">${n}</span></div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/marcaMax*100)}%;background:var(--accent)"></div></div></div>`).join('');
-  document.getElementById('subanal-estadisticas').innerHTML=`<div class="g2"><div class="card"><div class="card-title">Completitud (montadas)</div>${compHTML}</div><div class="card"><div class="card-title">Distribución por marca</div>${marcaHTML}</div></div>`;
-}
-
-// ══ EXPORT EXCEL ══
-function exportarExcel(){
-  const data=perfsFiltered.length?perfsFiltered:PERFS;
-  const headers=['Calle','Entre','Y','Zona','Estado','Modelo','Marca','HP','N° Equipo','TAG','Serie','Prof.(m)','N.Estático','N.Dinámico','Q m³/h','H mca','Cañería'];
-  const rows=data.map(p=>[p.calle,p.entre,p.y_col,normZona(p.zona),p.estado_actual||'—',p.modelo,p.marca,p.hp,p.n_equipo,p.tag,p.serie,p.prof_trabajo_mts,p.nivel_estatico,p.nivel_dinamico,p.Q_m3h,p.H_mca,p.tipo_cañeria]);
-  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-  ws['!cols']=[8,8,8,14,12,14,12,6,12,10,10,10,10,10,10,10,20].map(w=>({wch:w}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Inventario');
-  XLSX.writeFile(wb,`inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast(`Excel exportado — ${data.length} registros`);
+function renderAnalEstadisticas(){
+  const porProv=REPARACIONES.reduce((a,r)=>{if(r.proveedor)a[r.proveedor]=(a[r.proveedor]||0)+1;return a},{});
+  const costoTotal=REPARACIONES.reduce((a,r)=>a+(r.costo_usd||0),0);
+  const activas=REPARACIONES.filter(r=>!['Entregada','Cancelada'].includes(r.estado));
+  document.getElementById('subanal-estadisticas').innerHTML=`
+    <div class="g2">
+      <div class="card"><div class="card-title">Reparaciones por proveedor</div><div id="astat-prov"></div></div>
+      <div class="card">
+        <div class="card-title">Resumen económico</div>
+        <div class="dg">
+          <div class="di"><div class="di-label">Costo total histórico</div><div class="di-val mono" style="color:var(--accent)">U$D ${costoTotal.toLocaleString('es-AR',{maximumFractionDigits:0})}</div></div>
+          <div class="di"><div class="di-label">Reparaciones activas</div><div class="di-val mono" style="color:var(--amber)">${activas.length}</div></div>
+          <div class="di"><div class="di-label">Total historial</div><div class="di-val mono">${REPARACIONES.length}</div></div>
+          <div class="di"><div class="di-label">Entregadas</div><div class="di-val mono" style="color:var(--green)">${REPARACIONES.filter(r=>r.estado==='Entregada').length}</div></div>
+        </div>
+      </div>
+    </div>`;
+  barChart('astat-prov',porProv,'var(--accent)');
 }
 
 // ══ DATOS ══
@@ -1520,146 +1596,117 @@ function showSubDatos(s){
   if(s==='usuarios')loadUsers();
 }
 
-function logMsg(msg,type=''){
-  const box=document.getElementById('logBox');
-  if(box.querySelector('span[style*="text3"]'))box.innerHTML='';
-  const line=document.createElement('div');
-  line.className=type?'log-'+type:'';line.style.color=type==='ok'?'var(--green)':type==='err'?'var(--red)':'var(--accent)';
-  line.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
-  box.appendChild(line);box.scrollTop=box.scrollHeight;
-}
-
 function processFileCat(file){
   if(!file)return;
-  logMsg(`Leyendo "${file.name}"...`,'info');
+  const statusEl=document.getElementById('statusCat');
+  const logEl=document.getElementById('logBox');
+  statusEl.innerHTML=`<span style="color:var(--amber)">Procesando ${file.name}...</span>`;
   const reader=new FileReader();
-  reader.onload=async function(e){
+  reader.onload=async e=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('motorarg'))||wb.SheetNames[0];
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:null});
-      const alturas={};
-      (rows[7]||[]).forEach((v,c)=>{if(c>=12&&v!==null){const h=parseFloat(String(v).replace(',','.'));if(!isNaN(h))alturas[c]=h;}});
-      const records=[];
-      for(let i=9;i<rows.length;i++){
-        const r=rows[i];if(!r)continue;
-        const marca=String(r[1]||'').trim(),modelo=String(r[3]||'').trim();
-        if(!marca||marca==='null'||!modelo||modelo==='null')continue;
-        const hpM=String(r[5]||'').replace(',','.').match(/(\d+\.?\d*)/);
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const sheetName=wb.SheetNames.find(s=>s.toLowerCase().includes('motorarg'))||wb.SheetNames[0];
+      const ws=wb.Sheets[sheetName];
+      const data=XLSX.utils.sheet_to_json(ws,{header:1});
+      logEl.innerHTML=`<span style="color:var(--accent)">Hoja: ${sheetName} · ${data.length} filas</span>\n`;
+      const records=[];let skipped=0;
+      for(let i=1;i<data.length;i++){
+        const row=data[i];
+        if(!row||!row[0])continue;
+        const modelo=String(row[0]||'').trim();
+        if(!modelo){skipped++;continue;}
         const curva=[];
-        Object.entries(alturas).forEach(([col,h])=>{const val=r[parseInt(col)];if(val==null)return;const m=String(val).replace(',','.').match(/^(\d+\.?\d*)/);if(m){const q=parseFloat(m[1]);if(q>0)curva.push([q,h]);}});
-        curva.sort((a,b)=>a[0]-b[0]);
-        if(curva.length>=2)records.push({marca,modelo,para:String(r[4]||'').trim(),hp:hpM?parseFloat(hpM[1]):null,etapas:String(r[6]||'').trim(),descarga:String(r[7]||'').trim(),largo_mm:String(r[9]||'').trim(),curva});
+        for(let j=2;j<row.length-1;j+=2){
+          const q=parseFloat(row[j]),h=parseFloat(row[j+1]);
+          if(!isNaN(q)&&!isNaN(h)&&h>0)curva.push([q,h]);
+        }
+        if(!curva.length){skipped++;continue;}
+        records.push({marca:'Motorarg',modelo,para:String(row[1]||'').trim(),
+          hp:parseFloat(String(row[0]).match(/\d+\.?\d*/)?.[0])||null,
+          etapas:null,descarga:null,largo_mm:null,curva});
       }
-      if(!records.length){logMsg('Sin modelos válidos','err');return;}
+      logEl.innerHTML+=`Registros válidos: ${records.length} · Saltados: ${skipped}\n`;
       const res=await api('/api/import/catalogo','POST',{records});
-      if(!res||!res.ok){logMsg('Error al importar','err');return;}
-      const data=await res.json();
-      const fresh=await api('/api/catalogo');
-      if(fresh&&fresh.ok){CATALOGO.length=0;(await fresh.json()).forEach(r=>CATALOGO.push(r));}
-      initCatFilters();initBuscarSelect();
-      logMsg(`✓ ${data.count} modelos importados`,'ok');
-      document.getElementById('statusCat').innerHTML=`<span style="color:var(--green);font-size:13px">✓ ${data.count} modelos desde "${file.name}"</span>`;
-      toast(`${data.count} modelos importados`);
-    }catch(err){logMsg('Error: '+err.message,'err');}
+      if(!res||!res.ok){logEl.innerHTML+=`<span style="color:var(--red)">Error al importar</span>`;return;}
+      const d=await res.json();
+      logEl.innerHTML+=`<span style="color:var(--green)">✅ Importados: ${d.count} modelos</span>`;
+      statusEl.innerHTML=`<span style="color:var(--green)">✅ ${d.count} modelos importados</span>`;
+      await loadAll();
+    }catch(err){
+      logEl.innerHTML+=`<span style="color:var(--red)">Error: ${err.message}</span>`;
+      statusEl.innerHTML=`<span style="color:var(--red)">Error procesando archivo</span>`;
+    }
   };
   reader.readAsArrayBuffer(file);
 }
 
-// ══ USUARIOS ══
 async function loadUsers(){
-  const res=await api('/api/users');if(!res||!res.ok)return;
+  if(!CAN_ADMIN)return;
+  const res=await api('/api/users');
+  if(!res||!res.ok)return;
   const users=await res.json();
-  const roleBadge=r=>r==='admin'?'b-red':r==='editor'?'b-amber':'b-gray';
-  document.getElementById('users-lista').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase">
-      <span>Usuario</span><span>Rol</span><span></span>
-    </div>`+
-    users.map(u=>`<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-      <span style="font-family:var(--mono);font-size:13px">${u.username}</span>
-      <span class="badge ${roleBadge(u.role)}">${u.role}</span>
-      <div style="display:flex;gap:6px">${u.id!==USER_ID?`<button class="btn btn-sm btn-ghost" onclick="cambiarRol(${u.id},'${u.role}')">Rol</button><button class="btn btn-sm btn-red" onclick="deleteUser(${u.id})">✕</button>`:'<span style="font-size:11px;color:var(--text3)">(vos)</span>'}</div>
+  document.getElementById('users-lista').innerHTML=users.map(u=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-family:var(--mono);font-size:13px">${u.username}</span>
+      <span class="badge b-gray">${u.role}</span>
+      ${u.id!==USER_ID?`
+        <select onchange="cambiarRol(${u.id},this.value)" style="font-size:12px;max-width:100px">
+          ${['viewer','editor','admin'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm btn-red" onclick="eliminarUser(${u.id})">✕</button>
+      `:'<span style="font-size:11px;color:var(--text3)">(tú)</span>'}
     </div>`).join('');
 }
 async function crearUsuario(){
-  const u=document.getElementById('nu-user').value.trim();
-  const p=document.getElementById('nu-pass').value;
-  const r=document.getElementById('nu-role').value;
-  if(!u||!p){toast('Completá usuario y contraseña','err');return;}
-  const res=await api('/api/users','POST',{username:u,password:p,role:r});
-  if(!res||!res.ok){const d=await res.json();toast(d.error||'Error','err');return;}
-  toast('Usuario creado');loadUsers();
-  document.getElementById('nu-user').value='';document.getElementById('nu-pass').value='';
+  const username=document.getElementById('nu-user').value.trim();
+  const password=document.getElementById('nu-pass').value;
+  const role=document.getElementById('nu-role').value;
+  if(!username||!password){toast('Completá usuario y contraseña','err');return;}
+  const res=await api('/api/users','POST',{username,password,role});
+  if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
+  toast('Usuario creado');document.getElementById('nu-user').value='';document.getElementById('nu-pass').value='';
+  loadUsers();
 }
-async function deleteUser(id){
-  if(!confirm('¿Eliminar usuario?'))return;
-  await api(`/api/users/${id}`,'DELETE');toast('Usuario eliminado');loadUsers();
-}
-async function cambiarRol(id,actual){
-  const nuevo=prompt(`Rol actual: ${actual}\nNuevo rol (viewer / editor / admin):`,'');
-  if(!nuevo||!['viewer','editor','admin'].includes(nuevo.trim()))return;
-  const res=await api(`/api/users/${id}/role`,'PATCH',{role:nuevo.trim()});
+async function cambiarRol(uid,role){
+  const res=await api(`/api/users/${uid}/role`,'PATCH',{role});
   if(!res||!res.ok){toast('Error','err');return;}
-  toast(`Rol cambiado a ${nuevo}`);loadUsers();
+  toast('Rol actualizado');
+}
+async function eliminarUser(uid){
+  if(!confirm('¿Eliminar este usuario?'))return;
+  const res=await api(`/api/users/${uid}`,'DELETE');
+  if(!res||!res.ok){toast('Error','err');return;}
+  toast('Usuario eliminado');loadUsers();
 }
 async function cambiarPassword(){
-  const cur=document.getElementById('pw-current').value;
-  const nw=document.getElementById('pw-new').value;
-  const res=await api('/api/me/password','PUT',{current:cur,new:nw});
-  if(!res||!res.ok){const d=await res.json();toast(d.error||'Error','err');return;}
-  toast('Contraseña cambiada');
-  document.getElementById('pw-current').value='';document.getElementById('pw-new').value='';
+  const current=document.getElementById('pw-current').value;
+  const nueva=document.getElementById('pw-new').value;
+  if(!nueva||nueva.length<6){toast('Mínimo 6 caracteres','err');return;}
+  const res=await api('/api/me/password','PUT',{current,new:nueva});
+  if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
+  toast('Contraseña actualizada');document.getElementById('pw-current').value='';document.getElementById('pw-new').value='';
+}
+
+// ══ EXPORT EXCEL ══
+function exportarExcel(){
+  if(!XLSX)return;
+  const data=BOMBAS.map(b=>({
+    'N° Equipo':b.n_equipo,'TAG':b.tag,'TAG anterior':b.tag_extraviado,
+    'Marca':b.marca,'Modelo':b.modelo,'HP':b.hp,'kW':b.kw,'Amperes':b.amperes,
+    'Serie':b.serie,'SAP ID':b.sap_id,'Estado':b.estado_actual||'Disponible',
+    'Ubicación':b.ubicacion_fisica,'Perforación':b.calle?fmtLoc(b):'—',
+    'Zona':normZona(b.zona),'Fecha montaje':fmtFechaDisplay(b.fecha_montaje)
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Bombas');
+  XLSX.writeFile(wb,'inventario_bombas.xlsx');
 }
 
 // ══ INIT ══
-if(CAN_ADMIN)document.getElementById('tabUsers').style.display='';
-if(!CAN_EDIT)document.querySelectorAll('.btn-new-perf').forEach(b=>b.style.display='none');
-document.querySelector('.htab[onclick*="analitica"]').addEventListener('click',()=>setTimeout(()=>showSubAnal('rango'),100));
-loadAll();
-</script>
-<script>
-// ====================== REPARACIONES ======================
-function showTab(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    const content = document.getElementById(`content-${tab}`);
-    if (content) content.style.display = 'block';
-
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    const active = document.getElementById(`tab-${tab}`);
-    if (active) active.classList.add('active');
-
-    if (tab === 'reparaciones') cargarListaReparaciones();
-}
-
-async function cargarListaReparaciones() {
-    try {
-        const res = await fetch('/api/reparaciones');
-        const data = await res.json();
-        const tbody = document.querySelector('#tabla-reparaciones tbody');
-        tbody.innerHTML = data.map(r => `
-            <tr>
-                <td>${r.fecha_envio || ''}</td>
-                <td><strong>${r.numero_equipo}</strong></td>
-                <td>${r.tag_principal || ''}</td>
-                <td>${r.proveedor}</td>
-                <td><span class="badge bg-${r.estado === 'Entregada' ? 'success' : 'warning'}">${r.estado}</span></td>
-                <td>${r.solped || ''}</td>
-                <td>${r.fecha_entrega || ''}</td>
-                <td><button class="btn btn-sm btn-warning" onclick="editarReparacion(${r.id})">Editar</button></td>
-            </tr>
-        `).join('');
-    } catch(e) {
-        console.error(e);
-    }
-}
-
-function nuevaReparacion() {
-    alert("Nueva Reparación - En desarrollo");
-}
-
-function editarReparacion(id) {
-    alert("Editar reparación ID: " + id);
-}
+document.addEventListener('DOMContentLoaded',()=>{
+  loadAll();
+  if(CAN_ADMIN)document.getElementById('tabUsers').style.display='inline-block';
+});
 </script>
 </body>
 </html>
