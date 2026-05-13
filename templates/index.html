@@ -50,6 +50,8 @@ textarea{resize:vertical;min-height:60px}
 .b-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
 .b-gray{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
 .b-empty{background:rgba(240,84,84,.05);color:var(--text3);border:1px dashed rgba(240,84,84,.3)}
+.b-garantia{background:rgba(52,199,123,.08);color:#2ecc71;border:1px solid rgba(52,199,123,.4);animation:pulse-g 2s infinite}
+@keyframes pulse-g{0%,100%{box-shadow:0 0 0 0 rgba(52,199,123,.3)}50%{box-shadow:0 0 0 4px rgba(52,199,123,.0)}}
 .row-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all .1s}
 .row-item:last-child{border-bottom:none}
 .row-item:hover{padding-left:6px;background:rgba(79,142,247,.04);border-radius:4px;margin:0 -6px;padding-right:6px}
@@ -491,6 +493,23 @@ const fmt = f => (!f||f==='NaT'||f==='null'||f===null) ? '—' : f;
 const fmtLoc = r => [r.calle, r.entre&&r.entre!=='0'?`e/${r.entre}`:null, r.y_col&&r.y_col!=='0'?`y ${r.y_col}`:null].filter(Boolean).join(' ');
 const normZona = z => {if(!z)return'Sin zona';const l=z.toLowerCase();if(l.includes('sur'))return'La Plata Sur';if(l.includes('norte'))return'La Plata Norte';return z;}
 
+function addDays(dateStr, days){
+  if(!dateStr)return null;
+  const d=new Date(dateStr);d.setDate(d.getDate()+days);
+  return d.toISOString().split('T')[0];
+}
+function diasRestantes(fechaStr){
+  if(!fechaStr)return null;
+  const diff=Math.ceil((new Date(fechaStr)-new Date())/(1000*60*60*24));
+  return diff;
+}
+function garantiaBadge(b){
+  if(!b.en_garantia)return'';
+  const hasta=addDays(b.garantia_hasta,183);
+  const dias=diasRestantes(hasta);
+  if(dias===null||dias<0)return'';
+  return`<span class="badge b-garantia" title="Garantía hasta ${fmtFechaDisplay(hasta)} (${dias}d)">🛡 Garantía ${dias}d</span>`;
+}
 function repEstadoBadge(e){
   if(!e)return'<span class="badge b-gray">—</span>';
   if(e==='Entregada')return`<span class="badge b-green">${e}</span>`;
@@ -735,6 +754,7 @@ function renderBombas(){
     html+=`<div class="row-item" onclick="showBomba(${b.id})">
       <div class="ri-main"><div class="ri-id">${b.n_equipo||'—'} <span style="color:var(--text3);font-weight:400"> · ${b.modelo||'?'} · ${b.marca||'?'}</span></div><div class="ri-meta">TAG: ${b.tag||'—'}${b.serie?' · Serie: '+b.serie:''}</div></div>
       ${isMontado?`<div style="text-align:right;margin-right:8px;font-size:12px;color:var(--text3)">📍 ${loc}</div>`:''}
+      ${garantiaBadge(b)}
       <span style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-right:6px">${b.hp?b.hp+' HP':'—'}</span>
       ${isMontado?estadoBadge('Montado'):ubicBadge(b.ubicacion_fisica)}
     </div>`;
@@ -863,11 +883,44 @@ function repFormHTML(r){
     </div>`;
 }
 
+async function checkGarantiaEquipo(){
+  const neq=(document.getElementById('rf-neq')?.value||'').trim();
+  const div=document.getElementById('garantia-alert');
+  if(!div||!neq)return;
+  div.innerHTML='';
+  try{
+    const res=await api(`/api/garantia/${encodeURIComponent(neq)}`);
+    if(!res||!res.ok)return;
+    const g=await res.json();
+    if(g.en_garantia){
+      div.innerHTML=`
+        <div style="background:rgba(52,199,123,.08);border:1px solid rgba(52,199,123,.4);border-radius:8px;padding:10px 14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#2ecc71;margin-bottom:4px">🛡 ¡Este equipo está en garantía!</div>
+          <div style="font-size:12px;color:var(--text2)">
+            Reparación entregada el <strong>${fmtFechaDisplay(g.fecha_entrega)}</strong> por <strong>${g.proveedor||'—'}</strong>
+            · Remito: <strong>${g.remito_entrega||'—'}</strong><br>
+            Garantía vence: <strong>${fmtFechaDisplay(g.hasta)}</strong> (${g.dias_restantes} días restantes)
+          </div>
+          <button class="btn btn-sm btn-ghost" style="margin-top:8px;font-size:11px" onclick="closeModal('form');showRep(${g.rep_id})">Ver reparación original →</button>
+        </div>`;
+    }
+  }catch(e){}
+}
+
 function abrirNuevaRep(){
   if(!CAN_EDIT)return;
   currentRepId=null;
   document.getElementById('modal-form-title').textContent='Nueva reparación';
   document.getElementById('modal-form-body').innerHTML=repFormHTML(null);
+  // Add garantia alert div and listener
+  const neqInput=document.getElementById('rf-neq');
+  if(neqInput){
+    const alertDiv=document.createElement('div');
+    alertDiv.id='garantia-alert';
+    neqInput.parentElement.parentElement.insertAdjacentElement('afterend',alertDiv);
+    neqInput.addEventListener('change',checkGarantiaEquipo);
+    neqInput.addEventListener('input',()=>setTimeout(checkGarantiaEquipo,500));
+  }
   openModal('form');
 }
 function editarRep(rid){
@@ -1074,7 +1127,7 @@ async function showBomba(bid){
           ${CAN_EDIT?`<div class="tl-actions"><button class="btn btn-sm btn-ghost" onclick="editarAsignacion(${h.id},event)">✏ Editar</button>${h.estado==='Montado'?`<button class="btn btn-sm btn-red" onclick="desmontarModal(${h.id},event)">→ Desmontar</button>`:''}</div>`:''}
         </div></div>`;
     }).join('')}</div></div>`:'';
-  document.getElementById('modal-bomba-title').innerHTML=`${b.n_equipo||'—'} <span style="font-size:12px;font-weight:400;color:var(--text3)">· ${b.modelo||'—'} · ${b.marca||'—'}</span>`;
+  document.getElementById('modal-bomba-title').innerHTML=`${b.n_equipo||'—'} <span style="font-size:12px;font-weight:400;color:var(--text3)">· ${b.modelo||'—'} · ${b.marca||'—'}</span> ${garantiaBadge(b)}`;
   document.getElementById('btn-edit-bomba').style.display=CAN_EDIT?'inline-flex':'none';
   document.getElementById('modal-bomba-body').innerHTML=`
     <div class="dg">
