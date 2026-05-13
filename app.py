@@ -698,29 +698,44 @@ def get_estados_reparacion():
 @app.route('/api/import/reparaciones', methods=['POST'])
 @admin_required
 def import_reparaciones():
-    """Importa registros desde seed_reparaciones.json al DB."""
-    import os as _os
+    """Importa registros desde seed_reparaciones.json (local o GitHub) a Turso."""
+    import os as _os, urllib.request as _urllib
+    records = None
+    source = ''
+
+    # 1) Intentar leer localmente
     seed_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'seed_reparaciones.json')
-    if not _os.path.exists(seed_path):
-        return jsonify({'error': f'No se encontró {seed_path}'}), 404
-    try:
-        with open(seed_path, encoding='utf-8') as f:
-            records = json.load(f)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if _os.path.exists(seed_path):
+        try:
+            with open(seed_path, encoding='utf-8') as f:
+                records = json.load(f)
+            source = 'local'
+        except Exception as e:
+            return jsonify({'error': f'Error leyendo archivo local: {str(e)}'}), 500
+
+    # 2) Fallback: leer desde GitHub raw
+    if records is None:
+        try:
+            url = 'https://raw.githubusercontent.com/ElMoNo22/bombas-mgr/refs/heads/main/seed_reparaciones.json'
+            with _urllib.urlopen(url, timeout=30) as resp:
+                records = json.loads(resp.read().decode('utf-8'))
+            source = 'github'
+        except Exception as e:
+            return jsonify({'error': f'No se encontró el archivo ni en servidor ni en GitHub: {str(e)}'}), 500
+
     conn = get_db()
     inserted = skipped = errors = 0
     err_list = []
     for r in records:
-        cur = conn.execute(
-            'SELECT id FROM reparaciones WHERE remito=? AND numero_equipo=?',
-            (r.get('remito'), r.get('numero_equipo'))
-        )
-        if cur.fetchone():
-            skipped += 1
-            continue
-        vals = [r.get(f) for f in REP_FIELDS]
         try:
+            cur = conn.execute(
+                'SELECT id FROM reparaciones WHERE remito=? AND numero_equipo=?',
+                (r.get('remito'), r.get('numero_equipo'))
+            )
+            if cur.fetchone():
+                skipped += 1
+                continue
+            vals = [r.get(f) for f in REP_FIELDS]
             conn.execute(
                 f'INSERT INTO reparaciones ({",".join(REP_FIELDS)}) VALUES ({",".join(["?"]*len(REP_FIELDS))})',
                 vals
@@ -732,8 +747,8 @@ def import_reparaciones():
             if len(err_list) < 5:
                 err_list.append(str(e))
     conn.close()
-    return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped,
-                    'errors': errors, 'error_list': err_list})
+    return jsonify({'ok': True, 'source': source, 'inserted': inserted,
+                    'skipped': skipped, 'errors': errors, 'error_list': err_list})
 
 # ── USERS ──
 @app.route('/api/users', methods=['GET'])
