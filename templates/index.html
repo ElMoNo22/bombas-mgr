@@ -751,7 +751,7 @@ function initRepFilters(){
 }
 function renderRepStats(){
   const activas=REPARACIONES.filter(r=>repEsActiva(r.estado));
-  const byCosto=REPARACIONES.filter(r=>r.costo_sin_iva).reduce((a,r)=>a+parseFloat(r.costo_sin_iva||0),0);
+  const byCosto=REPARACIONES.filter(r=>r.costo_usd).reduce((a,r)=>a+parseFloat(r.costo_usd||0),0);
   document.getElementById('rep-stats').innerHTML=`
     <div class="stat"><div class="stat-val" style="color:var(--amber)">${activas.length}</div><div class="stat-lbl">Activas</div></div>
     <div class="stat"><div class="stat-val" style="color:var(--green)">${REPARACIONES.filter(r=>r.estado==='Entregada').length}</div><div class="stat-lbl">Entregadas</div></div>
@@ -794,7 +794,7 @@ function renderReps(){
       <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.servicio||r.descripcion||'—'}</td>
       <td>${repEstadoBadge(r.estado)}</td>
       <td class="mono" style="font-size:11px">${solpedNP}</td>
-      <td class="mono" style="font-size:12px">${r.costo_sin_iva?'$'+parseFloat(r.costo_sin_iva).toLocaleString('es-AR',{maximumFractionDigits:0}):'—'}</td>
+      <td class="mono" style="font-size:12px">${r.costo_usd?'U$D '+parseFloat(r.costo_usd).toLocaleString('es-AR',{maximumFractionDigits:0}):'—'}</td>
       <td class="mono" style="font-size:11px">${fmtFechaDisplay(r.fecha_entrega)}</td>
       <td>${CAN_EDIT?`<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editarRep(${r.id})">✏</button>`:''}
           ${CAN_ADMIN?`<button class="btn btn-sm btn-red" onclick="event.stopPropagation();eliminarRep(${r.id})" style="margin-left:4px">✕</button>`:''}</td>
@@ -839,7 +839,7 @@ function repFormHTML(r){
     <div class="section-divider" style="margin-top:14px">Datos económicos</div>
     <div class="g3" style="margin-bottom:10px;margin-top:10px">
       <div><label>Presupuesto</label><input id="rf-presup" value="${v('presupuesto')}"></div>
-      <div><label>Costo sin IVA ($)</label><input type="number" id="rf-costo" step="0.01" value="${v('costo_sin_iva')}"></div>
+      <div><label>Costo U$D</label><input type="number" id="rf-costo" step="0.01" value="${v('costo_usd')}"></div>
       <div><label>Liberación</label><input id="rf-liber" value="${v('liberacion')}"></div>
     </div>
     <div class="section-divider" style="margin-top:4px">Gestión administrativa</div>
@@ -881,7 +881,7 @@ async function guardarRep(){
   const data={
     numero_equipo:str('rf-neq'),proveedor:str('rf-prov'),remito:str('rf-remito'),
     fecha_envio:normFecha(str('rf-fenvio')),descripcion:str('rf-desc'),servicio:str('rf-serv'),
-    presupuesto:str('rf-presup'),costo_sin_iva:num('rf-costo'),
+    presupuesto:str('rf-presup'),costo_usd:num('rf-costo'),
     solped:str('rf-solped'),fecha_solped:normFecha(str('rf-fsolped')),
     np:str('rf-np'),fecha_np:normFecha(str('rf-fnp')),
     liberacion:str('rf-liber'),estado:str('rf-estado'),
@@ -924,7 +924,7 @@ async function showRep(rid){
     <div class="section-divider">Datos económicos</div>
     <div class="g3" style="margin:10px 0">
       <div class="di"><div class="di-label">Presupuesto</div><div class="di-val mono">${r.presupuesto||'—'}</div></div>
-      <div class="di"><div class="di-label">Costo sin IVA</div><div class="di-val mono" style="color:var(--accent)">${r.costo_sin_iva?'$'+parseFloat(r.costo_sin_iva).toLocaleString('es-AR',{maximumFractionDigits:0}):'—'}</div></div>
+      <div class="di"><div class="di-label">Costo U$D</div><div class="di-val mono" style="color:var(--accent)">${r.costo_usd?'U$D '+parseFloat(r.costo_usd).toLocaleString('es-AR',{maximumFractionDigits:0}):'—'}</div></div>
       <div class="di"><div class="di-label">Liberación</div><div class="di-val mono">${r.liberacion||'—'}</div></div>
     </div>
     <div class="section-divider">Gestión administrativa</div>
@@ -956,7 +956,7 @@ function exportarExcelRep(){
     'Fecha Envío':fmtFechaDisplay(r.fecha_envio),'N° Equipo':r.numero_equipo,'Marca':r.marca,
     'Modelo':r.modelo,'TAG':r.tag,'Proveedor':r.proveedor,'Servicio':r.servicio,
     'Estado':r.estado,'SOLPED':r.solped,'Fecha SOLPED':fmtFechaDisplay(r.fecha_solped),
-    'NP':r.np,'Fecha NP':fmtFechaDisplay(r.fecha_np),'Costo sin IVA':r.costo_sin_iva,
+    'NP':r.np,'Fecha NP':fmtFechaDisplay(r.fecha_np),'Costo sin IVA':r.costo_usd,
     'Liberación':r.liberacion,'Fecha Entrega':fmtFechaDisplay(r.fecha_entrega),
     'Responsable':r.responsable,'Observaciones':r.observaciones
   }));
