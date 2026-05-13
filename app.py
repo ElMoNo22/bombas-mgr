@@ -698,10 +698,9 @@ def get_estados_reparacion():
 @app.route('/api/import/reparaciones', methods=['POST'])
 @admin_required
 def import_reparaciones():
-    """Importa registros desde seed_reparaciones.json (local o GitHub) a Turso."""
+    """Importa registros desde seed_reparaciones.json usando executemany (chunks de 10)."""
     import os as _os, urllib.request as _urllib
     records = None
-    source = ''
 
     # 1) Intentar leer localmente
     seed_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'seed_reparaciones.json')
@@ -709,7 +708,6 @@ def import_reparaciones():
         try:
             with open(seed_path, encoding='utf-8') as f:
                 records = json.load(f)
-            source = 'local'
         except Exception as e:
             return jsonify({'error': f'Error leyendo archivo local: {str(e)}'}), 500
 
@@ -719,36 +717,52 @@ def import_reparaciones():
             url = 'https://raw.githubusercontent.com/ElMoNo22/bombas-mgr/refs/heads/main/seed_reparaciones.json'
             with _urllib.urlopen(url, timeout=30) as resp:
                 records = json.loads(resp.read().decode('utf-8'))
-            source = 'github'
         except Exception as e:
-            return jsonify({'error': f'No se encontró el archivo ni en servidor ni en GitHub: {str(e)}'}), 500
+            return jsonify({'error': f'No se encontró el archivo: {str(e)}'}), 500
 
     conn = get_db()
-    inserted = skipped = errors = 0
-    err_list = []
+    try:
+        # Traer existentes en una sola query
+        cur = conn.execute('SELECT remito, numero_equipo FROM reparaciones')
+        existentes = set(
+            (r['remito'], str(r['numero_equipo'] or '')) for r in fetchall_dicts(cur)
+        )
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': f'Error leyendo tabla: {str(e)}'}), 500
+
+    # Filtrar duplicados
+    to_insert = []
+    skipped = 0
     for r in records:
-        try:
-            cur = conn.execute(
-                'SELECT id FROM reparaciones WHERE remito=? AND numero_equipo=?',
-                (r.get('remito'), r.get('numero_equipo'))
-            )
-            if cur.fetchone():
-                skipped += 1
-                continue
-            vals = [r.get(f) for f in REP_FIELDS]
-            conn.execute(
-                f'INSERT INTO reparaciones ({",".join(REP_FIELDS)}) VALUES ({",".join(["?"]*len(REP_FIELDS))})',
-                vals
-            )
-            db_commit(conn)
-            inserted += 1
-        except Exception as e:
-            errors += 1
-            if len(err_list) < 5:
-                err_list.append(str(e))
+        key = (r.get('remito'), str(r.get('numero_equipo') or ''))
+        if key in existentes:
+            skipped += 1
+        else:
+            to_insert.append([r.get(f) for f in REP_FIELDS])
+
+    # Insertar en batch con executemany (chunks de 10 internamente)
+    insert_sql = f'INSERT INTO reparaciones ({",".join(REP_FIELDS)}) VALUES ({",".join(["?"]*len(REP_FIELDS))})'
+    errors = 0
+    err_list = []
+    try:
+        conn.executemany(insert_sql, to_insert)
+        inserted = len(to_insert)
+    except Exception as e:
+        # Si falla el batch, intentar uno por uno para rescatar los que se pueda
+        inserted = 0
+        for vals in to_insert:
+            try:
+                conn.execute(insert_sql, vals)
+                inserted += 1
+            except Exception as e2:
+                errors += 1
+                if len(err_list) < 5:
+                    err_list.append(str(e2))
+
     conn.close()
-    return jsonify({'ok': True, 'source': source, 'inserted': inserted,
-                    'skipped': skipped, 'errors': errors, 'error_list': err_list})
+    return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped,
+                    'errors': errors, 'error_list': err_list})
 
 # ── USERS ──
 @app.route('/api/users', methods=['GET'])
