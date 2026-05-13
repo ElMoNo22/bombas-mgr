@@ -150,6 +150,11 @@ textarea{resize:vertical;min-height:60px}
     <div class="card"><div class="card-title">Montadas por HP</div><div id="dash-hp"></div></div>
     <div class="card"><div class="card-title">Modelos más instalados</div><div id="dash-modelos"></div></div>
   </div>
+  <div class="g3" style="margin-top:10px">
+    <div class="card"><div class="card-title">Reparaciones activas por estado</div><div id="dash-rep-estados"></div></div>
+    <div class="card"><div class="card-title">Reparaciones por proveedor</div><div id="dash-rep-prov"></div></div>
+    <div class="card"><div class="card-title">Bombas en garantía</div><div id="dash-garantia"></div></div>
+  </div>
 </div>
 
 <!-- ══ INVENTARIO ══ -->
@@ -204,6 +209,13 @@ textarea{resize:vertical;min-height:60px}
           <option value="">Todas</option><option>Montada</option><option>Pañol</option><option>Sucursal</option><option>Grúa</option><option>PSM Cañero</option><option>En reparación</option><option>Baja</option>
         </select>
       </div>
+      <div class="ff"><label>Garantía</label>
+        <select id="fBGar" onchange="filtrarBombas()">
+          <option value="">Todas</option>
+          <option value="1">En garantía</option>
+          <option value="0">Sin garantía</option>
+        </select>
+      </div>
     </div>
     <div class="card" style="padding:.5rem 1.1rem"><div id="bombas-lista"></div></div>
     <div class="pagination">
@@ -256,6 +268,18 @@ textarea{resize:vertical;min-height:60px}
         <option value="">Todas</option>
         <option value="1">Solo activas</option>
         <option value="0">Solo cerradas</option>
+      </select>
+    </div>
+    <div class="ff"><label>Garantía</label>
+      <select id="fRGar" onchange="filtrarReps()">
+        <option value="">Todas</option>
+        <option value="1">En garantía</option>
+      </select>
+    </div>
+    <div class="ff"><label>Año</label>
+      <select id="fRAnio" onchange="filtrarReps()">
+        <option value="">Todos</option>
+        <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
       </select>
     </div>
   </div>
@@ -652,11 +676,16 @@ async function renderDash(){
   const res=await api('/api/stats');
   if(!res||!res.ok)return;
   const s=await res.json();
+  const enGarantiaCount=BOMBAS.filter(b=>b.en_garantia).length;
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat"><div class="stat-val" style="color:var(--green)">${s.montadas}</div><div class="stat-lbl">Montadas</div></div>
     <div class="stat"><div class="stat-val" style="color:var(--accent)">${s.disponibles}</div><div class="stat-lbl">Disponibles</div></div>
-    <div class="stat"><div class="stat-val">${s.total_bombas}</div><div class="stat-lbl">Bombas</div></div>
-    <div class="stat"><div class="stat-val" style="color:var(--amber)">${s.en_reparacion||0}</div><div class="stat-lbl">En reparación</div></div>`;
+    <div class="stat"><div class="stat-val" style="color:var(--amber)">${s.en_reparacion||0}</div><div class="stat-lbl">En reparación</div></div>
+    <div class="stat"><div class="stat-val" style="color:#2ecc71">${enGarantiaCount}</div><div class="stat-lbl">En garantía</div></div>
+    <div class="stat"><div class="stat-val">${s.total_bombas}</div><div class="stat-lbl">Total bombas</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--text3)">${s.total_perforaciones}</div><div class="stat-lbl">Perforaciones</div></div>`;
+  // widen dash-stats to 6 cols
+  document.querySelector('#panel-dashboard .g4').style.gridTemplateColumns='repeat(6,1fr)';
   barChart('dash-estados',{'Montado':s.montadas,'Disponible':s.disponibles},{'Montado':'var(--green)','Disponible':'var(--accent)'});
   barChart('dash-zonas',Object.fromEntries(s.por_zona.map(z=>[z.zona||'Sin zona',z.n])),'var(--accent)');
   barChart('dash-hp',Object.fromEntries(s.por_hp.map(h=>[h.hp+' HP',h.n])),'var(--amber)',true);
@@ -668,6 +697,24 @@ async function renderDash(){
       <div style="width:60px;height:4px;background:var(--bg3);border-radius:2px"><div style="height:4px;width:${Math.round(m.n/mMax*100)}%;background:var(--green);border-radius:2px"></div></div>
       <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">${m.n}</span>
     </div>`).join('');
+  // Reparaciones en dashboard
+  const repActivas=REPARACIONES.filter(r=>repEsActiva(r.estado));
+  const porEstadoRep=repActivas.reduce((a,r)=>{a[r.estado]=(a[r.estado]||0)+1;return a},{});
+  const porProvRep=REPARACIONES.reduce((a,r)=>{if(r.proveedor)a[r.proveedor]=(a[r.proveedor]||0)+1;return a},{});
+  const colors={'Pendiente cotización':'var(--text3)','En reparación':'var(--amber)','Esperando SOLPED':'var(--accent)','Esperando NP':'var(--purple)','Esperando retiro':'var(--green)'};
+  barChart('dash-rep-estados',porEstadoRep,colors);
+  barChart('dash-rep-prov',porProvRep,'var(--accent)');
+  // Garantías en dashboard
+  const garBombas=BOMBAS.filter(b=>b.en_garantia).sort((a,b)=>diasRestantes(addDays(a.garantia_hasta,183))-diasRestantes(addDays(b.garantia_hasta,183)));
+  document.getElementById('dash-garantia').innerHTML=garBombas.length
+    ? garBombas.slice(0,6).map(b=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="showBomba(${b.id})">
+          <div style="flex:1"><div style="font-size:12px;font-family:var(--mono)">${b.n_equipo||'—'} · ${b.modelo||'?'}</div>
+          <div style="font-size:11px;color:var(--text3)">${b.marca||''} · TAG: ${b.tag||'—'}</div></div>
+          <span class="badge b-garantia">${diasRestantes(addDays(b.garantia_hasta,183))}d</span>
+        </div>`).join('')+
+        (garBombas.length>6?`<div style="font-size:11px;color:var(--text3);margin-top:6px">+${garBombas.length-6} más en garantía</div>`:'')
+    : '<div style="color:var(--text3);font-size:12px;padding:.5rem 0">Sin garantías activas</div>';
 }
 
 // ══ INVENTARIO ══
@@ -732,12 +779,15 @@ function filtrarBombas(){
   const marc=document.getElementById('fBMarca').value;
   const hp=document.getElementById('fBHP').value;
   const ubic=document.getElementById('fBUbic').value;
+  const gar=document.getElementById('fBGar')?.value||'';
   bombasFiltered=BOMBAS.filter(b=>{
     if(txt){const campos=[b.n_equipo||'',b.tag||'',b.tag_extraviado||'',b.modelo||'',b.marca||'',b.serie||''].map(s=>s.toLowerCase());if(!campos.some(x=>x.includes(txt)))return false;}
     if(est){if(est==='Montado'&&b.estado_actual!=='Montado')return false;if(est==='disponible'&&b.estado_actual==='Montado')return false;if(est==='Desmontado'&&(b.estado_actual==='Montado'||!b.estado_actual))return false;}
     if(ubic&&(b.ubicacion_fisica||'')!==ubic)return false;
     if(marc&&b.marca!==marc)return false;
     if(hp&&String(b.hp)!==hp)return false;
+    if(gar==='1'&&!b.en_garantia)return false;
+    if(gar==='0'&&b.en_garantia)return false;
     return true;
   });
   bombaPage=0;renderBombas();
@@ -784,12 +834,18 @@ function filtrarReps(){
   const est=document.getElementById('fREstado').value;
   const prov=document.getElementById('fRProv').value;
   const activa=document.getElementById('fRActiva').value;
+  const fRGar=document.getElementById('fRGar')?.value||'';
+  const fRAnio=document.getElementById('fRAnio')?.value||'';
+  // Build garantia set from BOMBAS
+  const garSet=new Set(BOMBAS.filter(b=>b.en_garantia).map(b=>String(b.n_equipo||'').replace('.0','')));
   repsFiltered=REPARACIONES.filter(r=>{
-    if(txt){const campos=[r.numero_equipo||'',r.tag||'',r.marca||'',r.modelo||'',r.proveedor||'',r.servicio||'',r.solped||'',r.np||''].map(s=>s.toLowerCase());if(!campos.some(x=>x.includes(txt)))return false;}
+    if(txt){const campos=[r.numero_equipo||'',r.tag||'',r.marca||'',r.modelo||'',r.proveedor||'',r.servicio||'',r.solped||'',r.np||'',r.gcp||'',r.remito||'',r.nota_justificacion||''].map(s=>s.toLowerCase());if(!campos.some(x=>x.includes(txt)))return false;}
     if(est&&r.estado!==est)return false;
     if(prov&&r.proveedor!==prov)return false;
     if(activa==='1'&&!repEsActiva(r.estado))return false;
     if(activa==='0'&&repEsActiva(r.estado))return false;
+    if(fRGar==='1'&&!garSet.has(String(r.numero_equipo||'').replace('.0','')))return false;
+    if(fRAnio&&!(r.fecha_envio||'').startsWith(fRAnio))return false;
     return true;
   });
   repPage=0;renderReps();
@@ -1141,7 +1197,9 @@ async function showBomba(bid){
       <div class="di"><div class="di-label">SAP ID</div><div class="di-val mono">${b.sap_id||'—'}</div></div>
       <div class="di" style="grid-column:span 2"><div class="di-label">Ubicación física</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-          ${ubicBadge(b.ubicacion_fisica)}
+          ${isActMontada
+            ? `<span class="badge b-green">📍 Montada en ${[b.historial[0].calle, b.historial[0].y_col&&b.historial[0].y_col!=='0'?'y '+b.historial[0].y_col:null].filter(Boolean).join(' ')} — ${normZona(b.historial[0].zona)}</span>`
+            : ubicBadge(b.ubicacion_fisica)}
           ${CAN_EDIT&&!isActMontada?`<select onchange="cambiarUbicacion(${b.id},this.value)" style="max-width:180px;font-size:12px">
             <option value="">— cambiar —</option>
             ${['Pañol','Sucursal','Grúa','PSM Cañero','En reparación','Baja'].map(u=>`<option ${b.ubicacion_fisica===u?'selected':''}>${u}</option>`).join('')}
@@ -1671,22 +1729,77 @@ function renderAnalAntiguedad(){
 }
 function renderAnalEstadisticas(){
   const porProv=REPARACIONES.reduce((a,r)=>{if(r.proveedor)a[r.proveedor]=(a[r.proveedor]||0)+1;return a},{});
+  const costoPorProv=REPARACIONES.reduce((a,r)=>{if(r.proveedor&&r.costo_usd)a[r.proveedor]=(a[r.proveedor]||0)+r.costo_usd;return a},{});
   const costoTotal=REPARACIONES.reduce((a,r)=>a+(r.costo_usd||0),0);
-  const activas=REPARACIONES.filter(r=>!['Entregada','Cancelada'].includes(r.estado));
+  const activas=REPARACIONES.filter(r=>repEsActiva(r.estado));
+  const enGarantia=BOMBAS.filter(b=>b.en_garantia);
+
+  // Top equipos más reparados
+  const porEquipo=REPARACIONES.reduce((a,r)=>{const k=r.numero_equipo||'?';a[k]=(a[k]||0)+1;return a},{});
+  const topEquipos=Object.entries(porEquipo).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Reparaciones por año
+  const porAnio=REPARACIONES.reduce((a,r)=>{const y=(r.fecha_envio||'').slice(0,4);if(y)a[y]=(a[y]||0)+1;return a},{});
+
+  // Tiempo promedio de reparación (fecha_envio → fecha_entrega)
+  const tiempos=REPARACIONES.filter(r=>r.fecha_envio&&r.fecha_entrega).map(r=>{
+    const d=(new Date(r.fecha_entrega)-new Date(r.fecha_envio))/(1000*60*60*24);
+    return d>0?d:null;
+  }).filter(Boolean);
+  const tPromedio=tiempos.length?Math.round(tiempos.reduce((a,b)=>a+b,0)/tiempos.length):null;
+  const tMin=tiempos.length?Math.round(Math.min(...tiempos)):null;
+  const tMax=tiempos.length?Math.round(Math.max(...tiempos)):null;
+
   document.getElementById('subanal-estadisticas').innerHTML=`
-    <div class="g2">
+    <div class="g4" style="margin-bottom:12px">
+      <div class="stat"><div class="stat-val" style="color:var(--accent);font-size:20px">U$D ${costoTotal.toLocaleString('es-AR',{maximumFractionDigits:0})}</div><div class="stat-lbl">Costo total histórico</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--amber)">${activas.length}</div><div class="stat-lbl">Activas ahora</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--green)">${enGarantia.length}</div><div class="stat-lbl">En garantía</div></div>
+      <div class="stat"><div class="stat-val">${tPromedio||'—'}<span style="font-size:14px;color:var(--text3)"> días</span></div><div class="stat-lbl">Tiempo prom. rep.</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:12px">
       <div class="card"><div class="card-title">Reparaciones por proveedor</div><div id="astat-prov"></div></div>
+      <div class="card"><div class="card-title">Costo U$D por proveedor</div><div id="astat-costo-prov"></div></div>
+    </div>
+    <div class="g2" style="margin-bottom:12px">
+      <div class="card"><div class="card-title">Equipos más reparados</div><div id="astat-equipos"></div></div>
+      <div class="card"><div class="card-title">Reparaciones por año</div><div id="astat-anios"></div></div>
+    </div>
+    <div class="g3">
       <div class="card">
-        <div class="card-title">Resumen económico</div>
+        <div class="card-title">Tiempos de reparación</div>
         <div class="dg">
-          <div class="di"><div class="di-label">Costo total histórico</div><div class="di-val mono" style="color:var(--accent)">U$D ${costoTotal.toLocaleString('es-AR',{maximumFractionDigits:0})}</div></div>
-          <div class="di"><div class="di-label">Reparaciones activas</div><div class="di-val mono" style="color:var(--amber)">${activas.length}</div></div>
-          <div class="di"><div class="di-label">Total historial</div><div class="di-val mono">${REPARACIONES.length}</div></div>
-          <div class="di"><div class="di-label">Entregadas</div><div class="di-val mono" style="color:var(--green)">${REPARACIONES.filter(r=>r.estado==='Entregada').length}</div></div>
+          <div class="di"><div class="di-label">Promedio</div><div class="di-val mono">${tPromedio||'—'} días</div></div>
+          <div class="di"><div class="di-label">Mínimo</div><div class="di-val mono" style="color:var(--green)">${tMin||'—'} días</div></div>
+          <div class="di"><div class="di-label">Máximo</div><div class="di-val mono" style="color:var(--red)">${tMax||'—'} días</div></div>
+          <div class="di"><div class="di-label">Calculados</div><div class="di-val mono">${tiempos.length}</div></div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-title">Estados activos</div>
+        <div id="astat-estados"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Bombas en garantía</div>
+        ${enGarantia.slice(0,6).map(b=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="font-family:var(--mono);flex:1">${b.n_equipo||'—'} · ${b.modelo||'?'}</span>
+            <span style="color:var(--green)">${diasRestantes(addDays(b.garantia_hasta,183))}d</span>
+          </div>`).join('')}
+        ${enGarantia.length>6?`<div style="font-size:11px;color:var(--text3);margin-top:6px">+${enGarantia.length-6} más</div>`:''}
+      </div>
     </div>`;
+
   barChart('astat-prov',porProv,'var(--accent)');
+  const costoPorProvDisplay=Object.fromEntries(Object.entries(costoPorProv).map(([k,v])=>[k,'U$D '+Math.round(v).toLocaleString('es-AR')]));
+  barChart('astat-costo-prov',Object.fromEntries(Object.entries(costoPorProv).sort((a,b)=>b[1]-a[1])),'var(--amber)');
+  barChart('astat-equipos',Object.fromEntries(topEquipos),'var(--purple)');
+  barChart('astat-anios',Object.fromEntries(Object.entries(porAnio).sort()),'var(--blue,#4f8ef7)',true);
+
+  // Estados activos
+  const porEstado=activas.reduce((a,r)=>{a[r.estado]=(a[r.estado]||0)+1;return a},{});
+  const colors={'Pendiente cotización':'var(--text3)','En reparación':'var(--amber)','Esperando SOLPED':'var(--accent)','Esperando NP':'var(--purple)','Esperando retiro':'var(--green)'};
+  barChart('astat-estados',porEstado,colors);
 }
 
 // ══ DATOS ══
