@@ -1048,6 +1048,160 @@ def fix_fechas():
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True, 'fixed': fixed})
+import os
+import json
+import urllib.request
+import urllib.error
+
+# ── CHAT con Gemini ──
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+
+def build_context(conn):
+    """Arma un resumen de la base de datos para pasarle como contexto a Gemini."""
+    def scalar(sql, params=()):
+        cur = conn.execute(sql, params)
+        row = fetchone_dict(cur)
+        return list(row.values())[0] if row else 0
+
+    def many(sql, params=()):
+        cur = conn.execute(sql, params)
+        return fetchall_dicts(cur)
+
+    ctx = {}
+
+    # Stats generales
+    ctx['total_bombas'] = scalar('SELECT COUNT(*) as n FROM bombas')
+    ctx['total_perforaciones'] = scalar('SELECT COUNT(*) as n FROM perforaciones')
+    ctx['montadas'] = scalar("SELECT COUNT(*) as n FROM asignaciones WHERE estado='Montado'")
+    ctx['disponibles'] = scalar('''SELECT COUNT(*) as n FROM bombas WHERE id NOT IN
+        (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado='Montado')''')
+    ctx['en_reparacion'] = scalar("SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')")
+
+    # Bombas en reparación
+    ctx['reparaciones_activas'] = many('''
+        SELECT numero_equipo, marca, modelo, proveedor, estado, fecha_envio, costo_usd
+        FROM reparaciones
+        WHERE estado NOT IN ('Entregada','Cancelada')
+        ORDER BY fecha_envio DESC
+    ''')
+
+    # Bombas montadas por zona
+    ctx['por_zona'] = many('''
+        SELECT p.zona, COUNT(*) as n
+        FROM asignaciones a JOIN perforaciones p ON a.perforacion_id=p.id
+        WHERE a.estado='Montado' GROUP BY p.zona ORDER BY n DESC
+    ''')
+
+    # Bombas disponibles (no montadas)
+    ctx['bombas_disponibles'] = many('''
+        SELECT n_equipo, marca, modelo, hp, ubicacion_fisica
+        FROM bombas WHERE id NOT IN
+        (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado='Montado')
+        ORDER BY marca, modelo
+        LIMIT 50
+    ''')
+
+    # Reparaciones recientes entregadas
+    ctx['reparaciones_recientes'] = many('''
+        SELECT numero_equipo, marca, modelo, proveedor, estado,
+               fecha_envio, fecha_entrega, costo_usd, descripcion
+        FROM reparaciones
+        ORDER BY id DESC LIMIT 20
+    ''')
+
+    # Perforaciones sin bomba
+    ctx['perforaciones_sin_bomba'] = scalar('''
+        SELECT COUNT(*) as n FROM perforaciones WHERE id NOT IN
+        (SELECT DISTINCT perforacion_id FROM asignaciones WHERE estado='Montado')
+    ''')
+
+    # Costo total reparaciones activas
+    ctx['costo_total_reparaciones_activas'] = scalar('''
+        SELECT COALESCE(SUM(costo_usd), 0) as n FROM reparaciones
+        WHERE estado NOT IN ('Entregada','Cancelada') AND costo_usd IS NOT NULL
+    ''')
+
+    # Por marca
+    ctx['por_marca'] = many('''
+        SELECT marca, COUNT(*) as n FROM bombas
+        WHERE marca IS NOT NULL GROUP BY marca ORDER BY n DESC
+    ''')
+
+    return ctx
+
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def chat_gemini():
+    if not GEMINI_API_KEY:
+        return jsonify({'error': 'GEMINI_API_KEY no configurada en el servidor'}), 500
+
+    data = request.get_json()
+    pregunta = (data.get('message') or '').strip()
+    if not pregunta:
+        return jsonify({'error': 'Mensaje vacío'}), 400
+
+    conn = get_db()
+    try:
+        ctx = build_context(conn)
+    finally:
+        conn.close()
+
+    system_prompt = f"""Sos un asistente experto del sistema de gestión de bombas de pozo profundo "POZO/MGR".
+Respondé siempre en español, de forma clara y concisa.
+Cuando hagas reportes o listas, usá formato legible (con saltos de línea, bullets, etc).
+No inventes datos — solo usá la información del contexto provisto.
+
+=== DATOS ACTUALES DEL SISTEMA ===
+{json.dumps(ctx, ensure_ascii=False, indent=2)}
+===================================
+
+El usuario puede preguntarte sobre:
+- Estado general del sistema (cuántas bombas hay, cuántas montadas, disponibles, etc.)
+- Reparaciones activas o historial de reparaciones
+- Bombas por zona, marca, modelo, HP
+- Perforaciones sin bomba asignada
+- Costos de reparaciones
+- Cualquier análisis o reporte sobre los datos anteriores
+
+Si la pregunta está fuera del alcance de los datos disponibles, indicalo amablemente.
+"""
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": system_prompt},
+                    {"text": f"Pregunta del usuario: {pregunta}"}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 1024
+        }
+    }
+
+    try:
+        req = urllib.request.Request(
+            GEMINI_URL,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+        
+        respuesta = result['candidates'][0]['content']['parts'][0]['text']
+        return jsonify({'reply': respuesta})
+
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        return jsonify({'error': f'Error Gemini: {error_body}'}), 502
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     init_db()
