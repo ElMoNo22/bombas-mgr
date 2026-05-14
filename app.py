@@ -1056,7 +1056,7 @@ import urllib.error
 # ── CHAT con Gemini ──
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={GEMINI_API_KEY}"
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
 
 def build_context(conn):
     """Arma un resumen de la base de datos para pasarle como contexto a Gemini."""
