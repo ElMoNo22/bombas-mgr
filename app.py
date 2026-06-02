@@ -1,4 +1,6 @@
 import os, json, re
+import urllib.request
+import urllib.error
 import turso as db_driver
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -295,12 +297,7 @@ def get_bombas():
         AND fecha_entrega IS NOT NULL
         AND fecha_entrega >= ?
     """, (hace_6m,))
-    # Normalize: strip trailing .0 from both sides for matching
-    def norm_neq(v):
-        if v is None: return ''
-        s = str(v).strip()
-        if s.endswith('.0'): s = s[:-2]
-        return s
+    # Normalize: strip trailing .0 from both sides for matching (usa norm_neq global)
     en_garantia = {norm_neq(r['numero_equipo']): r for r in fetchall_dicts(cur_g)}
     for r in rows:
         g = en_garantia.get(norm_neq(r.get('n_equipo')))
@@ -1048,15 +1045,10 @@ def fix_fechas():
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True, 'fixed': fixed})
-import os
-import json
-import urllib.request
-import urllib.error
 
 # ── CHAT con Gemini ──
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={GEMINI_API_KEY}"
 
 def build_context(conn):
     """Arma un resumen de la base de datos para pasarle como contexto a Gemini."""
@@ -1184,9 +1176,10 @@ Si la pregunta está fuera del alcance de los datos disponibles, indicalo amable
         }
     }
 
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={GEMINI_API_KEY}"
     try:
         req = urllib.request.Request(
-            GEMINI_URL,
+            gemini_url,
             data=json.dumps(payload).encode('utf-8'),
             headers={'Content-Type': 'application/json'},
             method='POST'
