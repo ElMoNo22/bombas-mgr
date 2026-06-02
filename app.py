@@ -145,8 +145,21 @@ def init_db():
             responsable          TEXT,
             estado               TEXT DEFAULT 'En reparación',
             usuario_registro     TEXT,
+            sin_desmontaje       INTEGER DEFAULT 0,
+            dias_limite_preventivo INTEGER DEFAULT 90,
             created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
+            updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        # ── HISTORIAL DE TAGS ──
+        '''CREATE TABLE IF NOT EXISTS tags_historial (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            bomba_id    INTEGER NOT NULL,
+            n_equipo    TEXT NOT NULL,
+            tag         TEXT NOT NULL,
+            fecha_desde TEXT,
+            fecha_hasta TEXT,
+            motivo      TEXT,
+            usuario     TEXT,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
     ]
     for t in tables:
         try:
@@ -158,6 +171,8 @@ def init_db():
     # Migrations
     for migration in [
         'ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT',
+        'ALTER TABLE reparaciones ADD COLUMN sin_desmontaje INTEGER DEFAULT 0',
+        'ALTER TABLE reparaciones ADD COLUMN dias_limite_preventivo INTEGER DEFAULT 90',
     ]:
         try:
             conn.execute(migration)
@@ -173,12 +188,27 @@ def init_db():
         db_commit(conn)
     except Exception:
         pass
-    for migration in []:
-        try:
-            conn.execute(migration)
+    # Migrar tag_extraviado existente → tags_historial (solo si no fue migrado aún)
+    try:
+        cur_check = conn.execute('SELECT COUNT(*) as n FROM tags_historial')
+        already = fetchone_dict(cur_check)
+        if already and already['n'] == 0:
+            cur_b = conn.execute(
+                "SELECT id, n_equipo, tag, tag_extraviado FROM bombas WHERE tag_extraviado IS NOT NULL AND tag_extraviado != ''"
+            )
+            bombas_con_tag_viejo = fetchall_dicts(cur_b)
+            for b in bombas_con_tag_viejo:
+                # Puede haber varios tags separados por " / "
+                tags_viejos = [t.strip() for t in str(b['tag_extraviado']).split('/') if t.strip()]
+                for tag_v in tags_viejos:
+                    conn.execute(
+                        '''INSERT INTO tags_historial (bomba_id, n_equipo, tag, fecha_desde, fecha_hasta, motivo, usuario)
+                           VALUES (?, ?, ?, NULL, NULL, 'Migrado desde tag_extraviado', 'sistema')''',
+                        (b['id'], b['n_equipo'] or '', tag_v)
+                    )
             db_commit(conn)
-        except Exception:
-            pass
+    except Exception:
+        pass
 
     cur = conn.execute('SELECT id FROM users WHERE username = ?', ('admin',))
     if not fetchone_dict(cur):
@@ -521,6 +551,132 @@ def delete_perforacion(pid):
     conn.close()
     return jsonify({'ok': True})
 
+# ══════════════════════════════════════════════════════════════════
+# ── VALIDACIONES DE NEGOCIO ──
+# ══════════════════════════════════════════════════════════════════
+
+def _get_bomba_estado(bomba_id, conn):
+    """
+    Devuelve un dict con el estado actual completo de una bomba:
+      montada_en   : dict con info de la perforación si está Montado, o None
+      rep_activa   : dict con info de la reparación activa, o None
+      preventivo   : dict si tiene mantenimiento preventivo activo, o None
+    """
+    # ¿Está montada?
+    cur = conn.execute('''
+        SELECT a.id as asig_id, a.fecha_montaje, a.sin_desmontaje,
+               p.id as perf_id, p.calle, p.entre, p.y_col, p.zona
+        FROM asignaciones a
+        JOIN perforaciones p ON a.perforacion_id = p.id
+        WHERE a.bomba_id = ? AND a.estado = 'Montado'
+        ORDER BY a.fecha_montaje DESC LIMIT 1
+    ''', (bomba_id,))
+    montada_en = fetchone_dict(cur)
+
+    # ¿Tiene reparación activa?
+    cur2 = conn.execute('''
+        SELECT r.id, r.proveedor, r.estado, r.fecha_envio,
+               r.sin_desmontaje, r.dias_limite_preventivo, r.fecha_envio as f_envio
+        FROM reparaciones r
+        JOIN bombas b ON REPLACE(r.numero_equipo, '.0', '') = b.n_equipo
+        WHERE b.id = ? AND r.estado NOT IN ('Entregada', 'Cancelada')
+        ORDER BY r.id DESC LIMIT 1
+    ''', (bomba_id,))
+    rep_activa = fetchone_dict(cur2)
+
+    # Mantenimiento preventivo: rep activa con sin_desmontaje=1
+    preventivo = None
+    if rep_activa and rep_activa.get('sin_desmontaje'):
+        from datetime import date, timedelta
+        try:
+            dias = int(rep_activa.get('dias_limite_preventivo') or 90)
+            f_envio = rep_activa.get('f_envio')
+            if f_envio:
+                desde = date.fromisoformat(str(f_envio))
+                vence = desde + timedelta(days=dias)
+                dias_restantes = (vence - date.today()).days
+                preventivo = {
+                    'rep_id': rep_activa['id'],
+                    'proveedor': rep_activa['proveedor'],
+                    'fecha_envio': f_envio,
+                    'vence': vence.isoformat(),
+                    'dias_restantes': dias_restantes,
+                    'vencido': dias_restantes < 0,
+                }
+        except Exception:
+            pass
+
+    return {
+        'montada_en': montada_en,
+        'rep_activa': rep_activa,
+        'preventivo': preventivo,
+    }
+
+
+def _validar_montar(bomba_id, perforacion_id, conn):
+    """
+    Valida si es posible montar una bomba en una perforación.
+    Retorna (ok, mensaje_error) — si ok=True, mensaje_error=None.
+    """
+    estado = _get_bomba_estado(bomba_id, conn)
+
+    # Ya está montada en otro lugar
+    if estado['montada_en']:
+        m = estado['montada_en']
+        lugar = f"calle {m['calle']} y {m['y_col']}"
+        if m.get('zona'):
+            lugar += f" ({m['zona']})"
+        desde = f" desde {m['fecha_montaje']}" if m.get('fecha_montaje') else ''
+        return False, f"La bomba ya está montada en {lugar}{desde}. Desmontala primero."
+
+    # Está en reparación activa (sin preventivo)
+    if estado['rep_activa'] and not estado['rep_activa'].get('sin_desmontaje'):
+        r = estado['rep_activa']
+        prov = r.get('proveedor') or 'taller'
+        fecha = f" desde {r['fecha_envio']}" if r.get('fecha_envio') else ''
+        return False, f"La bomba está en reparación con {prov}{fecha} (estado: {r['estado']}). Cerrá la reparación primero."
+
+    # La perforación ya tiene otra bomba montada
+    cur = conn.execute('''
+        SELECT a.id, b.n_equipo, b.tag, b.marca, b.modelo
+        FROM asignaciones a JOIN bombas b ON a.bomba_id = b.id
+        WHERE a.perforacion_id = ? AND a.estado = 'Montado'
+        LIMIT 1
+    ''', (perforacion_id,))
+    otra = fetchone_dict(cur)
+    if otra:
+        desc = f"equipo {otra['n_equipo']}" if otra.get('n_equipo') else f"tag {otra.get('tag', '?')}"
+        return False, f"La perforación ya tiene montada la bomba {desc} ({otra.get('marca', '')} {otra.get('modelo', '')}). Desmontala primero."
+
+    return True, None
+
+
+def _validar_reparacion(bomba_id, sin_desmontaje, conn):
+    """
+    Valida si es posible registrar una reparación para una bomba.
+    Retorna (ok, mensaje_error, es_advertencia).
+    es_advertencia=True → el frontend debe pedir confirmación, no bloquear.
+    """
+    estado = _get_bomba_estado(bomba_id, conn)
+
+    # Está montada y NO es preventivo → bloqueo
+    if estado['montada_en'] and not sin_desmontaje:
+        m = estado['montada_en']
+        lugar = f"calle {m['calle']} y {m['y_col']}"
+        if m.get('zona'):
+            lugar += f" ({m['zona']})"
+        desde = f" desde {m['fecha_montaje']}" if m.get('fecha_montaje') else ''
+        return False, f"La bomba está montada en {lugar}{desde}. Desmontala antes de enviarla a reparar.", False
+
+    # Ya tiene otra reparación activa → advertencia (puede haber 2 presupuestos)
+    if estado['rep_activa']:
+        r = estado['rep_activa']
+        prov = r.get('proveedor') or 'otro taller'
+        return False, f"La bomba ya tiene una reparación activa con {prov} (estado: {r['estado']}). ¿Confirmás que querés registrar otra?", True
+
+    return True, None, False
+
+
 # ── ASIGNACIONES ──
 @app.route('/api/asignaciones', methods=['POST'])
 @editor_required
@@ -530,33 +686,31 @@ def create_asignacion():
     perforacion_id = data.get('perforacion_id')
     if not bomba_id or not perforacion_id:
         return jsonify({'error': 'bomba_id y perforacion_id requeridos'}), 400
+
     conn = get_db()
-    cur = conn.execute('''
-        SELECT a.id, p.calle, p.y_col FROM asignaciones a
-        JOIN perforaciones p ON a.perforacion_id = p.id
-        WHERE a.bomba_id = ? AND a.estado = 'Montado'
-    ''', (bomba_id,))
-    active = fetchone_dict(cur)
-    if active:
+    try:
+        ok, error = _validar_montar(bomba_id, perforacion_id, conn)
+        if not ok:
+            return jsonify({'error': error, 'code': 'VALIDACION'}), 409
+
+        conn.execute('''
+            INSERT INTO asignaciones (bomba_id, perforacion_id, estado, fecha_montaje, fecha_desmontaje, notificada_por, notas)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (bomba_id, perforacion_id, data.get('estado', 'Montado'),
+              norm_fecha(data.get('fecha_montaje')), norm_fecha(data.get('fecha_desmontaje')),
+              data.get('notificada_por'), data.get('notas')))
+        if data.get('estado', 'Montado') == 'Montado':
+            conn.execute("UPDATE bombas SET ubicacion_fisica='Montada' WHERE id=?", (bomba_id,))
+        db_commit(conn)
+        cur2 = conn.execute('''
+            SELECT a.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp, p.calle, p.y_col, p.zona
+            FROM asignaciones a JOIN bombas b ON a.bomba_id=b.id JOIN perforaciones p ON a.perforacion_id=p.id
+            ORDER BY a.id DESC LIMIT 1
+        ''')
+        row = fetchone_dict(cur2)
+        return jsonify(row), 201
+    finally:
         conn.close()
-        return jsonify({'error': f'La bomba ya está montada en {active["calle"]} y {active["y_col"]}'}), 409
-    conn.execute('''
-        INSERT INTO asignaciones (bomba_id, perforacion_id, estado, fecha_montaje, fecha_desmontaje, notificada_por, notas)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (bomba_id, perforacion_id, data.get('estado','Montado'),
-          norm_fecha(data.get('fecha_montaje')), norm_fecha(data.get('fecha_desmontaje')),
-          data.get('notificada_por'), data.get('notas')))
-    if data.get('estado','Montado') == 'Montado':
-        conn.execute("UPDATE bombas SET ubicacion_fisica='Montada' WHERE id=?", (bomba_id,))
-    db_commit(conn)
-    cur2 = conn.execute('''
-        SELECT a.*, b.n_equipo, b.tag, b.marca, b.modelo, b.hp, p.calle, p.y_col, p.zona
-        FROM asignaciones a JOIN bombas b ON a.bomba_id=b.id JOIN perforaciones p ON a.perforacion_id=p.id
-        ORDER BY a.id DESC LIMIT 1
-    ''')
-    row = fetchone_dict(cur2)
-    conn.close()
-    return jsonify(row), 201
 
 @app.route('/api/asignaciones/<int:aid>', methods=['PUT'])
 @editor_required
@@ -744,17 +898,48 @@ def get_reparacion(rid):
 @editor_required
 def create_reparacion():
     data = request.get_json()
-    fields = REP_FIELDS
-    vals = []
-    for f in fields:
-        v = data.get(f)
-        if f in REP_DATE_FIELDS:
-            v = norm_fecha(v)
-        if f == 'usuario_registro' and not v:
-            v = session.get('username', 'sistema')
-        vals.append(v)
+    sin_desmontaje = int(data.get('sin_desmontaje') or 0)
+    forzar = bool(data.get('forzar'))  # True cuando el usuario confirmó la advertencia
+
+    # Buscar bomba por numero_equipo para validar
+    numero_equipo = norm_neq(data.get('numero_equipo') or '')
     conn = get_db()
     try:
+        bomba_id = None
+        if numero_equipo:
+            cur_b = conn.execute(
+                "SELECT id FROM bombas WHERE REPLACE(n_equipo,'.0','') = ?", (numero_equipo,)
+            )
+            b = fetchone_dict(cur_b)
+            if b:
+                bomba_id = b['id']
+
+        if bomba_id:
+            ok, mensaje, es_advertencia = _validar_reparacion(bomba_id, sin_desmontaje, conn)
+            if not ok:
+                if es_advertencia and forzar:
+                    pass  # usuario confirmó, seguimos
+                else:
+                    return jsonify({
+                        'error': mensaje,
+                        'code': 'VALIDACION',
+                        'advertencia': es_advertencia
+                    }), 409
+
+        fields = REP_FIELDS + ['sin_desmontaje', 'dias_limite_preventivo']
+        vals = []
+        for f in fields:
+            v = data.get(f)
+            if f in REP_DATE_FIELDS:
+                v = norm_fecha(v)
+            if f == 'usuario_registro' and not v:
+                v = session.get('username', 'sistema')
+            if f == 'sin_desmontaje':
+                v = sin_desmontaje
+            if f == 'dias_limite_preventivo':
+                v = int(data.get('dias_limite_preventivo') or 90)
+            vals.append(v)
+
         conn.execute(
             f'INSERT INTO reparaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})',
             vals
@@ -762,11 +947,11 @@ def create_reparacion():
         db_commit(conn)
         cur = conn.execute('SELECT * FROM reparaciones ORDER BY id DESC LIMIT 1')
         row = fetchone_dict(cur)
-        conn.close()
         return jsonify(row), 201
     except Exception as e:
-        conn.close()
         return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
 @app.route('/api/reparaciones/<int:rid>', methods=['PUT'])
 @editor_required
@@ -899,6 +1084,304 @@ def import_reparaciones():
     conn.close()
     return jsonify({'ok': True, 'inserted': inserted, 'skipped': skipped,
                     'errors': errors, 'error_list': err_list})
+
+
+# ── TAGS HISTORIAL ──
+
+@app.route('/api/bombas/<int:bid>/tags', methods=['GET'])
+@login_required
+def get_tags_historial(bid):
+    conn = get_db()
+    cur = conn.execute(
+        'SELECT * FROM tags_historial WHERE bomba_id = ? ORDER BY fecha_desde DESC, id DESC',
+        (bid,)
+    )
+    rows = fetchall_dicts(cur)
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/bombas/<int:bid>/tags', methods=['POST'])
+@editor_required
+def add_tag_historial(bid):
+    """Registra un cambio de tag en una bomba.
+    Cierra el tag anterior (si hay uno activo) y abre el nuevo.
+    """
+    data = request.get_json()
+    tag_nuevo = (data.get('tag') or '').strip()
+    motivo = (data.get('motivo') or '').strip()
+    fecha_desde = norm_fecha(data.get('fecha_desde')) or __import__('datetime').date.today().isoformat()
+
+    if not tag_nuevo:
+        return jsonify({'error': 'tag requerido'}), 400
+
+    conn = get_db()
+    try:
+        # Cerrar el tag activo anterior si existe
+        cur = conn.execute(
+            "SELECT id FROM tags_historial WHERE bomba_id = ? AND (fecha_hasta IS NULL OR fecha_hasta = '') ORDER BY id DESC LIMIT 1",
+            (bid,)
+        )
+        activo = fetchone_dict(cur)
+        if activo:
+            conn.execute(
+                "UPDATE tags_historial SET fecha_hasta = ? WHERE id = ?",
+                (fecha_desde, activo['id'])
+            )
+
+        # Obtener n_equipo de la bomba
+        cur_b = conn.execute('SELECT n_equipo FROM bombas WHERE id = ?', (bid,))
+        bomba = fetchone_dict(cur_b)
+        n_equipo = bomba['n_equipo'] if bomba else ''
+
+        # Insertar nuevo tag
+        conn.execute(
+            '''INSERT INTO tags_historial (bomba_id, n_equipo, tag, fecha_desde, motivo, usuario)
+               VALUES (?, ?, ?, ?, ?, ?)''',
+            (bid, n_equipo, tag_nuevo, fecha_desde, motivo, session.get('username', 'sistema'))
+        )
+
+        # Actualizar tag actual en bombas
+        conn.execute(
+            'UPDATE bombas SET tag = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            (tag_nuevo, bid)
+        )
+        db_commit(conn)
+
+        cur2 = conn.execute(
+            'SELECT * FROM tags_historial WHERE bomba_id = ? ORDER BY id DESC LIMIT 1', (bid,)
+        )
+        row = fetchone_dict(cur2)
+        return jsonify(row), 201
+    finally:
+        conn.close()
+
+
+# ── ANALÍTICA — ERRORES DE INTEGRIDAD ──
+
+@app.route('/api/analitica/errores', methods=['GET'])
+@login_required
+def get_errores_integridad():
+    """
+    Detecta inconsistencias en la base de datos y las devuelve categorizadas.
+    Usado por el panel de Analítica para mostrar errores corregibles.
+    """
+    from datetime import date, timedelta
+    conn = get_db()
+    errores = []
+
+    try:
+        # ── 1. Bombas montadas en más de un lugar al mismo tiempo ──
+        cur = conn.execute('''
+            SELECT b.id as bomba_id, b.n_equipo, b.tag, b.marca, b.modelo,
+                   COUNT(*) as cant_montajes
+            FROM asignaciones a JOIN bombas b ON a.bomba_id = b.id
+            WHERE a.estado = 'Montado'
+            GROUP BY a.bomba_id
+            HAVING COUNT(*) > 1
+        ''')
+        for r in fetchall_dicts(cur):
+            cur2 = conn.execute('''
+                SELECT a.id as asig_id, a.fecha_montaje, p.calle, p.y_col, p.zona
+                FROM asignaciones a JOIN perforaciones p ON a.perforacion_id = p.id
+                WHERE a.bomba_id = ? AND a.estado = 'Montado'
+                ORDER BY a.fecha_montaje DESC
+            ''', (r['bomba_id'],))
+            montajes = fetchall_dicts(cur2)
+            errores.append({
+                'tipo': 'doble_montado',
+                'severidad': 'error',
+                'titulo': f"Bomba montada en {r['cant_montajes']} lugares al mismo tiempo",
+                'descripcion': f"Equipo {r['n_equipo']} ({r['marca']} {r['modelo']}) figura como Montado en {r['cant_montajes']} perforaciones.",
+                'bomba_id': r['bomba_id'],
+                'n_equipo': r['n_equipo'],
+                'tag': r['tag'],
+                'detalle': montajes,
+                'accion': 'Corregir manualmente desde el perfil de la bomba'
+            })
+
+        # ── 2. Bombas Montadas con reparación activa (sin flag preventivo) ──
+        cur = conn.execute('''
+            SELECT DISTINCT b.id as bomba_id, b.n_equipo, b.tag, b.marca, b.modelo,
+                   p.calle, p.y_col, p.zona, a.fecha_montaje,
+                   r.id as rep_id, r.proveedor, r.estado as rep_estado,
+                   r.fecha_envio, r.sin_desmontaje
+            FROM bombas b
+            JOIN asignaciones a ON a.bomba_id = b.id AND a.estado = 'Montado'
+            JOIN perforaciones p ON a.perforacion_id = p.id
+            JOIN reparaciones r ON REPLACE(r.numero_equipo,'.0','') = b.n_equipo
+                AND r.estado NOT IN ('Entregada','Cancelada')
+                AND (r.sin_desmontaje IS NULL OR r.sin_desmontaje = 0)
+        ''')
+        for r in fetchall_dicts(cur):
+            errores.append({
+                'tipo': 'montada_en_reparacion',
+                'severidad': 'error',
+                'titulo': 'Bomba Montada con reparación activa',
+                'descripcion': f"Equipo {r['n_equipo']} ({r['marca']} {r['modelo']}) está Montado en {r['calle']} y {r['y_col']} pero también tiene una reparación activa con {r['proveedor']} (estado: {r['rep_estado']}).",
+                'bomba_id': r['bomba_id'],
+                'n_equipo': r['n_equipo'],
+                'rep_id': r['rep_id'],
+                'detalle': r,
+                'accion': 'Verificar: ¿se desmontó y no se registró? Corregir estado.'
+            })
+
+        # ── 3. Bombas con preventivo vencido ──
+        hoy = date.today().isoformat()
+        cur = conn.execute('''
+            SELECT b.id as bomba_id, b.n_equipo, b.tag, b.marca, b.modelo,
+                   r.id as rep_id, r.proveedor, r.estado as rep_estado,
+                   r.fecha_envio, r.dias_limite_preventivo
+            FROM bombas b
+            JOIN reparaciones r ON REPLACE(r.numero_equipo,'.0','') = b.n_equipo
+            WHERE r.estado NOT IN ('Entregada','Cancelada')
+              AND r.sin_desmontaje = 1
+              AND r.fecha_envio IS NOT NULL
+        ''')
+        for r in fetchall_dicts(cur):
+            try:
+                dias = int(r.get('dias_limite_preventivo') or 90)
+                desde = date.fromisoformat(str(r['fecha_envio']))
+                vence = desde + timedelta(days=dias)
+                dias_rest = (vence - date.today()).days
+                if dias_rest < 0:
+                    errores.append({
+                        'tipo': 'preventivo_vencido',
+                        'severidad': 'advertencia',
+                        'titulo': 'Mantenimiento preventivo vencido',
+                        'descripcion': f"Equipo {r['n_equipo']} ({r['marca']} {r['modelo']}) tiene un mantenimiento preventivo con {r['proveedor']} abierto hace {abs(dias_rest)} días (venció el {vence.isoformat()}).",
+                        'bomba_id': r['bomba_id'],
+                        'n_equipo': r['n_equipo'],
+                        'rep_id': r['rep_id'],
+                        'dias_vencido': abs(dias_rest),
+                        'accion': 'Cerrar el mantenimiento o extender el plazo'
+                    })
+            except Exception:
+                pass
+
+        # ── 4. Reparaciones activas cuyo n_equipo no existe en bombas ──
+        cur = conn.execute('''
+            SELECT r.id, r.numero_equipo, r.marca, r.modelo, r.tag_actual,
+                   r.proveedor, r.estado, r.fecha_envio, r.hp
+            FROM reparaciones r
+            WHERE r.estado NOT IN ('Entregada','Cancelada')
+              AND NOT EXISTS (
+                SELECT 1 FROM bombas b
+                WHERE REPLACE(b.n_equipo,'.0','') = REPLACE(r.numero_equipo,'.0','')
+              )
+            ORDER BY r.fecha_envio DESC
+        ''')
+        for r in fetchall_dicts(cur):
+            errores.append({
+                'tipo': 'rep_sin_bomba',
+                'severidad': 'advertencia',
+                'titulo': 'Reparación activa sin bomba en inventario',
+                'descripcion': f"Reparación #{r['id']} del equipo {r['numero_equipo']} ({r['marca']} {r['modelo']}) no tiene bomba correspondiente en el inventario.",
+                'rep_id': r['id'],
+                'n_equipo': r['numero_equipo'],
+                'detalle': r,
+                'accion': 'Agregar la bomba al inventario con ese N° de equipo'
+            })
+
+        # ── 5. Marcas con nombres duplicados/similares ──
+        cur = conn.execute('SELECT DISTINCT marca FROM bombas WHERE marca IS NOT NULL')
+        marcas = [r['marca'].strip() for r in fetchall_dicts(cur) if r.get('marca')]
+        cur2 = conn.execute('SELECT DISTINCT proveedor FROM reparaciones WHERE proveedor IS NOT NULL')
+        proveedores = [r['proveedor'].strip() for r in fetchall_dicts(cur2) if r.get('proveedor')]
+
+        def _similares(lista):
+            grupos = []
+            vistos = set()
+            for i, a in enumerate(lista):
+                if a in vistos:
+                    continue
+                grupo = [a]
+                a_norm = a.upper().replace(' ', '').replace('-', '').replace('.', '')
+                for b in lista[i+1:]:
+                    b_norm = b.upper().replace(' ', '').replace('-', '').replace('.', '')
+                    if a_norm == b_norm or (len(a_norm) > 4 and (a_norm in b_norm or b_norm in a_norm)):
+                        grupo.append(b)
+                        vistos.add(b)
+                if len(grupo) > 1:
+                    grupos.append(grupo)
+                    vistos.add(a)
+            return grupos
+
+        for grupo in _similares(marcas):
+            errores.append({
+                'tipo': 'marca_duplicada',
+                'severidad': 'advertencia',
+                'titulo': 'Marca con nombres inconsistentes',
+                'descripcion': f"Posibles duplicados de marca: {' | '.join(grupo)}",
+                'valores': grupo,
+                'accion': 'Unificar el nombre de la marca en todas las bombas afectadas'
+            })
+
+        for grupo in _similares(proveedores):
+            errores.append({
+                'tipo': 'proveedor_duplicado',
+                'severidad': 'advertencia',
+                'titulo': 'Proveedor con nombres inconsistentes',
+                'descripcion': f"Posibles duplicados de proveedor: {' | '.join(grupo)}",
+                'valores': grupo,
+                'accion': 'Unificar el nombre del proveedor en todas las reparaciones afectadas'
+            })
+
+    finally:
+        conn.close()
+
+    resumen = {
+        'total': len(errores),
+        'errores': len([e for e in errores if e['severidad'] == 'error']),
+        'advertencias': len([e for e in errores if e['severidad'] == 'advertencia']),
+    }
+    return jsonify({'resumen': resumen, 'items': errores})
+
+
+@app.route('/api/analitica/unificar-marca', methods=['POST'])
+@admin_required
+def unificar_marca():
+    """Reemplaza todas las variantes de una marca por el nombre canónico."""
+    data = request.get_json()
+    variantes = data.get('variantes', [])
+    canonical = (data.get('canonical') or '').strip()
+    if not canonical or not variantes:
+        return jsonify({'error': 'canonical y variantes requeridos'}), 400
+    conn = get_db()
+    try:
+        updated = 0
+        for v in variantes:
+            if v == canonical:
+                continue
+            conn.execute('UPDATE bombas SET marca = ? WHERE marca = ?', (canonical, v))
+            updated += 1
+        db_commit(conn)
+        return jsonify({'ok': True, 'updated_variantes': updated})
+    finally:
+        conn.close()
+
+
+@app.route('/api/analitica/unificar-proveedor', methods=['POST'])
+@admin_required
+def unificar_proveedor():
+    """Reemplaza todas las variantes de un proveedor por el nombre canónico."""
+    data = request.get_json()
+    variantes = data.get('variantes', [])
+    canonical = (data.get('canonical') or '').strip()
+    if not canonical or not variantes:
+        return jsonify({'error': 'canonical y variantes requeridos'}), 400
+    conn = get_db()
+    try:
+        updated = 0
+        for v in variantes:
+            if v == canonical:
+                continue
+            conn.execute('UPDATE reparaciones SET proveedor = ? WHERE proveedor = ?', (canonical, v))
+            updated += 1
+        db_commit(conn)
+        return jsonify({'ok': True, 'updated_variantes': updated})
+    finally:
+        conn.close()
+
 
 # ── USERS ──
 @app.route('/api/users', methods=['GET'])
