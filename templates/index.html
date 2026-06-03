@@ -356,11 +356,13 @@ textarea{resize:vertical;min-height:60px}
     <button class="stab" onclick="showSubAnal('faltantes')">⚡ Datos faltantes</button>
     <button class="stab" onclick="showSubAnal('antiguedad')">🕐 Antigüedad</button>
     <button class="stab" onclick="showSubAnal('estadisticas')">📊 Estadísticas</button>
+    <button class="stab" onclick="showSubAnal('integridad')" id="stab-integridad">🔍 Integridad</button>
   </div>
   <div id="subanal-rango"></div>
   <div id="subanal-faltantes" style="display:none"></div>
   <div id="subanal-antiguedad" style="display:none"></div>
   <div id="subanal-estadisticas" style="display:none"></div>
+  <div id="subanal-integridad" style="display:none"></div>
 </div>
 
 <!-- ══ DATOS ══ -->
@@ -490,6 +492,17 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Modal unificar marca/proveedor -->
+<div class="modal-bg" id="modal-unificar" onclick="if(event.target===this)closeModal('unificar')">
+  <div class="modal" style="width:min(480px,95vw)">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-unificar-title">Unificar nombre</div>
+      <button class="modal-close" onclick="closeModal('unificar')">✕</button>
+    </div>
+    <div id="modal-unificar-body"></div>
+  </div>
+</div>
 
 <script>
 // ══ STATE ══
@@ -1676,11 +1689,12 @@ function buscarEq(){
 function showSubAnal(s){
   document.querySelectorAll('#anal-tabs .stab').forEach(b=>b.classList.remove('active'));
   document.querySelector(`#anal-tabs .stab[onclick*="${s}"]`).classList.add('active');
-  ['rango','faltantes','antiguedad','estadisticas'].forEach(x=>document.getElementById('subanal-'+x).style.display=x===s?'block':'none');
+  ['rango','faltantes','antiguedad','estadisticas','integridad'].forEach(x=>document.getElementById('subanal-'+x).style.display=x===s?'block':'none');
   if(s==='rango')renderAnalRango();
   else if(s==='faltantes')renderAnalFaltantes();
   else if(s==='antiguedad')renderAnalAntiguedad();
   else if(s==='estadisticas')renderAnalEstadisticas();
+  else if(s==='integridad')renderAnalIntegridad();
 }
 function renderAnalRango(){
   const montadas=PERFS.filter(p=>p.estado_actual==='Montado'&&p.prof_trabajo_mts);
@@ -1800,6 +1814,198 @@ function renderAnalEstadisticas(){
   const porEstado=activas.reduce((a,r)=>{a[r.estado]=(a[r.estado]||0)+1;return a},{});
   const colors={'Pendiente cotización':'var(--text3)','En reparación':'var(--amber)','Esperando SOLPED':'var(--accent)','Esperando NP':'var(--purple)','Esperando retiro':'var(--green)'};
   barChart('astat-estados',porEstado,colors);
+}
+
+// ══ INTEGRIDAD ══
+let _integridadData = null;
+
+async function renderAnalIntegridad(){
+  const el = document.getElementById('subanal-integridad');
+  el.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text3)">🔍 Analizando base de datos...</div>`;
+  try {
+    const r = await fetch('/api/analitica/errores');
+    const data = await r.json();
+    _integridadData = data;
+    _renderIntegridadUI(data);
+  } catch(e) {
+    el.innerHTML = `<div class="card"><p style="color:var(--red)">Error al cargar: ${e.message}</p></div>`;
+  }
+}
+
+function _renderIntegridadUI(data){
+  const el = document.getElementById('subanal-integridad');
+  const {resumen, items} = data;
+
+  // Agrupar por tipo
+  const grupos = {
+    doble_montado:        { label:'Montadas en 2+ lugares', icon:'📍', color:'var(--red)',   items:[] },
+    montada_en_reparacion:{ label:'Montada + reparación activa', icon:'🔧', color:'var(--red)',   items:[] },
+    preventivo_vencido:   { label:'Preventivo vencido', icon:'⏰', color:'var(--amber)', items:[] },
+    rep_sin_bomba:        { label:'Reparaciones sin bomba en inventario', icon:'❓', color:'var(--amber)', items:[] },
+    marca_duplicada:      { label:'Marcas con nombre inconsistente', icon:'🏷', color:'var(--blue,#4f8ef7)', items:[] },
+    proveedor_duplicado:  { label:'Proveedores con nombre inconsistente', icon:'🏭', color:'var(--blue,#4f8ef7)', items:[] },
+  };
+  items.forEach(i => { if(grupos[i.tipo]) grupos[i.tipo].items.push(i); });
+
+  const badgeResumen = (n, color) => n > 0
+    ? `<span style="background:${color};color:#fff;border-radius:20px;padding:1px 9px;font-size:11px;font-weight:700">${n}</span>`
+    : `<span style="background:var(--green);color:#fff;border-radius:20px;padding:1px 9px;font-size:11px;font-weight:700">✓</span>`;
+
+  let html = `
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <div style="font-size:13px;color:var(--text2)">
+        ${resumen.errores > 0 ? `<span style="color:var(--red);font-weight:600">● ${resumen.errores} error(es)</span>` : ''}
+        ${resumen.advertencias > 0 ? `<span style="color:var(--amber);font-weight:600;margin-left:10px">● ${resumen.advertencias} advertencia(s)</span>` : ''}
+        ${resumen.total === 0 ? `<span style="color:var(--green);font-weight:600">✅ Sin inconsistencias detectadas</span>` : ''}
+      </div>
+      <button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="renderAnalIntegridad()">↺ Reanalizar</button>
+    </div>`;
+
+  Object.entries(grupos).forEach(([tipo, g]) => {
+    const n = g.items.length;
+    html += `
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${n?'10px':'0'}">
+        <span style="font-size:16px">${g.icon}</span>
+        <span style="font-size:13px;font-weight:600;flex:1">${g.label}</span>
+        ${badgeResumen(n, g.color)}
+      </div>
+      ${n ? _renderGrupoItems(tipo, g.items) : ''}
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function _renderGrupoItems(tipo, items){
+  if(tipo === 'doble_montado'){
+    return items.map(e => `
+      <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="display:flex;width:100%;align-items:center;gap:8px">
+          <div class="ri-main" style="flex:1">
+            <div class="ri-id">N° ${e.n_equipo} · TAG ${e.tag||'—'}</div>
+            <div class="ri-meta">${e.descripcion}</div>
+          </div>
+          <button class="btn btn-sm" onclick="showBomba(${e.bomba_id})">Ver bomba →</button>
+        </div>
+        <div style="width:100%;display:flex;flex-direction:column;gap:3px;padding-left:4px">
+          ${(e.detalle||[]).map((d,i)=>`
+            <div style="font-size:11px;color:var(--text2);display:flex;gap:6px;align-items:center">
+              <span style="color:${i===0?'var(--green)':'var(--red)'};font-size:10px">●</span>
+              <span>${d.calle} y ${d.y_col}${d.zona?' ('+d.zona+')':''}</span>
+              <span style="color:var(--text3)">desde ${d.fecha_montaje||'?'}</span>
+              ${i===0?'<span style="color:var(--green);font-size:10px">← más reciente</span>':'<button class="btn btn-sm btn-ghost" style="font-size:10px;padding:1px 6px" onclick="corregirDoubleMontado(${d.asig_id})">Marcar Desmontado</button>'}
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+  if(tipo === 'montada_en_reparacion'){
+    return items.map(e => `
+      <div class="row-item">
+        <div class="ri-main" style="flex:1">
+          <div class="ri-id">N° ${e.n_equipo}</div>
+          <div class="ri-meta">${e.descripcion}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-ghost" onclick="showBomba(${e.bomba_id})">Bomba →</button>
+          <button class="btn btn-sm btn-ghost" onclick="showRep(${e.rep_id})">Reparación →</button>
+        </div>
+      </div>`).join('');
+  }
+  if(tipo === 'preventivo_vencido'){
+    return items.map(e => `
+      <div class="row-item">
+        <div class="ri-main" style="flex:1">
+          <div class="ri-id">N° ${e.n_equipo}</div>
+          <div class="ri-meta">${e.descripcion}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--red)">Venció hace ${e.dias_vencido}d</span>
+          <button class="btn btn-sm btn-ghost" onclick="showRep(${e.rep_id})">Ver rep. →</button>
+        </div>
+      </div>`).join('');
+  }
+  if(tipo === 'rep_sin_bomba'){
+    return items.map(e => `
+      <div class="row-item">
+        <div class="ri-main" style="flex:1">
+          <div class="ri-id">Rep #${e.rep_id} · N° ${e.n_equipo||'—'}</div>
+          <div class="ri-meta">${e.detalle?.marca||'?'} ${e.detalle?.modelo||'?'} · ${e.detalle?.proveedor||'?'} · ${e.detalle?.estado}</div>
+        </div>
+        <button class="btn btn-sm btn-ghost" onclick="showRep(${e.rep_id})">Ver →</button>
+      </div>`).join('');
+  }
+  if(tipo === 'marca_duplicada'){
+    return items.map(e => `
+      <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div style="font-size:12px;color:var(--text2)">Variantes detectadas: <span style="font-family:var(--mono)">${e.valores.join(' · ')}</span></div>
+        ${CAN_ADMIN ? `<button class="btn btn-sm" onclick="abrirUnificar('marca', ${JSON.stringify(e.valores).replace(/"/g,'&quot;')})">🔧 Unificar</button>` : '<span style="font-size:11px;color:var(--text3)">Solo admin puede unificar</span>'}
+      </div>`).join('');
+  }
+  if(tipo === 'proveedor_duplicado'){
+    return items.map(e => `
+      <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div style="font-size:12px;color:var(--text2)">Variantes detectadas: <span style="font-family:var(--mono)">${e.valores.join(' · ')}</span></div>
+        ${CAN_ADMIN ? `<button class="btn btn-sm" onclick="abrirUnificar('proveedor', ${JSON.stringify(e.valores).replace(/"/g,'&quot;')})">🔧 Unificar</button>` : '<span style="font-size:11px;color:var(--text3)">Solo admin puede unificar</span>'}
+      </div>`).join('');
+  }
+  return '';
+}
+
+async function corregirDoubleMontado(asig_id){
+  if(!confirm('¿Marcar esta asignación como Desmontada?')) return;
+  const hoy = new Date().toISOString().slice(0,10);
+  const r = await fetch(`/api/asignaciones/${asig_id}`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({estado:'Desmontado', fecha_desmontaje: hoy})
+  });
+  if(r.ok){ showToast('✅ Corregido'); renderAnalIntegridad(); }
+  else showToast('Error al corregir','error');
+}
+
+function abrirUnificar(tipo, variantes){
+  document.getElementById('modal-unificar-title').textContent = tipo === 'marca' ? 'Unificar marca' : 'Unificar proveedor';
+  const canonical = variantes[0];
+  document.getElementById('modal-unificar-body').innerHTML = `
+    <div style="padding:16px 20px 20px">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+        Elegí el nombre <strong>canónico</strong> (el correcto). Las otras variantes van a quedar reemplazadas en toda la base de datos.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        ${variantes.map(v => `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px">
+            <input type="radio" name="canonical" value="${v}" ${v===canonical?'checked':''}>
+            <span style="font-family:var(--mono)">${v}</span>
+          </label>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('unificar')">Cancelar</button>
+        <button class="btn btn-sm" onclick="confirmarUnificar('${tipo}', ${JSON.stringify(variantes).replace(/"/g,'&quot;')})">Unificar →</button>
+      </div>
+    </div>`;
+  openModal('unificar');
+}
+
+async function confirmarUnificar(tipo, variantes){
+  const canonical = document.querySelector('input[name="canonical"]:checked')?.value;
+  if(!canonical){ showToast('Seleccioná un nombre canónico','error'); return; }
+  const endpoint = tipo === 'marca' ? '/api/analitica/unificar-marca' : '/api/analitica/unificar-proveedor';
+  const r = await fetch(endpoint, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({canonical, variantes})
+  });
+  const data = await r.json();
+  if(r.ok){
+    showToast(`✅ Unificado: "${canonical}"`);
+    closeModal('unificar');
+    // Refrescar datos locales
+    await loadAll();
+    renderAnalIntegridad();
+  } else {
+    showToast(data.error || 'Error al unificar','error');
+  }
 }
 
 // ══ DATOS ══
