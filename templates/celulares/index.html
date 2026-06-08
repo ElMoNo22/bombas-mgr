@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CelMGR — Gestión de Equipos Celulares</title>
+<style>
+  :root {
+    --primary: #1a1a2e;
+    --accent: #4361ee;
+    --accent2: #3a0ca3;
+    --success: #2d6a4f;
+    --success-bg: #d8f3dc;
+    --warn: #7b4f00;
+    --warn-bg: #fff3cd;
+    --danger: #7b1d1d;
+    --danger-bg: #fde8e8;
+    --info: #1e3a5f;
+    --info-bg: #dbeafe;
+    --gray-bg: #e9ecef;
+    --gray-text: #6c757d;
+    --border: #dee2e6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #212529;
+    --text2: #495057;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; }
+  .sidebar { width: 220px; background: var(--primary); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .sidebar-logo p { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+  .sidebar-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.45; padding: 16px 16px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; opacity: 0.7; font-size: 13px; transition: all 0.15s; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); opacity: 1; }
+  .nav-item.active { background: rgba(255,255,255,0.12); opacity: 1; border-left: 3px solid var(--accent); }
+  .nav-item span { font-size: 16px; }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: var(--shadow); }
+  .topbar h2 { font-size: 16px; font-weight: 600; }
+  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  /* Cards métricas */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .metric-card { background: var(--card); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .metric-card .label { font-size: 12px; color: var(--gray-text); margin-bottom: 6px; }
+  .metric-card .value { font-size: 26px; font-weight: 700; }
+  .metric-card .sub { font-size: 11px; color: var(--gray-text); margin-top: 4px; }
+
+  /* Tabla */
+  .table-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+  .table-toolbar { padding: 12px 16px; display: flex; gap: 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+  .table-toolbar input, .table-toolbar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--bg); }
+  .table-toolbar input { flex: 1; min-width: 200px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg); border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f1f3f5; }
+  .td-mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--text2); }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: var(--success-bg); color: var(--success); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+  .badge-info { background: var(--info-bg); color: var(--info); }
+  .badge-gray { background: var(--gray-bg); color: var(--gray-text); }
+
+  /* Botones */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-link { border: none; background: none; color: var(--accent); padding: 4px 6px; font-size: 13px; cursor: pointer; }
+  .btn-link:hover { text-decoration: underline; }
+
+  /* Avatar */
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--info-bg); color: var(--info); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+
+  /* Panel detail */
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .detail-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  .detail-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 0; }
+  .field label { display: block; font-size: 11px; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .field p { font-size: 13px; font-weight: 500; }
+  .timeline { }
+  .tl-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .tl-item:last-child { border-bottom: none; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gray-text); margin-top: 4px; flex-shrink: 0; }
+  .tl-dot.active { background: var(--success); }
+  .ticket-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ticket-item:last-child { border-bottom: none; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border-radius: var(--radius); padding: 24px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .modal h3 { font-size: 16px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+  .form-group textarea { resize: vertical; min-height: 70px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: all 0.25s; z-index: 2000; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: #7b1d1d; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px; color: var(--gray-text); }
+  .empty p { margin-top: 8px; font-size: 13px; }
+
+  /* Breadcrumb */
+  .breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--gray-text); }
+  .breadcrumb a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .sidebar { width: 56px; }
+    .sidebar-logo h1 span:not(:first-child), .sidebar-logo p, .nav-item .nav-label, .sidebar-section { display: none; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h1><span>📱</span> <span>CelMGR</span></h1>
+      <p>Gestión de equipos</p>
+    </div>
+    <div class="sidebar-section">Principal</div>
+    <div class="nav-item active" onclick="showSection('equipos', this)">
+      <span>📱</span><span class="nav-label">Equipos</span>
+    </div>
+    <div class="nav-item" onclick="showSection('lineas', this)">
+      <span>📶</span><span class="nav-label">Líneas</span>
+    </div>
+    <div class="nav-item" onclick="showSection('empleados', this)">
+      <span>👥</span><span class="nav-label">Empleados</span>
+    </div>
+    <div class="sidebar-section">Soporte</div>
+    <div class="nav-item" onclick="showSection('tickets', this)">
+      <span>🎫</span><span class="nav-label">Tickets</span>
+    </div>
+    <div class="sidebar-section">Sistema</div>
+    <div class="nav-item" onclick="window.location='/'">
+      <span>💧</span><span class="nav-label">POZO/MGR</span>
+    </div>
+    <div class="nav-item" onclick="window.location='/telemetria'">
+      <span>📡</span><span class="nav-label">TeleMGR</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="section-title">Equipos celulares</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="exportarTabla()">⬇ Exportar</button>
+        <button class="btn btn-primary" id="btn-nuevo" onclick="abrirModalNuevo()">+ Nuevo</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ EQUIPOS ══ -->
+      <div id="sec-equipos" class="panel active">
+        <div class="metrics" id="metrics-equipos">
+          <div class="metric-card"><div class="label">Total equipos</div><div class="value" id="m-total">—</div></div>
+          <div class="metric-card"><div class="label">Asignados</div><div class="value" id="m-asig" style="color:var(--success)">—</div></div>
+          <div class="metric-card"><div class="label">En reparación</div><div class="value" id="m-rep" style="color:var(--warn)">—</div></div>
+          <div class="metric-card"><div class="label">Stock</div><div class="value" id="m-stock" style="color:var(--info)">—</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-equipos" placeholder="Buscar marca, modelo, IMEI, usuario..." oninput="filtrarTabla()">
+            <select id="filtro-estado" onchange="filtrarTabla()">
+              <option value="">Todos los estados</option>
+              <option value="asignado">Asignado</option>
+              <option value="stock">Stock</option>
+              <option value="reparacion">En reparación</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Marca / Modelo</th>
+                <th>IMEI</th>
+                <th>Línea</th>
+                <th>Usuario</th>
+                <th>Sector</th>
+                <th>Desde</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-equipos"><tr><td colspan="8" class="empty">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ DETALLE EQUIPO ══ -->
+      <div id="sec-detalle-equipo" class="panel">
+        <div class="breadcrumb">
+          <a onclick="showSection('equipos', null)">← Equipos</a>
+          <span>/</span>
+          <span id="detalle-titulo">Detalle</span>
+        </div>
+        <div class="detail-grid">
+          <div>
+            <div class="detail-card">
+              <h3>📱 Datos del equipo</h3>
+              <div class="field-group" id="detalle-equipo-campos"></div>
+            </div>
+            <div class="detail-card" style="margin-top:14px">
+              <h3>👤 Usuario asignado</h3>
+              <div id="detalle-usuario">
+                <p style="color:var(--gray-text)">Sin asignación activa</p>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button class="btn btn-primary btn-sm" onclick="abrirModalAsignar()">Asignar</button>
+                <button class="btn btn-sm" id="btn-desasignar" onclick="desasignarEquipo()" style="display:none">Desasignar</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="detail-card">
+              <h3>🎫 Tickets de soporte</h3>
+              <div style="margin-bottom:10px">
+                <button class="btn btn-sm" onclick="abrirModalTicket()">+ Nuevo ticket</button>
+              </div>
+              <div id="detalle-tickets"><p style="color:var(--gray-text)">Sin tickets</p></div>
+            </div>
+            <div class="detail-card" style="margin-top:14px">
+              <h3>📋 Historial de asignaciones</h3>
+              <div class="timeline" id="detalle-historial"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ EMPLEADOS ══ -->
+      <div id="sec-empleados" class="panel">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-empleados" placeholder="Buscar nombre, legajo, sector..." oninput="filtrarEmpleados()">
+            <select id="filtro-sector" onchange="filtrarEmpleados()">
+              <option value="">Todos los sectores</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Legajo</th><th>Nombre</th><th>Puesto</th><th>Sector</th><th>Lugar</th><th>Equipo actual</th><th></th></tr>
+            </thead>
+            <tbody id="tbody-empleados"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ LÍNEAS ══ -->
+      <div id="sec-lineas" class="panel">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-lineas" placeholder="Buscar número, operadora..." oninput="filtrarLineas()">
+          </div>
+          <table>
+            <thead>
+              <tr><th>Número</th><th>Operadora</th><th>Plan</th><th>Datos</th><th>Equipo asignado</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody id="tbody-lineas"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ TICKETS ══ -->
+      <div id="sec-tickets" class="panel">
+        <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+          <div class="metric-card"><div class="label">Total</div><div class="value" id="m-tk-total">—</div></div>
+          <div class="metric-card"><div class="label">Abiertos</div><div class="value" id="m-tk-abiertos" style="color:var(--warn)">—</div></div>
+          <div class="metric-card"><div class="label">En service</div><div class="value" id="m-tk-service" style="color:var(--info)">—</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-tickets" placeholder="Buscar N° ticket, equipo, usuario..." oninput="filtrarTickets()">
+            <select id="filtro-ticket-estado" onchange="filtrarTickets()">
+              <option value="">Todos los estados</option>
+              <option value="abierto">Abierto</option>
+              <option value="en_service">En service</option>
+              <option value="cerrado">Cerrado</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr><th>N° Ticket</th><th>Equipo</th><th>Usuario</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody id="tbody-tickets"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══ MODALES ══ -->
+
+<!-- Modal Equipo -->
+<div class="modal-overlay" id="modal-equipo">
+  <div class="modal">
+    <h3 id="modal-equipo-titulo">Nuevo equipo</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Marca *</label><input id="f-marca" placeholder="Samsung, Motorola..."></div>
+      <div class="form-group"><label>Modelo *</label><input id="f-modelo" placeholder="Galaxy A54..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>IMEI 1 *</label><input id="f-imei" placeholder="15 dígitos"></div>
+      <div class="form-group"><label>IMEI 2</label><input id="f-imei2" placeholder="Dual SIM"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>N° Serie</label><input id="f-serie"></div>
+      <div class="form-group"><label>Color</label><input id="f-color"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Almacenamiento</label><input id="f-almacenamiento" placeholder="128GB"></div>
+      <div class="form-group"><label>Garantía hasta</label><input id="f-garantia" type="date"></div>
+    </div>
+    <div class="form-group"><label>Accesorios</label><input id="f-accesorios" placeholder="Funda, cargador, auriculares..."></div>
+    <div class="form-group"><label>Estado</label>
+      <select id="f-estado">
+        <option value="stock">Stock</option>
+        <option value="asignado">Asignado</option>
+        <option value="reparacion">En reparación</option>
+        <option value="baja">Baja</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Observaciones</label><textarea id="f-obs"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-equipo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEquipo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Empleado -->
+<div class="modal-overlay" id="modal-empleado">
+  <div class="modal">
+    <h3 id="modal-emp-titulo">Nuevo empleado</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Apellido *</label><input id="fe-apellido"></div>
+      <div class="form-group"><label>Nombre *</label><input id="fe-nombre"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Legajo *</label><input id="fe-legajo"></div>
+      <div class="form-group"><label>Email</label><input id="fe-email" type="email"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Puesto</label><input id="fe-puesto"></div>
+      <div class="form-group"><label>Sector</label><input id="fe-sector"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Lugar de trabajo</label><input id="fe-lugar"></div>
+      <div class="form-group"><label>Fecha ingreso</label><input id="fe-ingreso" type="date"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-empleado')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEmpleado()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Asignar -->
+<div class="modal-overlay" id="modal-asignar">
+  <div class="modal">
+    <h3>Asignar equipo</h3>
+    <div class="form-group"><label>Empleado *</label>
+      <select id="fa-empleado"><option value="">Seleccioná un empleado...</option></select>
+    </div>
+    <div class="form-group"><label>Línea celular</label>
+      <select id="fa-linea"><option value="">Sin línea</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fecha desde</label><input id="fa-fecha" type="date"></div>
+      <div class="form-group"><label>N° Acta de entrega</label><input id="fa-acta"></div>
+    </div>
+    <div class="form-group"><label>Observaciones</label><textarea id="fa-obs"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-asignar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAsignar()">Asignar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ticket -->
+<div class="modal-overlay" id="modal-ticket">
+  <div class="modal">
+    <h3>Nuevo ticket de soporte</h3>
+    <div class="form-group"><label>Descripción del problema *</label><textarea id="ft-desc" placeholder="Describí el problema..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label>
+        <select id="ft-tipo">
+          <option value="rotura">Rotura física</option>
+          <option value="falla_sw">Falla de software</option>
+          <option value="perdida">Pérdida</option>
+          <option value="robo">Robo</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Estado inicial</label>
+        <select id="ft-estado">
+          <option value="abierto">Abierto</option>
+          <option value="en_service">Enviado a service</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Service (nombre)</label><input id="ft-service"></div>
+      <div class="form-group"><label>Fecha ingreso service</label><input id="ft-ingreso" type="date"></div>
+    </div>
+    <div class="form-group">
+      <label><input type="checkbox" id="ft-garantia" style="width:auto;margin-right:6px"> En garantía</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-ticket')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTicket()">Crear ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Línea -->
+<div class="modal-overlay" id="modal-linea">
+  <div class="modal">
+    <h3 id="modal-linea-titulo">Nueva línea</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Número *</label><input id="fl-numero" placeholder="+54 221..."></div>
+      <div class="form-group"><label>Operadora</label>
+        <select id="fl-operadora">
+          <option value="">—</option>
+          <option>Personal</option>
+          <option>Claro</option>
+          <option>Movistar</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Plan</label><input id="fl-plan"></div>
+      <div class="form-group"><label>Datos (GB)</label><input id="fl-datos" type="number" step="0.5"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Vencimiento</label><input id="fl-vence" type="date"></div>
+      <div class="form-group"><label>ICCID</label><input id="fl-iccid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-linea')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarLinea()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Estado global ──────────────────────────────────────────
+let equipos = [], empleados = [], lineas = [], tickets = [];
+let equipoActual = null;
+let seccionActual = 'equipos';
+
+// ── Navegación ─────────────────────────────────────────────
+const secTitles = {
+  equipos: 'Equipos celulares',
+  'detalle-equipo': 'Detalle de equipo',
+  empleados: 'Empleados',
+  lineas: 'Líneas celulares',
+  tickets: 'Tickets de soporte'
+};
+
+function showSection(name, navEl) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.getElementById('section-title').textContent = secTitles[name] || name;
+  seccionActual = name;
+  if (navEl) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    navEl.classList.add('active');
+  }
+  const btnNuevo = document.getElementById('btn-nuevo');
+  btnNuevo.style.display = name === 'detalle-equipo' ? 'none' : '';
+
+  if (name === 'equipos') cargarEquipos();
+  else if (name === 'empleados') cargarEmpleados();
+  else if (name === 'lineas') cargarLineas();
+  else if (name === 'tickets') cargarTickets();
+}
+
+// ── API helper ─────────────────────────────────────────────
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function toast(msg, tipo = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (tipo ? ' ' + tipo : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function badgeEstado(estado) {
+  const map = {
+    asignado: ['badge-ok', '✓ Asignado'],
+    stock: ['badge-info', '📦 Stock'],
+    reparacion: ['badge-warn', '🔧 Reparación'],
+    baja: ['badge-danger', '✕ Baja'],
+    activa: ['badge-ok', '✓ Activa'],
+    suspendida: ['badge-warn', '⏸ Suspendida'],
+    abierto: ['badge-warn', '● Abierto'],
+    en_service: ['badge-info', '🔧 En service'],
+    cerrado: ['badge-ok', '✓ Cerrado'],
+  };
+  const [cls, label] = map[estado] || ['badge-gray', estado];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function iniciales(nombre) {
+  if (!nombre) return '?';
+  return nombre.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+}
+
+// ── EQUIPOS ────────────────────────────────────────────────
+async function cargarEquipos() {
+  try {
+    const stats = await api('/celulares/api/stats');
+    document.getElementById('m-total').textContent = stats.total;
+    document.getElementById('m-asig').textContent = stats.asignados;
+    document.getElementById('m-rep').textContent = stats.reparacion;
+    document.getElementById('m-stock').textContent = stats.stock;
+
+    equipos = await api('/celulares/api/equipos');
+    renderTablaEquipos(equipos);
+  } catch(e) { toast('Error cargando equipos: ' + e.message, 'error'); }
+}
+
+function renderTablaEquipos(data) {
+  const tbody = document.getElementById('tbody-equipos');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay equipos</td></tr>'; return; }
+  tbody.innerHTML = data.map(eq => `
+    <tr>
+      <td><strong>${eq.marca} ${eq.modelo}</strong>${eq.color ? `<br><small style="color:var(--gray-text)">${eq.color}</small>` : ''}</td>
+      <td class="td-mono">${eq.imei}</td>
+      <td>${eq.linea_numero || '<span style="color:var(--gray-text)">—</span>'}</td>
+      <td>${eq.usuario_nombre
+        ? `<div style="display:flex;align-items:center;gap:8px"><div class="avatar">${iniciales(eq.usuario_nombre)}</div>${eq.usuario_nombre}</div>`
+        : '<span style="color:var(--gray-text)">Sin asignar</span>'}</td>
+      <td>${eq.sector || '—'}</td>
+      <td style="color:var(--gray-text)">${eq.asignado_desde ? eq.asignado_desde.substr(0,10) : '—'}</td>
+      <td>${badgeEstado(eq.estado)}</td>
+      <td><button class="btn-link" onclick="verDetalleEquipo(${eq.id})">Ver →</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarTabla() {
+  const q = document.getElementById('buscar-equipos').value.toLowerCase();
+  const est = document.getElementById('filtro-estado').value;
+  const filtered = equipos.filter(eq => {
+    const match = !q || [eq.marca, eq.modelo, eq.imei, eq.usuario_nombre, eq.linea_numero]
+      .some(v => v && v.toLowerCase().includes(q));
+    const estOk = !est || eq.estado === est;
+    return match && estOk;
+  });
+  renderTablaEquipos(filtered);
+}
+
+async function verDetalleEquipo(id) {
+  showSection('detalle-equipo', null);
+  try {
+    const data = await api(`/celulares/api/equipos/${id}`);
+    const eq = data.equipo;
+    equipoActual = data;
+    document.getElementById('detalle-titulo').textContent = `${eq.marca} ${eq.modelo}`;
+    document.getElementById('section-title').textContent = `${eq.marca} ${eq.modelo}`;
+
+    // Campos
+    const campos = [
+      ['Marca / Modelo', `${eq.marca} ${eq.modelo}`],
+      ['IMEI', eq.imei],
+      ['IMEI 2', eq.imei2 || '—'],
+      ['N° Serie', eq.numero_serie || '—'],
+      ['Color', eq.color || '—'],
+      ['Almacenamiento', eq.almacenamiento || '—'],
+      ['Estado', badgeEstado(eq.estado)],
+      ['Garantía hasta', eq.garantia_hasta || '—'],
+      ['Accesorios', eq.accesorios || '—'],
+      ['Observaciones', eq.observaciones || '—'],
+    ];
+    document.getElementById('detalle-equipo-campos').innerHTML = campos.map(([l, v]) =>
+      `<div class="field"><label>${l}</label><p>${v}</p></div>`
+    ).join('');
+
+    // Usuario
+    const hist = data.historial;
+    const actual = hist.find(h => !h.fecha_hasta);
+    const btnDesasig = document.getElementById('btn-desasignar');
+    if (actual) {
+      document.getElementById('detalle-usuario').innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="avatar" style="width:40px;height:40px;font-size:14px">${iniciales(actual.empleado_nombre)}</div>
+          <div><strong>${actual.empleado_nombre}</strong><br><small>Legajo ${actual.legajo} · ${actual.sector || ''}</small></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+          <div><label style="color:var(--gray-text)">DESDE</label><p>${actual.fecha_desde}</p></div>
+          <div><label style="color:var(--gray-text)">LÍNEA</label><p>${actual.linea || '—'}</p></div>
+          ${actual.acta_nro ? `<div><label style="color:var(--gray-text)">ACTA</label><p>${actual.acta_nro}</p></div>` : ''}
+        </div>
+      `;
+      btnDesasig.style.display = '';
+    } else {
+      document.getElementById('detalle-usuario').innerHTML = '<p style="color:var(--gray-text)">Sin asignación activa</p>';
+      btnDesasig.style.display = 'none';
+    }
+
+    // Tickets
+    const tkDiv = document.getElementById('detalle-tickets');
+    if (data.tickets.length) {
+      tkDiv.innerHTML = data.tickets.map(t => `
+        <div class="ticket-item">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <strong>${t.nro_ticket} — ${t.descripcion}</strong>
+            ${badgeEstado(t.estado)}
+          </div>
+          <small style="color:var(--gray-text)">${t.created_at.substr(0,10)}${t.service_nombre ? ` · ${t.service_nombre}` : ''}${t.en_garantia ? ' · En garantía' : ''}</small>
+        </div>
+      `).join('');
+    } else {
+      tkDiv.innerHTML = '<p style="color:var(--gray-text)">Sin tickets registrados</p>';
+    }
+
+    // Timeline
+    document.getElementById('detalle-historial').innerHTML = hist.length
+      ? hist.map(h => `
+        <div class="tl-item">
+          <div class="tl-dot ${!h.fecha_hasta ? 'active' : ''}"></div>
+          <div>
+            <strong>${h.empleado_nombre || '—'}</strong>
+            <small style="display:block;color:var(--gray-text)">${h.fecha_desde} → ${h.fecha_hasta || 'Presente'}</small>
+            ${h.acta_nro ? `<small style="color:var(--gray-text)">Acta: ${h.acta_nro}</small>` : ''}
+          </div>
+        </div>
+      `).join('')
+      : '<p style="color:var(--gray-text)">Sin historial</p>';
+
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ── EMPLEADOS ──────────────────────────────────────────────
+async function cargarEmpleados() {
+  empleados = await api('/celulares/api/empleados');
+  const sectores = [...new Set(empleados.map(e => e.sector).filter(Boolean))].sort();
+  const sel = document.getElementById('filtro-sector');
+  sel.innerHTML = '<option value="">Todos los sectores</option>' +
+    sectores.map(s => `<option>${s}</option>`).join('');
+  renderEmpleados(empleados);
+}
+
+function renderEmpleados(data) {
+  const tbody = document.getElementById('tbody-empleados');
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td class="td-mono">#${e.legajo}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${iniciales(e.nombre + ' ' + e.apellido)}</div>${e.apellido}, ${e.nombre}</div></td>
+      <td>${e.puesto || '—'}</td>
+      <td>${e.sector || '—'}</td>
+      <td>${e.lugar_trabajo || '—'}</td>
+      <td>${e.equipo_actual || '<span style="color:var(--gray-text)">Sin equipo</span>'}</td>
+      <td><button class="btn-link btn-sm" onclick="editarEmpleado(${e.id})">Editar</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarEmpleados() {
+  const q = document.getElementById('buscar-empleados').value.toLowerCase();
+  const sec = document.getElementById('filtro-sector').value;
+  renderEmpleados(empleados.filter(e => {
+    const full = `${e.nombre} ${e.apellido} ${e.legajo}`.toLowerCase();
+    return (!q || full.includes(q)) && (!sec || e.sector === sec);
+  }));
+}
+
+// ── LÍNEAS ─────────────────────────────────────────────────
+async function cargarLineas() {
+  lineas = await api('/celulares/api/lineas');
+  renderLineas(lineas);
+}
+
+function renderLineas(data) {
+  const tbody = document.getElementById('tbody-lineas');
+  tbody.innerHTML = data.map(l => `
+    <tr>
+      <td>${l.numero}</td>
+      <td>${l.operadora || '—'}</td>
+      <td>${l.plan || '—'}</td>
+      <td>${l.datos_gb ? l.datos_gb + ' GB' : '—'}</td>
+      <td>${l.equipo_nombre || '<span style="color:var(--gray-text)">Sin equipo</span>'}</td>
+      <td>${badgeEstado(l.estado)}</td>
+      <td><button class="btn-link btn-sm" onclick="editarLinea(${l.id})">Editar</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarLineas() {
+  const q = document.getElementById('buscar-lineas').value.toLowerCase();
+  renderLineas(lineas.filter(l =>
+    !q || [l.numero, l.operadora, l.equipo_nombre].some(v => v && v.toLowerCase().includes(q))
+  ));
+}
+
+// ── TICKETS ────────────────────────────────────────────────
+async function cargarTickets() {
+  tickets = await api('/celulares/api/tickets');
+  const total = tickets.length;
+  const abiertos = tickets.filter(t => t.estado === 'abierto').length;
+  const service = tickets.filter(t => t.estado === 'en_service').length;
+  document.getElementById('m-tk-total').textContent = total;
+  document.getElementById('m-tk-abiertos').textContent = abiertos;
+  document.getElementById('m-tk-service').textContent = service;
+  renderTickets(tickets);
+}
+
+function renderTickets(data) {
+  const tbody = document.getElementById('tbody-tickets');
+  tbody.innerHTML = data.map(t => `
+    <tr>
+      <td class="td-mono">${t.nro_ticket}</td>
+      <td>${t.equipo_nombre}</td>
+      <td>${t.empleado_nombre || '—'}</td>
+      <td>${t.descripcion}</td>
+      <td style="color:var(--gray-text)">${t.created_at.substr(0,10)}</td>
+      <td>${badgeEstado(t.estado)}</td>
+      <td><button class="btn-link btn-sm" onclick="editarTicket(${t.id})">Editar</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarTickets() {
+  const q = document.getElementById('buscar-tickets').value.toLowerCase();
+  const est = document.getElementById('filtro-ticket-estado').value;
+  renderTickets(tickets.filter(t => {
+    const match = !q || [t.nro_ticket, t.equipo_nombre, t.empleado_nombre, t.descripcion]
+      .some(v => v && v.toLowerCase().includes(q));
+    return match && (!est || t.estado === est);
+  }));
+}
+
+// ── MODALES ────────────────────────────────────────────────
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+
+let editandoEquipoId = null;
+let editandoEmpleadoId = null;
+let editandoLineaId = null;
+let editandoTicketId = null;
+
+function abrirModalNuevo() {
+  const s = seccionActual;
+  if (s === 'equipos') {
+    editandoEquipoId = null;
+    document.getElementById('modal-equipo-titulo').textContent = 'Nuevo equipo';
+    ['f-marca','f-modelo','f-imei','f-imei2','f-serie','f-color','f-almacenamiento','f-accesorios','f-obs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-garantia').value = '';
+    document.getElementById('f-estado').value = 'stock';
+    abrirModal('modal-equipo');
+  } else if (s === 'empleados') {
+    editandoEmpleadoId = null;
+    document.getElementById('modal-emp-titulo').textContent = 'Nuevo empleado';
+    ['fe-apellido','fe-nombre','fe-legajo','fe-email','fe-puesto','fe-sector','fe-lugar'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fe-ingreso').value = '';
+    abrirModal('modal-empleado');
+  } else if (s === 'lineas') {
+    editandoLineaId = null;
+    ['fl-numero','fl-plan','fl-datos','fl-iccid'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fl-operadora').value = '';
+    document.getElementById('fl-vence').value = '';
+    abrirModal('modal-linea');
+  }
+}
+
+async function guardarEquipo() {
+  const d = {
+    marca: document.getElementById('f-marca').value.trim(),
+    modelo: document.getElementById('f-modelo').value.trim(),
+    imei: document.getElementById('f-imei').value.trim(),
+    imei2: document.getElementById('f-imei2').value.trim(),
+    numero_serie: document.getElementById('f-serie').value.trim(),
+    color: document.getElementById('f-color').value.trim(),
+    almacenamiento: document.getElementById('f-almacenamiento').value.trim(),
+    garantia_hasta: document.getElementById('f-garantia').value,
+    accesorios: document.getElementById('f-accesorios').value.trim(),
+    estado: document.getElementById('f-estado').value,
+    observaciones: document.getElementById('f-obs').value.trim(),
+  };
+  if (!d.marca || !d.modelo || !d.imei) { toast('Marca, modelo e IMEI son obligatorios', 'error'); return; }
+  try {
+    if (editandoEquipoId) await api(`/celulares/api/equipos/${editandoEquipoId}`, 'PUT', d);
+    else await api('/celulares/api/equipos', 'POST', d);
+    cerrarModal('modal-equipo');
+    toast('✓ Equipo guardado');
+    cargarEquipos();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function guardarEmpleado() {
+  const d = {
+    apellido: document.getElementById('fe-apellido').value.trim(),
+    nombre: document.getElementById('fe-nombre').value.trim(),
+    legajo: document.getElementById('fe-legajo').value.trim(),
+    email: document.getElementById('fe-email').value.trim(),
+    puesto: document.getElementById('fe-puesto').value.trim(),
+    sector: document.getElementById('fe-sector').value.trim(),
+    lugar_trabajo: document.getElementById('fe-lugar').value.trim(),
+    fecha_ingreso: document.getElementById('fe-ingreso').value,
+    activo: 1,
+  };
+  if (!d.apellido || !d.nombre || !d.legajo) { toast('Apellido, nombre y legajo son obligatorios', 'error'); return; }
+  try {
+    if (editandoEmpleadoId) await api(`/celulares/api/empleados/${editandoEmpleadoId}`, 'PUT', d);
+    else await api('/celulares/api/empleados', 'POST', d);
+    cerrarModal('modal-empleado');
+    toast('✓ Empleado guardado');
+    cargarEmpleados();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function guardarLinea() {
+  const d = {
+    numero: document.getElementById('fl-numero').value.trim(),
+    operadora: document.getElementById('fl-operadora').value,
+    plan: document.getElementById('fl-plan').value.trim(),
+    datos_gb: parseFloat(document.getElementById('fl-datos').value) || null,
+    vencimiento: document.getElementById('fl-vence').value,
+    iccid: document.getElementById('fl-iccid').value.trim(),
+    estado: 'activa',
+  };
+  if (!d.numero) { toast('El número es obligatorio', 'error'); return; }
+  try {
+    if (editandoLineaId) await api(`/celulares/api/lineas/${editandoLineaId}`, 'PUT', d);
+    else await api('/celulares/api/lineas', 'POST', d);
+    cerrarModal('modal-linea');
+    toast('✓ Línea guardada');
+    cargarLineas();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function abrirModalAsignar() {
+  const emps = await api('/celulares/api/empleados');
+  const lins = await api('/celulares/api/lineas');
+  document.getElementById('fa-empleado').innerHTML = '<option value="">Seleccioná un empleado...</option>' +
+    emps.filter(e => e.activo).map(e => `<option value="${e.id}">${e.apellido}, ${e.nombre} (${e.legajo})</option>`).join('');
+  document.getElementById('fa-linea').innerHTML = '<option value="">Sin línea</option>' +
+    lins.filter(l => l.estado === 'activa').map(l => `<option value="${l.id}">${l.numero} · ${l.operadora||''}</option>`).join('');
+  document.getElementById('fa-fecha').value = new Date().toISOString().substr(0,10);
+  document.getElementById('fa-acta').value = '';
+  document.getElementById('fa-obs').value = '';
+  abrirModal('modal-asignar');
+}
+
+async function confirmarAsignar() {
+  if (!equipoActual) return;
+  const d = {
+    empleado_id: parseInt(document.getElementById('fa-empleado').value),
+    linea_id: parseInt(document.getElementById('fa-linea').value) || null,
+    fecha_desde: document.getElementById('fa-fecha').value,
+    acta_nro: document.getElementById('fa-acta').value.trim(),
+    observaciones: document.getElementById('fa-obs').value.trim(),
+  };
+  if (!d.empleado_id) { toast('Seleccioná un empleado', 'error'); return; }
+  try {
+    await api(`/celulares/api/equipos/${equipoActual.equipo.id}/asignar`, 'POST', d);
+    cerrarModal('modal-asignar');
+    toast('✓ Equipo asignado');
+    verDetalleEquipo(equipoActual.equipo.id);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function desasignarEquipo() {
+  if (!equipoActual || !confirm('¿Desasignar este equipo?')) return;
+  try {
+    await api(`/celulares/api/equipos/${equipoActual.equipo.id}/desasignar`, 'POST');
+    toast('✓ Equipo desasignado');
+    verDetalleEquipo(equipoActual.equipo.id);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function abrirModalTicket() {
+  document.getElementById('ft-desc').value = '';
+  document.getElementById('ft-tipo').value = 'rotura';
+  document.getElementById('ft-estado').value = 'abierto';
+  document.getElementById('ft-service').value = '';
+  document.getElementById('ft-ingreso').value = '';
+  document.getElementById('ft-garantia').checked = false;
+  abrirModal('modal-ticket');
+}
+
+async function guardarTicket() {
+  if (!equipoActual) return;
+  const d = {
+    equipo_id: equipoActual.equipo.id,
+    empleado_id: equipoActual.historial.find(h => !h.fecha_hasta)?.empleado_id || null,
+    descripcion: document.getElementById('ft-desc').value.trim(),
+    tipo: document.getElementById('ft-tipo').value,
+    estado: document.getElementById('ft-estado').value,
+    en_garantia: document.getElementById('ft-garantia').checked ? 1 : 0,
+    service_nombre: document.getElementById('ft-service').value.trim(),
+    service_ingreso: document.getElementById('ft-ingreso').value,
+  };
+  if (!d.descripcion) { toast('Descripción obligatoria', 'error'); return; }
+  try {
+    const res = await api('/celulares/api/tickets', 'POST', d);
+    cerrarModal('modal-ticket');
+    toast(`✓ Ticket ${res.nro_ticket} creado`);
+    verDetalleEquipo(equipoActual.equipo.id);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function editarEmpleado(id) {
+  const e = empleados.find(x => x.id === id);
+  if (!e) return;
+  editandoEmpleadoId = id;
+  document.getElementById('modal-emp-titulo').textContent = 'Editar empleado';
+  document.getElementById('fe-apellido').value = e.apellido;
+  document.getElementById('fe-nombre').value = e.nombre;
+  document.getElementById('fe-legajo').value = e.legajo;
+  document.getElementById('fe-email').value = e.email || '';
+  document.getElementById('fe-puesto').value = e.puesto || '';
+  document.getElementById('fe-sector').value = e.sector || '';
+  document.getElementById('fe-lugar').value = e.lugar_trabajo || '';
+  document.getElementById('fe-ingreso').value = e.fecha_ingreso || '';
+  abrirModal('modal-empleado');
+}
+
+function editarLinea(id) {
+  const l = lineas.find(x => x.id === id);
+  if (!l) return;
+  editandoLineaId = id;
+  document.getElementById('modal-linea-titulo').textContent = 'Editar línea';
+  document.getElementById('fl-numero').value = l.numero;
+  document.getElementById('fl-operadora').value = l.operadora || '';
+  document.getElementById('fl-plan').value = l.plan || '';
+  document.getElementById('fl-datos').value = l.datos_gb || '';
+  document.getElementById('fl-vence').value = l.vencimiento || '';
+  document.getElementById('fl-iccid').value = l.iccid || '';
+  abrirModal('modal-linea');
+}
+
+async function editarTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  const nuevoEstado = prompt(`Estado actual: ${t.estado}\nNuevo estado (abierto/en_service/cerrado):`, t.estado);
+  if (!nuevoEstado) return;
+  const costo = nuevoEstado === 'cerrado' ? prompt('Costo de reparación (dejar vacío si no aplica):') : null;
+  const resolucion = nuevoEstado === 'cerrado' ? prompt('Resolución:') : null;
+  try {
+    await api(`/celulares/api/tickets/${id}`, 'PUT', { estado: nuevoEstado, costo: parseFloat(costo) || null, resolucion });
+    toast('✓ Ticket actualizado');
+    cargarTickets();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function exportarTabla() {
+  toast('Exportar — próximamente');
+}
+
+// Cerrar modal al clickear afuera
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ── Init ───────────────────────────────────────────────────
+cargarEquipos();
+</script>
+</body>
+</html>

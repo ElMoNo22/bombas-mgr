@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeleMGR — Telemetría de Campo</title>
+<style>
+  :root {
+    --primary: #0d1b2a;
+    --accent: #0f7173;
+    --accent2: #0a5759;
+    --success: #2d6a4f; --success-bg: #d8f3dc;
+    --warn: #7b4f00; --warn-bg: #fff3cd;
+    --danger: #7b1d1d; --danger-bg: #fde8e8;
+    --info: #1e3a5f; --info-bg: #dbeafe;
+    --kite-bg: #e0f2fe; --kite-text: #075985;
+    --normal-bg: #ede9fe; --normal-text: #4c1d95;
+    --gray-bg: #e9ecef; --gray-text: #6c757d;
+    --border: #dee2e6; --bg: #f8f9fa; --card: #ffffff;
+    --text: #212529; --text2: #495057;
+    --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  .app { display: flex; height: 100vh; }
+  .sidebar { width: 220px; background: var(--primary); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .sidebar-logo p { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+  .sidebar-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.45; padding: 16px 16px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; opacity: 0.7; font-size: 13px; transition: all 0.15s; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); opacity: 1; }
+  .nav-item.active { background: rgba(255,255,255,0.12); opacity: 1; border-left: 3px solid var(--accent); }
+  .nav-item span { font-size: 16px; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: var(--shadow); }
+  .topbar h2 { font-size: 16px; font-weight: 600; }
+  .topbar-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #d1fae5; color: #065f46; font-weight: 600; margin-left: 10px; }
+  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .metric-card { background: var(--card); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .metric-card .label { font-size: 12px; color: var(--gray-text); margin-bottom: 6px; }
+  .metric-card .value { font-size: 26px; font-weight: 700; }
+  .metric-card .sub { font-size: 11px; color: var(--gray-text); margin-top: 4px; }
+  .table-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+  .table-toolbar { padding: 12px 16px; display: flex; gap: 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+  .table-toolbar input, .table-toolbar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--bg); }
+  .table-toolbar input { flex: 1; min-width: 200px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg); border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f1f3f5; }
+  .td-mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--text2); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: var(--success-bg); color: var(--success); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+  .badge-info { background: var(--info-bg); color: var(--info); }
+  .badge-kite { background: var(--kite-bg); color: var(--kite-text); }
+  .badge-normal { background: var(--normal-bg); color: var(--normal-text); }
+  .badge-gray { background: var(--gray-bg); color: var(--gray-text); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-link { border: none; background: none; color: var(--accent); padding: 4px 6px; font-size: 13px; cursor: pointer; }
+  .btn-link:hover { text-decoration: underline; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .detail-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  .detail-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field label { display: block; font-size: 11px; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .field p { font-size: 13px; font-weight: 500; }
+  .sensor-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 4px; }
+  .sensor-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .sensor-card .s-tipo { font-size: 11px; color: var(--gray-text); margin-bottom: 4px; }
+  .sensor-card .s-valor { font-size: 16px; font-weight: 700; }
+  .sensor-card .s-tag { font-size: 11px; color: var(--gray-text); margin-top: 4px; font-family: monospace; }
+  .pozo-link { display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-decoration: none; }
+  .interv-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .interv-item:last-child { border-bottom: none; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border-radius: var(--radius); padding: 24px; width: 540px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .modal h3 { font-size: 16px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+  .form-group textarea { resize: vertical; min-height: 70px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #0d1b2a; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: all 0.25s; z-index: 2000; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: #7b1d1d; }
+  .breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--gray-text); }
+  .breadcrumb a { color: var(--accent); cursor: pointer; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .dot-ok { background: #16a34a; }
+  .dot-warn { background: #d97706; }
+  .dot-err { background: #dc2626; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h1><span>📡</span> <span>TeleMGR</span></h1>
+      <p>Telemetría de campo</p>
+    </div>
+    <div class="sidebar-section">Equipos</div>
+    <div class="nav-item active" onclick="showSection('modems',this)"><span>🔌</span><span class="nav-label">Módems</span></div>
+    <div class="nav-item" onclick="showSection('sensores',this)"><span>📊</span><span class="nav-label">Sensores</span></div>
+    <div class="nav-item" onclick="showSection('lineas',this)"><span>📶</span><span class="nav-label">Líneas SIM</span></div>
+    <div class="sidebar-section">Sistema</div>
+    <div class="nav-item" onclick="window.location='/'"><span>💧</span><span class="nav-label">POZO/MGR</span></div>
+    <div class="nav-item" onclick="window.location='/celulares'"><span>📱</span><span class="nav-label">CelMGR</span></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center">
+        <h2 id="section-title">Módems de telemetría</h2>
+        <span class="topbar-badge">🔗 Vinculado a POZO/MGR</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="btn-nuevo" onclick="abrirModalNuevo()">+ Nuevo</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ MÓDEMS ══ -->
+      <div id="sec-modems" class="panel active">
+        <div class="metrics">
+          <div class="metric-card"><div class="label">Total módems</div><div class="value" id="m-total">—</div></div>
+          <div class="metric-card"><div class="label">Líneas Kite</div><div class="value" id="m-kite" style="color:var(--kite-text)">—</div></div>
+          <div class="metric-card"><div class="label">Líneas Normal</div><div class="value" id="m-normal" style="color:var(--normal-text)">—</div></div>
+          <div class="metric-card"><div class="label">Sin SIM</div><div class="value" id="m-nosim" style="color:var(--danger)">—</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-modems" placeholder="Buscar TAG, marca, modelo, IMEI, ubicación..." oninput="filtrarModems()">
+            <select id="filtro-sim" onchange="filtrarModems()">
+              <option value="">Todas las SIM</option>
+              <option value="kite">Kite</option>
+              <option value="normal">Normal</option>
+              <option value="sin">Sin SIM</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Ubicación</th>
+                <th>Equipo</th>
+                <th>N° TAG</th>
+                <th>IMEI</th>
+                <th>Tipo SIM</th>
+                <th>Sensores</th>
+                <th>Último contacto</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-modems"><tr><td colspan="8" style="padding:20px;text-align:center;color:var(--gray-text)">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ DETALLE MÓDEM ══ -->
+      <div id="sec-detalle-modem" class="panel">
+        <div class="breadcrumb">
+          <a onclick="showSection('modems',null)">← Módems</a>
+          <span>/</span>
+          <span id="detalle-titulo">Detalle</span>
+        </div>
+        <div class="detail-grid">
+          <div>
+            <div class="detail-card">
+              <h3>🔌 Datos del módulo</h3>
+              <div class="field-group" id="detalle-modem-campos"></div>
+            </div>
+            <div class="detail-card" style="margin-top:14px">
+              <h3>💧 Ubicación en POZO/MGR</h3>
+              <div id="detalle-perf"></div>
+            </div>
+            <div class="detail-card" style="margin-top:14px">
+              <h3>📶 Líneas SIM</h3>
+              <div id="detalle-lineas-sim"></div>
+              <button class="btn btn-sm" style="margin-top:10px" onclick="abrirModalLinea()">+ Agregar SIM</button>
+            </div>
+          </div>
+          <div>
+            <div class="detail-card">
+              <h3>📊 Sensores instalados</h3>
+              <div style="margin-bottom:10px">
+                <button class="btn btn-sm" onclick="abrirModalSensor()">+ Agregar sensor</button>
+              </div>
+              <div class="sensor-grid" id="detalle-sensores"></div>
+            </div>
+            <div class="detail-card" style="margin-top:14px">
+              <h3>🗂 Historial de intervenciones</h3>
+              <button class="btn btn-sm" style="margin-bottom:10px" onclick="abrirModalIntervencion()">+ Registrar</button>
+              <div id="detalle-intervenciones"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SENSORES ══ -->
+      <div id="sec-sensores" class="panel">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-sensores" placeholder="Buscar tipo, canal, ubicación..." oninput="filtrarSensores()">
+            <select id="filtro-tipo-sensor" onchange="filtrarSensores()">
+              <option value="">Todos los tipos</option>
+              <option value="presion">Presión</option>
+              <option value="nivel">Nivel</option>
+              <option value="tension">Tensión</option>
+              <option value="corriente">Corriente</option>
+              <option value="temperatura">Temperatura</option>
+              <option value="estado_bomba">Estado bomba</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Canal</th><th>Tipo</th><th>Descripción</th><th>Señal</th><th>Rango</th><th>Unidad</th><th>Ubicación</th><th>TAG</th><th></th></tr>
+            </thead>
+            <tbody id="tbody-sensores"><tr><td colspan="9" style="padding:20px;text-align:center;color:var(--gray-text)">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ LÍNEAS SIM ══ -->
+      <div id="sec-lineas" class="panel">
+        <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
+          <div class="metric-card"><div class="label">Total SIMs</div><div class="value" id="lm-total">—</div></div>
+          <div class="metric-card"><div class="label">Kite (IoT)</div><div class="value" id="lm-kite" style="color:var(--kite-text)">—</div></div>
+          <div class="metric-card"><div class="label">Normal</div><div class="value" id="lm-normal" style="color:var(--normal-text)">—</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-toolbar">
+            <input id="buscar-lineas" placeholder="Buscar número, ICCID, operadora..." oninput="filtrarLineas()">
+            <select id="filtro-tipo-sim" onchange="filtrarLineas()">
+              <option value="">Todos los tipos</option>
+              <option value="kite">Kite</option>
+              <option value="normal">Normal</option>
+            </select>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Número</th><th>Tipo</th><th>Operadora</th><th>ICCID</th><th>APN</th><th>Módulo asignado</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody id="tbody-lineas"><tr><td colspan="8" style="padding:20px;text-align:center;color:var(--gray-text)">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALES ══ -->
+
+<!-- Modal Módem -->
+<div class="modal-overlay" id="modal-modem">
+  <div class="modal">
+    <h3 id="modal-modem-titulo">Nuevo módulo de telemetría</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Marca *</label><input id="fm-marca" placeholder="Exemys, Moxa..."></div>
+      <div class="form-group"><label>Modelo *</label><input id="fm-modelo" placeholder="REM RTU-400..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>TAG tablero *</label><input id="fm-tag" placeholder="TAG-001"></div>
+      <div class="form-group"><label>IMEI</label><input id="fm-imei"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>N° Serie</label><input id="fm-serie"></div>
+      <div class="form-group"><label>Firmware</label><input id="fm-firmware"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>IP asignada</label><input id="fm-ip" placeholder="10.0.4.x"></div>
+      <div class="form-group"><label>Fecha instalación</label><input id="fm-finstal" type="date"></div>
+    </div>
+    <div class="form-group"><label>Perforación vinculada (POZO/MGR)</label>
+      <select id="fm-perf"><option value="">— Sin vincular —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Garantía hasta</label><input id="fm-garantia" type="date"></div>
+      <div class="form-group"><label>Estado</label>
+        <select id="fm-estado"><option value="activo">Activo</option><option value="fuera_servicio">Fuera de servicio</option><option value="baja">Baja</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Observaciones</label><textarea id="fm-obs"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-modem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarModem()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sensor -->
+<div class="modal-overlay" id="modal-sensor">
+  <div class="modal">
+    <h3>Agregar sensor</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Canal *</label><input id="fs-canal" placeholder="AI-01, DI-01..."></div>
+      <div class="form-group"><label>Tipo *</label>
+        <select id="fs-tipo">
+          <option value="presion">Presión</option>
+          <option value="nivel">Nivel</option>
+          <option value="tension">Tensión</option>
+          <option value="corriente">Corriente</option>
+          <option value="temperatura">Temperatura</option>
+          <option value="estado_bomba">Estado bomba</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de señal</label>
+        <select id="fs-senal">
+          <option value="">—</option>
+          <option value="4-20mA">4-20mA</option>
+          <option value="0-10V">0-10V</option>
+          <option value="digital">Digital</option>
+          <option value="PT100">PT100</option>
+          <option value="termopar">Termopar</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Unidad</label><input id="fs-unidad" placeholder="kg/cm², m, V, °C..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Rango mínimo</label><input id="fs-rmin" type="number" step="any"></div>
+      <div class="form-group"><label>Rango máximo</label><input id="fs-rmax" type="number" step="any"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Alarma mínima</label><input id="fs-amin" type="number" step="any"></div>
+      <div class="form-group"><label>Alarma máxima</label><input id="fs-amax" type="number" step="any"></div>
+    </div>
+    <div class="form-group"><label>Descripción</label><input id="fs-desc" placeholder="Presión salida, nivel freático..."></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-sensor')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarSensor()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Intervención -->
+<div class="modal-overlay" id="modal-intervencion">
+  <div class="modal">
+    <h3>Registrar intervención</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="fi-tipo">
+          <option value="mantenimiento">Mantenimiento</option>
+          <option value="cambio_sim">Cambio de SIM</option>
+          <option value="firmware">Actualización firmware</option>
+          <option value="reemplazo">Reemplazo de equipo</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Fecha *</label><input id="fi-fecha" type="date"></div>
+    </div>
+    <div class="form-group"><label>Descripción *</label><textarea id="fi-desc" placeholder="Describí la intervención..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Técnico</label><input id="fi-tecnico"></div>
+      <div class="form-group"><label>Costo</label><input id="fi-costo" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-intervencion')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarIntervencion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal SIM -->
+<div class="modal-overlay" id="modal-sim">
+  <div class="modal">
+    <h3>Agregar línea SIM</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="fsim-tipo">
+          <option value="kite">Kite (IoT)</option>
+          <option value="normal">Normal</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Operadora</label>
+        <select id="fsim-op">
+          <option value="">—</option>
+          <option>Personal</option><option>Claro</option><option>Movistar</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Número</label><input id="fsim-num" placeholder="+54 221..."></div>
+      <div class="form-group"><label>ICCID</label><input id="fsim-iccid"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>APN</label><input id="fsim-apn" placeholder="internet.kite.ar..."></div>
+      <div class="form-group"><label>IP SIM fija</label><input id="fsim-ip"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal('modal-sim')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarSIM()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let modems = [], sensores = [], lineas = [];
+let modemActual = null;
+let seccionActual = 'modems';
+let editandoModemId = null;
+
+const secTitles = {
+  modems: 'Módems de telemetría',
+  'detalle-modem': 'Detalle de módulo',
+  sensores: 'Sensores instalados',
+  lineas: 'Líneas SIM de campo',
+};
+
+function showSection(name, navEl) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.getElementById('section-title').textContent = secTitles[name] || name;
+  seccionActual = name;
+  if (navEl) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    navEl.classList.add('active');
+  }
+  document.getElementById('btn-nuevo').style.display = name === 'detalle-modem' ? 'none' : '';
+  if (name === 'modems') cargarModems();
+  else if (name === 'sensores') cargarSensores();
+  else if (name === 'lineas') cargarLineas();
+}
+
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function toast(msg, tipo = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (tipo ? ' ' + tipo : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function badgeSIM(tipo) {
+  if (!tipo) return '<span class="badge badge-gray">Sin SIM</span>';
+  if (tipo === 'kite') return '<span class="badge badge-kite">📡 Kite</span>';
+  return '<span class="badge badge-normal">📶 Normal</span>';
+}
+
+function iconTipo(tipo) {
+  const map = { presion:'⏲', nivel:'💧', tension:'⚡', corriente:'🔌', temperatura:'🌡', estado_bomba:'🔁', otro:'📌' };
+  return map[tipo] || '📌';
+}
+
+// ── MÓDEMS ─────────────────────────────────────────────────
+async function cargarModems() {
+  try {
+    const stats = await api('/telemetria/api/stats');
+    document.getElementById('m-total').textContent = stats.total_modems;
+    document.getElementById('m-kite').textContent = stats.lineas_kite;
+    document.getElementById('m-normal').textContent = stats.lineas_normal;
+    document.getElementById('m-nosim').textContent = stats.sin_sim;
+    modems = await api('/telemetria/api/modems');
+    renderModems(modems);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function renderModems(data) {
+  const tbody = document.getElementById('tbody-modems');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--gray-text)">Sin módems registrados</td></tr>'; return; }
+  tbody.innerHTML = data.map(m => `
+    <tr>
+      <td><strong>${m.perf_nombre || '—'}</strong>${m.perf_zona ? `<br><small style="color:var(--gray-text)">${m.perf_zona}</small>` : ''}</td>
+      <td>${m.marca}<br><small style="color:var(--gray-text)">${m.modelo}</small></td>
+      <td class="td-mono">${m.tag_tablero}</td>
+      <td class="td-mono">${m.imei || '—'}</td>
+      <td>${badgeSIM(m.sim_tipo)}${m.sim_numero ? `<br><small style="color:var(--gray-text)">${m.sim_numero}</small>` : ''}</td>
+      <td style="font-size:12px;color:var(--gray-text)" id="sens-count-${m.id}">—</td>
+      <td style="font-size:12px;color:var(--gray-text)">${m.ultimo_contacto ? m.ultimo_contacto.substr(0,16) : 'Sin datos'}</td>
+      <td><button class="btn-link" onclick="verDetalleModem(${m.id})">Ver →</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarModems() {
+  const q = document.getElementById('buscar-modems').value.toLowerCase();
+  const sim = document.getElementById('filtro-sim').value;
+  renderModems(modems.filter(m => {
+    const match = !q || [m.marca, m.modelo, m.tag_tablero, m.imei, m.perf_nombre, m.perf_zona]
+      .some(v => v && v.toLowerCase().includes(q));
+    const simOk = !sim ||
+      (sim === 'kite' && m.sim_tipo === 'kite') ||
+      (sim === 'normal' && m.sim_tipo === 'normal') ||
+      (sim === 'sin' && !m.sim_tipo);
+    return match && simOk;
+  }));
+}
+
+async function verDetalleModem(id) {
+  showSection('detalle-modem', null);
+  try {
+    const data = await api(`/telemetria/api/modems/${id}`);
+    const m = data.modem;
+    modemActual = data;
+    document.getElementById('detalle-titulo').textContent = `${m.tag_tablero} — ${m.marca} ${m.modelo}`;
+    document.getElementById('section-title').textContent = `${m.tag_tablero} — ${m.marca} ${m.modelo}`;
+
+    const campos = [
+      ['TAG tablero', m.tag_tablero], ['Marca / Modelo', `${m.marca} ${m.modelo}`],
+      ['IMEI', m.imei || '—'], ['N° Serie', m.nro_serie || '—'],
+      ['Firmware', m.firmware || '—'], ['IP asignada', m.ip_asignada || '—'],
+      ['Instalado', m.fecha_instalacion || '—'], ['Garantía hasta', m.garantia_hasta || '—'],
+      ['Último contacto', m.ultimo_contacto ? m.ultimo_contacto.substr(0,16) : '—'],
+      ['Estado', m.estado],
+    ];
+    document.getElementById('detalle-modem-campos').innerHTML = campos.map(([l,v]) =>
+      `<div class="field"><label>${l}</label><p>${v}</p></div>`
+    ).join('');
+
+    // Perforación
+    document.getElementById('detalle-perf').innerHTML = m.perf_nombre
+      ? `<div style="display:flex;align-items:center;justify-content:space-between">
+           <div><strong>${m.perf_nombre}</strong><br><small style="color:var(--gray-text)">${m.perf_zona || ''} · ${m.perf_calle || ''}</small>
+           ${m.bomba_marca ? `<br><small style="color:var(--gray-text)">Bomba: ${m.bomba_marca} ${m.bomba_modelo||''}</small>` : ''}</div>
+           <a href="/" class="pozo-link">💧 POZO/MGR</a>
+         </div>`
+      : '<p style="color:var(--gray-text)">Sin perforación vinculada</p>';
+
+    // Sensores
+    const sgrid = document.getElementById('detalle-sensores');
+    sgrid.innerHTML = data.sensores.filter(s => s.activo).map(s => `
+      <div class="sensor-card">
+        <div class="s-tipo">${iconTipo(s.tipo)} ${s.tipo.replace('_',' ')}</div>
+        <div class="s-valor">${s.descripcion || '—'}</div>
+        <div class="s-tag">${s.canal} · ${s.tipo_senal || '—'}</div>
+        ${s.unidad ? `<div class="s-tag">Unidad: ${s.unidad}</div>` : ''}
+        ${s.alarma_min != null || s.alarma_max != null
+          ? `<div class="s-tag">Alarma: ${s.alarma_min ?? '—'} / ${s.alarma_max ?? '—'}</div>` : ''}
+        <button class="btn-link" style="font-size:11px;padding:2px 0;margin-top:4px" onclick="eliminarSensor(${s.id})">✕ Quitar</button>
+      </div>
+    `).join('') || '<p style="color:var(--gray-text)">Sin sensores</p>';
+
+    // SIMs
+    document.getElementById('detalle-lineas-sim').innerHTML = data.lineas.length
+      ? data.lineas.map(l => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+          ${badgeSIM(l.tipo_sim)} ${l.numero || 'Sin número'} · ${l.operadora || '—'}
+          ${l.iccid ? `<br><small class="td-mono">${l.iccid}</small>` : ''}
+          ${l.apn ? `<br><small style="color:var(--gray-text)">APN: ${l.apn}</small>` : ''}
+        </div>
+      `).join('')
+      : '<p style="color:var(--gray-text)">Sin SIMs asignadas</p>';
+
+    // Intervenciones
+    document.getElementById('detalle-intervenciones').innerHTML = data.intervenciones.length
+      ? data.intervenciones.map(i => `
+        <div class="interv-item">
+          <div style="display:flex;justify-content:space-between">
+            <strong>${i.tipo.replace('_',' ')}</strong>
+            <small style="color:var(--gray-text)">${i.fecha}</small>
+          </div>
+          <div style="color:var(--text2)">${i.descripcion}</div>
+          ${i.tecnico ? `<small style="color:var(--gray-text)">Técnico: ${i.tecnico}</small>` : ''}
+          ${i.costo ? `<small style="color:var(--gray-text)"> · $${i.costo}</small>` : ''}
+        </div>
+      `).join('')
+      : '<p style="color:var(--gray-text)">Sin intervenciones registradas</p>';
+
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ── SENSORES ───────────────────────────────────────────────
+async function cargarSensores() {
+  sensores = await api('/telemetria/api/sensores');
+  renderSensores(sensores);
+}
+
+function renderSensores(data) {
+  const tbody = document.getElementById('tbody-sensores');
+  tbody.innerHTML = data.map(s => `
+    <tr>
+      <td class="td-mono">${s.canal}</td>
+      <td>${iconTipo(s.tipo)} ${s.tipo.replace('_',' ')}</td>
+      <td>${s.descripcion || '—'}</td>
+      <td class="td-mono">${s.tipo_senal || '—'}</td>
+      <td style="font-size:12px">${s.rango_min ?? '—'} / ${s.rango_max ?? '—'}</td>
+      <td>${s.unidad || '—'}</td>
+      <td>${s.perf_nombre || '—'}<br><small style="color:var(--gray-text)">${s.perf_zona || ''}</small></td>
+      <td class="td-mono">${s.tag_tablero}</td>
+      <td><button class="btn-link btn-sm" onclick="verDetalleModem(${s.modem_id})">Ver →</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarSensores() {
+  const q = document.getElementById('buscar-sensores').value.toLowerCase();
+  const tipo = document.getElementById('filtro-tipo-sensor').value;
+  renderSensores(sensores.filter(s => {
+    const match = !q || [s.canal, s.tipo, s.descripcion, s.perf_nombre, s.tag_tablero]
+      .some(v => v && v.toLowerCase().includes(q));
+    return match && (!tipo || s.tipo === tipo);
+  }));
+}
+
+// ── LÍNEAS ─────────────────────────────────────────────────
+async function cargarLineas() {
+  lineas = await api('/telemetria/api/lineas');
+  const kite = lineas.filter(l => l.tipo_sim === 'kite').length;
+  const normal = lineas.filter(l => l.tipo_sim === 'normal').length;
+  document.getElementById('lm-total').textContent = lineas.length;
+  document.getElementById('lm-kite').textContent = kite;
+  document.getElementById('lm-normal').textContent = normal;
+  renderLineas(lineas);
+}
+
+function renderLineas(data) {
+  const tbody = document.getElementById('tbody-lineas');
+  tbody.innerHTML = data.map(l => `
+    <tr>
+      <td>${l.numero || '<span style="color:var(--gray-text)">— sin número —</span>'}</td>
+      <td>${badgeSIM(l.tipo_sim)}</td>
+      <td>${l.operadora || '—'}</td>
+      <td class="td-mono">${l.iccid || '—'}</td>
+      <td style="font-size:12px">${l.apn || '—'}</td>
+      <td>${l.tag_tablero ? `${l.tag_tablero} · ${l.modem_marca} ${l.modem_modelo}` : '<span style="color:var(--gray-text)">Sin módulo</span>'}</td>
+      <td><span class="badge ${l.estado==='activa'?'badge-ok':'badge-warn'}">${l.estado}</span></td>
+      <td><button class="btn-link btn-sm" onclick="editarLinea(${l.id})">Editar</button></td>
+    </tr>
+  `).join('');
+}
+
+function filtrarLineas() {
+  const q = document.getElementById('buscar-lineas').value.toLowerCase();
+  const tipo = document.getElementById('filtro-tipo-sim').value;
+  renderLineas(lineas.filter(l => {
+    const match = !q || [l.numero, l.iccid, l.operadora, l.tag_tablero].some(v => v && v.toLowerCase().includes(q));
+    return match && (!tipo || l.tipo_sim === tipo);
+  }));
+}
+
+// ── MODALES ────────────────────────────────────────────────
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function abrirModalNuevo() {
+  if (seccionActual === 'modems') {
+    editandoModemId = null;
+    document.getElementById('modal-modem-titulo').textContent = 'Nuevo módulo de telemetría';
+    ['fm-marca','fm-modelo','fm-tag','fm-imei','fm-serie','fm-firmware','fm-ip','fm-obs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fm-finstal').value = '';
+    document.getElementById('fm-garantia').value = '';
+    document.getElementById('fm-estado').value = 'activo';
+    // cargar perforaciones
+    const perfs = await api('/telemetria/api/perforaciones');
+    document.getElementById('fm-perf').innerHTML = '<option value="">— Sin vincular —</option>' +
+      perfs.map(p => `<option value="${p.id}">${p.denominacion}${p.zona ? ' · '+p.zona : ''}</option>`).join('');
+    abrirModal('modal-modem');
+  } else if (seccionActual === 'lineas') {
+    abrirModalLinea();
+  }
+}
+
+async function guardarModem() {
+  const d = {
+    marca: document.getElementById('fm-marca').value.trim(),
+    modelo: document.getElementById('fm-modelo').value.trim(),
+    tag_tablero: document.getElementById('fm-tag').value.trim().toUpperCase(),
+    imei: document.getElementById('fm-imei').value.trim(),
+    nro_serie: document.getElementById('fm-serie').value.trim(),
+    firmware: document.getElementById('fm-firmware').value.trim(),
+    ip_asignada: document.getElementById('fm-ip').value.trim(),
+    perforacion_id: parseInt(document.getElementById('fm-perf').value) || null,
+    fecha_instalacion: document.getElementById('fm-finstal').value,
+    garantia_hasta: document.getElementById('fm-garantia').value,
+    estado: document.getElementById('fm-estado').value,
+    observaciones: document.getElementById('fm-obs').value.trim(),
+  };
+  if (!d.marca || !d.modelo || !d.tag_tablero) { toast('Marca, modelo y TAG son obligatorios', 'error'); return; }
+  try {
+    if (editandoModemId) await api(`/telemetria/api/modems/${editandoModemId}`, 'PUT', d);
+    else await api('/telemetria/api/modems', 'POST', d);
+    cerrarModal('modal-modem');
+    toast('✓ Módulo guardado');
+    cargarModems();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function abrirModalSensor() {
+  ['fs-canal','fs-unidad','fs-desc','fs-rmin','fs-rmax','fs-amin','fs-amax'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fs-tipo').value = 'presion';
+  document.getElementById('fs-senal').value = '';
+  abrirModal('modal-sensor');
+}
+
+async function guardarSensor() {
+  if (!modemActual) return;
+  const d = {
+    canal: document.getElementById('fs-canal').value.trim().toUpperCase(),
+    tipo: document.getElementById('fs-tipo').value,
+    tipo_senal: document.getElementById('fs-senal').value,
+    unidad: document.getElementById('fs-unidad').value.trim(),
+    descripcion: document.getElementById('fs-desc').value.trim(),
+    rango_min: parseFloat(document.getElementById('fs-rmin').value) || null,
+    rango_max: parseFloat(document.getElementById('fs-rmax').value) || null,
+    alarma_min: parseFloat(document.getElementById('fs-amin').value) || null,
+    alarma_max: parseFloat(document.getElementById('fs-amax').value) || null,
+  };
+  if (!d.canal || !d.tipo) { toast('Canal y tipo son obligatorios', 'error'); return; }
+  try {
+    await api(`/telemetria/api/modems/${modemActual.modem.id}/sensores`, 'POST', d);
+    cerrarModal('modal-sensor');
+    toast('✓ Sensor agregado');
+    verDetalleModem(modemActual.modem.id);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function eliminarSensor(sid) {
+  if (!confirm('¿Quitar este sensor?')) return;
+  try {
+    await api(`/telemetria/api/sensores/${sid}`, 'DELETE');
+    toast('✓ Sensor quitado');
+    verDetalleModem(modemActual.modem.id);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function abrirModalIntervencion() {
+  ['fi-desc','fi-tecnico','fi-costo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fi-tipo').value = 'mantenimiento';
+  document.getElementById('fi-fecha').value = new Date().toISOString().substr(0,10);
+  abrirModal('modal-intervencion');
+}
+
+async function guardarIntervencion() {
+  if (!modemActual) return;
+  const d = {
+    tipo: document.getElementById('fi-tipo').value,
+    descripcion: document.getElementById('fi-desc').value.trim(),
+    tecnico: document.getElementById('fi-tecnico').value.trim(),
+    fecha: document.getElementById('fi-fecha').value,
+    costo: parseFloat(document.getElementById('fi-costo').value) || null,
+  };
+  if (!d.descripcion) { toast('Descripción obligatoria', 'error'); return; }
+  try {
+    await api(`/telemetria/api/modems/${modemActual.modem.id}/intervenciones`, 'POST', d);
+    cerrarModal('modal-intervencion');
+    toast('✓ Intervención registrada');
+    verDetalleModem(modemActual.modem.id);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function abrirModalLinea() {
+  ['fsim-num','fsim-iccid','fsim-apn','fsim-ip'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fsim-tipo').value = 'kite';
+  document.getElementById('fsim-op').value = '';
+  abrirModal('modal-sim');
+}
+
+async function guardarSIM() {
+  const d = {
+    tipo_sim: document.getElementById('fsim-tipo').value,
+    operadora: document.getElementById('fsim-op').value,
+    numero: document.getElementById('fsim-num').value.trim(),
+    iccid: document.getElementById('fsim-iccid').value.trim(),
+    apn: document.getElementById('fsim-apn').value.trim(),
+    ip_sim: document.getElementById('fsim-ip').value.trim(),
+    modem_id: modemActual ? modemActual.modem.id : null,
+    estado: 'activa',
+  };
+  try {
+    await api('/telemetria/api/lineas', 'POST', d);
+    cerrarModal('modal-sim');
+    toast('✓ SIM agregada');
+    if (modemActual) verDetalleModem(modemActual.modem.id);
+    else cargarLineas();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function editarLinea(id) {
+  const l = lineas.find(x => x.id === id);
+  if (!l) return;
+  document.getElementById('fsim-tipo').value = l.tipo_sim;
+  document.getElementById('fsim-op').value = l.operadora || '';
+  document.getElementById('fsim-num').value = l.numero || '';
+  document.getElementById('fsim-iccid').value = l.iccid || '';
+  document.getElementById('fsim-apn').value = l.apn || '';
+  document.getElementById('fsim-ip').value = l.ip_sim || '';
+  abrirModal('modal-sim');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+cargarModems();
+</script>
+</body>
+</html>

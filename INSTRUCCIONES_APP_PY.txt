@@ -1,0 +1,31 @@
+## ══════════════════════════════════════════════════════════
+## INSTRUCCIONES — Agregar al app.py existente
+## ══════════════════════════════════════════════════════════
+##
+## 1. Buscá en tu app.py la sección de imports al principio
+##    y agregá estas dos líneas:
+
+from blueprints.celulares import cel_bp
+from blueprints.telemetria import tele_bp
+
+## 2. Buscá donde se crea la app Flask, algo como:
+##       app = Flask(__name__)
+##    Y DESPUÉS de esa línea, antes del primer @app.route,
+##    agregá esto:
+
+app.register_blueprint(cel_bp)
+app.register_blueprint(tele_bp)
+
+## ══════════════════════════════════════════════════════════
+## EJEMPLO de cómo queda el principio de tu app.py:
+## ══════════════════════════════════════════════════════════
+
+# import os, json, ...  (tus imports existentes)
+# from blueprints.celulares import cel_bp       ← agregar
+# from blueprints.telemetria import tele_bp     ← agregar
+
+# app = Flask(__name__)
+# app.register_blueprint(cel_bp)                ← agregar
+# app.register_blueprint(tele_bp)               ← agregar
+
+# ... resto del app.py sin tocar nada ...
