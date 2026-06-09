@@ -1,22 +1,15 @@
 import os, json, re
-
 import turso as db_driver
-
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
-
 from werkzeug.security import generate_password_hash, check_password_hash
-
 from functools import wraps
 
-from blueprints.celulares import cel_bp
-from blueprints.telemetria import tele_bp
-
 app = Flask(__name__)
-
 app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024')
 
+# ── BLUEPRINTS ──
+from blueprints.celulares import cel_bp
 app.register_blueprint(cel_bp)
-app.register_blueprint(tele_bp)
 
 # ── DB CONNECTION ──
 
@@ -47,9 +40,9 @@ def check_garantia(numero_equipo, conn):
         SELECT id, fecha_entrega, proveedor, remito_entrega, descripcion
         FROM reparaciones
         WHERE REPLACE(numero_equipo, '.0', '') = ?
-        AND estado = 'Entregada'
-        AND fecha_entrega IS NOT NULL
-        AND fecha_entrega >= ?
+          AND estado = 'Entregada'
+          AND fecha_entrega IS NOT NULL
+          AND fecha_entrega >= ?
         ORDER BY fecha_entrega DESC LIMIT 1
     """, (neq, hace_6m))
     return fetchone_dict(cur)
@@ -78,12 +71,24 @@ def fetchone_dict(cursor):
     except Exception:
         return {k: row[k] for k in row.keys()}
 
+def _parse_modulos(raw):
+    """Convierte el campo modulos (JSON string o lista) a lista Python."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return raw
+    try:
+        return json.loads(raw)
+    except Exception:
+        return []
+
 def init_db():
     conn = get_db()
     tables = [
         '''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL, role TEXT DEFAULT 'viewer')''',
+            password_hash TEXT NOT NULL, role TEXT DEFAULT 'viewer',
+            modulos TEXT DEFAULT '["pozos","celulares","telemetria"]')''',
         '''CREATE TABLE IF NOT EXISTS bombas (
             id INTEGER PRIMARY KEY AUTOINCREMENT, n_equipo TEXT UNIQUE,
             tag TEXT, tag_extraviado TEXT, marca TEXT, modelo TEXT,
@@ -112,49 +117,19 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             marca TEXT, modelo TEXT, para TEXT, hp REAL,
             etapas TEXT, descarga TEXT, largo_mm TEXT, curva_json TEXT)''',
-        # ── REPARACIONES ──
         '''CREATE TABLE IF NOT EXISTS reparaciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha_envio TEXT,
-            remito TEXT,
-            proveedor TEXT,
-            descripcion TEXT,
-            servicio TEXT,
-            tag_actual TEXT,
-            tag_reemplazado TEXT,
-            numero_equipo TEXT,
-            marca TEXT,
-            modelo TEXT,
-            hp TEXT,
-            kw TEXT,
-            amperes TEXT,
-            serie TEXT,
-            centro TEXT,
-            ceco TEXT,
-            referencia TEXT,
-            presupuesto TEXT,
-            fecha_cotizacion TEXT,
-            costo_usd REAL,
-            estado_autorizacion TEXT,
-            fecha_autorizacion TEXT,
-            om TEXT,
-            solped TEXT,
-            fecha_solped TEXT,
-            liberacion TEXT,
-            fecha_liberacion TEXT,
-            estadio TEXT,
-            gcp TEXT,
-            nota_justificacion TEXT,
-            np TEXT,
-            fecha_np_generacion TEXT,
-            fecha_np_envio_prov TEXT,
-            estado_entrega TEXT,
-            fecha_entrega TEXT,
-            remito_entrega TEXT,
-            observaciones TEXT,
-            responsable TEXT,
-            estado TEXT DEFAULT 'En reparación',
-            usuario_registro TEXT,
+            fecha_envio TEXT, remito TEXT, proveedor TEXT, descripcion TEXT,
+            servicio TEXT, tag_actual TEXT, tag_reemplazado TEXT, numero_equipo TEXT,
+            marca TEXT, modelo TEXT, hp TEXT, kw TEXT, amperes TEXT, serie TEXT,
+            centro TEXT, ceco TEXT, referencia TEXT, presupuesto TEXT,
+            fecha_cotizacion TEXT, costo_usd REAL, estado_autorizacion TEXT,
+            fecha_autorizacion TEXT, om TEXT, solped TEXT, fecha_solped TEXT,
+            liberacion TEXT, fecha_liberacion TEXT, estadio TEXT, gcp TEXT,
+            nota_justificacion TEXT, np TEXT, fecha_np_generacion TEXT,
+            fecha_np_envio_prov TEXT, estado_entrega TEXT, fecha_entrega TEXT,
+            remito_entrega TEXT, observaciones TEXT, responsable TEXT,
+            estado TEXT DEFAULT 'En reparación', usuario_registro TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''
     ]
@@ -165,33 +140,30 @@ def init_db():
         except Exception as e:
             if 'already exists' not in str(e).lower():
                 raise
+
     # Migrations
     for migration in [
         'ALTER TABLE bombas ADD COLUMN ubicacion_fisica TEXT',
+        "ALTER TABLE users ADD COLUMN modulos TEXT DEFAULT '[\"pozos\",\"celulares\",\"telemetria\"]'",
     ]:
         try:
             conn.execute(migration)
             db_commit(conn)
         except Exception:
             pass
+
+    # Clean .0 suffix from n_equipo
     try:
-        conn.execute("""
-            UPDATE bombas SET n_equipo = REPLACE(n_equipo, '.0', '')
-            WHERE n_equipo LIKE '%.0'
-        """)
+        conn.execute("UPDATE bombas SET n_equipo = REPLACE(n_equipo, '.0', '') WHERE n_equipo LIKE '%.0'")
         db_commit(conn)
     except Exception:
         pass
-    for migration in []:
-        try:
-            conn.execute(migration)
-            db_commit(conn)
-        except Exception:
-            pass
+
     cur = conn.execute('SELECT id FROM users WHERE username = ?', ('admin',))
     if not fetchone_dict(cur):
-        conn.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                     ('admin', generate_password_hash('bombas2024'), 'admin'))
+        conn.execute('INSERT INTO users (username, password_hash, role, modulos) VALUES (?, ?, ?, ?)',
+                     ('admin', generate_password_hash('bombas2024'), 'admin',
+                      '["pozos","celulares","telemetria"]'))
         db_commit(conn)
     conn.close()
 
@@ -232,8 +204,11 @@ def admin_required(f):
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', username=session.get('username'),
-                           role=session.get('role'), user_id=session.get('user_id', 0))
+    return render_template('index.html',
+                           username=session.get('username'),
+                           role=session.get('role'),
+                           user_id=session.get('user_id', 0),
+                           modulos=session.get('modulos', ['pozos','celulares','telemetria']))
 
 @app.route('/login', methods=['GET'])
 def login_page():
@@ -251,10 +226,16 @@ def login():
     user = fetchone_dict(cur)
     conn.close()
     if user and check_password_hash(user['password_hash'], password):
-        session['user_id'] = user['id']
+        modulos = _parse_modulos(user.get('modulos'))
+        # admin siempre tiene todos
+        if user['role'] == 'admin':
+            modulos = ['pozos','celulares','telemetria']
+        session['user_id']  = user['id']
         session['username'] = user['username']
-        session['role'] = user['role']
-        return jsonify({'ok': True, 'username': user['username'], 'role': user['role']})
+        session['role']     = user['role']
+        session['modulos']  = modulos
+        return jsonify({'ok': True, 'username': user['username'],
+                        'role': user['role'], 'modulos': modulos})
     return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
 
 @app.route('/logout')
@@ -302,9 +283,7 @@ def get_bombas():
     cur_g = conn.execute("""
         SELECT numero_equipo, fecha_entrega, id as rep_id
         FROM reparaciones
-        WHERE estado = 'Entregada'
-        AND fecha_entrega IS NOT NULL
-        AND fecha_entrega >= ?
+        WHERE estado = 'Entregada' AND fecha_entrega IS NOT NULL AND fecha_entrega >= ?
     """, (hace_6m,))
     en_garantia = {norm_neq(r['numero_equipo']): r for r in fetchall_dicts(cur_g)}
     for r in rows:
@@ -340,7 +319,7 @@ def get_bomba(bid):
     cur3 = conn.execute('''
         SELECT * FROM reparaciones
         WHERE REPLACE(numero_equipo,'.0','') = ?
-        AND estado NOT IN ('Entregada', 'Cancelada')
+          AND estado NOT IN ('Entregada', 'Cancelada')
         ORDER BY id DESC LIMIT 1
     ''', (neq,))
     rep_activa = fetchone_dict(cur3)
@@ -355,7 +334,7 @@ def get_bomba(bid):
         try:
             hasta = (date.fromisoformat(fecha_ent) + timedelta(days=183)).isoformat()
             dias = (date.fromisoformat(hasta) - date.today()).days
-        except:
+        except Exception:
             hasta = None
             dias = None
         bomba['en_garantia'] = True
@@ -410,8 +389,7 @@ def set_ubicacion(bid):
     data = request.get_json()
     ubicacion = data.get('ubicacion_fisica')
     conn = get_db()
-    conn.execute('UPDATE bombas SET ubicacion_fisica=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
-                 (ubicacion, bid))
+    conn.execute('UPDATE bombas SET ubicacion_fisica=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (ubicacion, bid))
     db_commit(conn)
     cur = conn.execute('SELECT * FROM bombas WHERE id=?', (bid,))
     row = fetchone_dict(cur)
@@ -528,7 +506,7 @@ def delete_perforacion(pid):
     conn.close()
     return jsonify({'ok': True})
 
-# ── ASIGNACIONES ──
+# ── ASIGNACIONES (POZOS) ──
 
 @app.route('/api/asignaciones', methods=['POST'])
 @editor_required
@@ -590,8 +568,8 @@ def desmontar(aid):
     data = request.get_json() or {}
     conn = get_db()
     conn.execute('''UPDATE asignaciones SET estado='Desmontado', fecha_desmontaje=?,
-                    notas=COALESCE(?,notas), updated_at=CURRENT_TIMESTAMP WHERE id=?''',
-                 (norm_fecha(data.get('fecha_desmontaje')), data.get('notas'), aid))
+        notas=COALESCE(?,notas), updated_at=CURRENT_TIMESTAMP WHERE id=?''',
+        (norm_fecha(data.get('fecha_desmontaje')), data.get('notas'), aid))
     cur_a = conn.execute('SELECT bomba_id FROM asignaciones WHERE id=?', (aid,))
     asig = fetchone_dict(cur_a)
     if asig:
@@ -658,24 +636,24 @@ def get_stats():
         cur = conn.execute(sql)
         return fetchall_dicts(cur)
     stats = {
-        'total_bombas': scalar('SELECT COUNT(*) as n FROM bombas'),
-        'total_perforaciones': scalar('SELECT COUNT(*) as n FROM perforaciones'),
-        'montadas': scalar("SELECT COUNT(*) as n FROM asignaciones WHERE estado='Montado'"),
-        'disponibles': scalar('''SELECT COUNT(*) as n FROM bombas WHERE id NOT IN
-            (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado='Montado')'''),
-        'por_zona': many('''SELECT p.zona, COUNT(*) as n FROM asignaciones a
-            JOIN perforaciones p ON a.perforacion_id=p.id
-            WHERE a.estado='Montado' GROUP BY p.zona'''),
-        'por_hp': many('''SELECT b.hp, COUNT(*) as n FROM asignaciones a
-            JOIN bombas b ON a.bomba_id=b.id
-            WHERE a.estado='Montado' AND b.hp IS NOT NULL GROUP BY b.hp ORDER BY b.hp'''),
-        'por_marca': many('''SELECT marca, COUNT(*) as n FROM bombas WHERE marca IS NOT NULL
-            GROUP BY marca ORDER BY n DESC'''),
-        'modelos_top': many('''SELECT b.modelo, COUNT(*) as n FROM asignaciones a
-            JOIN bombas b ON a.bomba_id=b.id
-            WHERE a.estado='Montado' AND b.modelo IS NOT NULL
-            GROUP BY b.modelo ORDER BY n DESC LIMIT 10'''),
-        'en_reparacion': scalar("SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')"),
+        'total_bombas':       scalar('SELECT COUNT(*) as n FROM bombas'),
+        'total_perforaciones':scalar('SELECT COUNT(*) as n FROM perforaciones'),
+        'montadas':           scalar("SELECT COUNT(*) as n FROM asignaciones WHERE estado='Montado'"),
+        'disponibles':        scalar('''SELECT COUNT(*) as n FROM bombas WHERE id NOT IN
+                                        (SELECT DISTINCT bomba_id FROM asignaciones WHERE estado='Montado')'''),
+        'por_zona':           many('''SELECT p.zona, COUNT(*) as n FROM asignaciones a
+                                      JOIN perforaciones p ON a.perforacion_id=p.id
+                                      WHERE a.estado='Montado' GROUP BY p.zona'''),
+        'por_hp':             many('''SELECT b.hp, COUNT(*) as n FROM asignaciones a
+                                      JOIN bombas b ON a.bomba_id=b.id
+                                      WHERE a.estado='Montado' AND b.hp IS NOT NULL GROUP BY b.hp ORDER BY b.hp'''),
+        'por_marca':          many('''SELECT marca, COUNT(*) as n FROM bombas WHERE marca IS NOT NULL
+                                      GROUP BY marca ORDER BY n DESC'''),
+        'modelos_top':        many('''SELECT b.modelo, COUNT(*) as n FROM asignaciones a
+                                      JOIN bombas b ON a.bomba_id=b.id
+                                      WHERE a.estado='Montado' AND b.modelo IS NOT NULL
+                                      GROUP BY b.modelo ORDER BY n DESC LIMIT 10'''),
+        'en_reparacion':      scalar("SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')"),
     }
     conn.close()
     return jsonify(stats)
@@ -683,13 +661,8 @@ def get_stats():
 # ── REPARACIONES ──
 
 ESTADOS_REPARACION = [
-    'Pendiente cotización',
-    'En reparación',
-    'Esperando SOLPED',
-    'Esperando NP',
-    'Esperando retiro',
-    'Entregada',
-    'Cancelada',
+    'Pendiente cotización','En reparación','Esperando SOLPED',
+    'Esperando NP','Esperando retiro','Entregada','Cancelada',
 ]
 
 REP_FIELDS = [
@@ -715,20 +688,17 @@ REP_DATE_FIELDS = {
 def get_reparaciones():
     conn = get_db()
     numero_equipo = request.args.get('numero_equipo', '').strip()
-    estado = request.args.get('estado', '').strip()
-    proveedor = request.args.get('proveedor', '').strip()
-    activa = request.args.get('activa', '').strip()
+    estado        = request.args.get('estado', '').strip()
+    proveedor     = request.args.get('proveedor', '').strip()
+    activa        = request.args.get('activa', '').strip()
     query = 'SELECT * FROM reparaciones WHERE 1=1'
     params = []
     if numero_equipo:
-        query += ' AND numero_equipo LIKE ?'
-        params.append(f'%{numero_equipo}%')
+        query += ' AND numero_equipo LIKE ?'; params.append(f'%{numero_equipo}%')
     if estado:
-        query += ' AND estado = ?'
-        params.append(estado)
+        query += ' AND estado = ?'; params.append(estado)
     if proveedor:
-        query += ' AND proveedor LIKE ?'
-        params.append(f'%{proveedor}%')
+        query += ' AND proveedor LIKE ?'; params.append(f'%{proveedor}%')
     if activa == '1':
         query += " AND estado NOT IN ('Entregada','Cancelada')"
     elif activa == '0':
@@ -754,21 +724,15 @@ def get_reparacion(rid):
 @editor_required
 def create_reparacion():
     data = request.get_json()
-    fields = REP_FIELDS
     vals = []
-    for f in fields:
+    for f in REP_FIELDS:
         v = data.get(f)
-        if f in REP_DATE_FIELDS:
-            v = norm_fecha(v)
-        if f == 'usuario_registro' and not v:
-            v = session.get('username', 'sistema')
+        if f in REP_DATE_FIELDS: v = norm_fecha(v)
+        if f == 'usuario_registro' and not v: v = session.get('username', 'sistema')
         vals.append(v)
     conn = get_db()
     try:
-        conn.execute(
-            f'INSERT INTO reparaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})',
-            vals
-        )
+        conn.execute(f'INSERT INTO reparaciones ({",".join(REP_FIELDS)}) VALUES ({",".join(["?"]*len(REP_FIELDS))})', vals)
         db_commit(conn)
         cur = conn.execute('SELECT * FROM reparaciones ORDER BY id DESC LIMIT 1')
         row = fetchone_dict(cur)
@@ -786,8 +750,7 @@ def update_reparacion(rid):
     vals = []
     for f in fields:
         v = data.get(f)
-        if f in REP_DATE_FIELDS:
-            v = norm_fecha(v)
+        if f in REP_DATE_FIELDS: v = norm_fecha(v)
         vals.append(v)
     sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = CURRENT_TIMESTAMP'
     vals.append(rid)
@@ -808,48 +771,17 @@ def delete_reparacion(rid):
     conn.close()
     return jsonify({'ok': True})
 
-@app.route('/api/reparaciones/estados', methods=['GET'])
-@login_required
-def get_estados_reparacion():
-    return jsonify(ESTADOS_REPARACION)
-
-# ── IMPORT PERFORACIONES ──
-
-@app.route('/api/import/perforaciones', methods=['POST'])
-@admin_required
-def import_perforaciones():
-    data = request.get_json()
-    records = data.get('records', [])
-    conn = get_db()
-    inserted = 0
-    updated = 0
-    for r in records:
-        fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
-                  'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
-        vals = [r.get(f) for f in fields]
-        cur = conn.execute('SELECT id FROM perforaciones WHERE denominacion=? AND calle=?',
-                           (r.get('denominacion'), r.get('calle')))
-        existing = fetchone_dict(cur)
-        if existing:
-            sets = ', '.join([f'{f}=?' for f in fields])
-            conn.execute(f'UPDATE perforaciones SET {sets} WHERE id=?', vals + [existing['id']])
-            updated += 1
-        else:
-            conn.execute(f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
-            inserted += 1
-    db_commit(conn)
-    conn.close()
-    return jsonify({'ok': True, 'inserted': inserted, 'updated': updated})
-
 # ── USERS ──
 
 @app.route('/api/users', methods=['GET'])
 @admin_required
 def get_users():
     conn = get_db()
-    cur = conn.execute('SELECT id, username, role FROM users ORDER BY username')
+    cur = conn.execute('SELECT id, username, role, modulos FROM users ORDER BY id')
     rows = fetchall_dicts(cur)
     conn.close()
+    for r in rows:
+        r['modulos'] = _parse_modulos(r.get('modulos'))
     return jsonify(rows)
 
 @app.route('/api/users', methods=['POST'])
@@ -858,42 +790,55 @@ def create_user():
     data = request.get_json()
     username = data.get('username','').strip()
     password = data.get('password','')
-    role = data.get('role', 'viewer')
+    role     = data.get('role', 'viewer')
+    modulos  = data.get('modulos', ['pozos','celulares','telemetria'])
     if not username or not password:
         return jsonify({'error': 'username y password requeridos'}), 400
+    if role == 'admin':
+        modulos = ['pozos','celulares','telemetria']
     conn = get_db()
     try:
-        conn.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                     (username, generate_password_hash(password), role))
+        conn.execute('INSERT INTO users (username, password_hash, role, modulos) VALUES (?, ?, ?, ?)',
+                     (username, generate_password_hash(password), role, json.dumps(modulos)))
         db_commit(conn)
-        cur = conn.execute('SELECT id, username, role FROM users WHERE username=?', (username,))
+        cur = conn.execute('SELECT id, username, role, modulos FROM users WHERE username=?', (username,))
         row = fetchone_dict(cur)
         conn.close()
+        row['modulos'] = _parse_modulos(row.get('modulos'))
         return jsonify(row), 201
     except Exception as e:
         conn.close()
         return jsonify({'error': str(e)}), 409
 
+@app.route('/api/users/<int:uid>', methods=['PUT'])
+@admin_required
+def update_user(uid):
+    data = request.get_json()
+    role    = data.get('role')
+    modulos = data.get('modulos', ['pozos','celulares','telemetria'])
+    if role == 'admin':
+        modulos = ['pozos','celulares','telemetria']
+    conn = get_db()
+    if data.get('password'):
+        conn.execute('UPDATE users SET role=?, modulos=?, password_hash=? WHERE id=?',
+                     (role, json.dumps(modulos), generate_password_hash(data['password']), uid))
+    else:
+        conn.execute('UPDATE users SET role=?, modulos=? WHERE id=?',
+                     (role, json.dumps(modulos), uid))
+    db_commit(conn)
+    cur = conn.execute('SELECT id, username, role, modulos FROM users WHERE id=?', (uid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    row['modulos'] = _parse_modulos(row.get('modulos'))
+    return jsonify(row)
+
 @app.route('/api/users/<int:uid>', methods=['DELETE'])
 @admin_required
 def delete_user(uid):
     if uid == session.get('user_id'):
-        return jsonify({'error': 'No podés eliminarte a vos mismo'}), 400
+        return jsonify({'error': 'No podés eliminar tu propio usuario'}), 400
     conn = get_db()
     conn.execute('DELETE FROM users WHERE id = ?', (uid,))
-    db_commit(conn)
-    conn.close()
-    return jsonify({'ok': True})
-
-@app.route('/api/users/<int:uid>/role', methods=['PATCH'])
-@admin_required
-def update_user_role(uid):
-    data = request.get_json()
-    role = data.get('role')
-    if role not in ('admin', 'editor', 'viewer'):
-        return jsonify({'error': 'Rol inválido'}), 400
-    conn = get_db()
-    conn.execute('UPDATE users SET role=? WHERE id=?', (role, uid))
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True})
@@ -902,21 +847,43 @@ def update_user_role(uid):
 @login_required
 def change_password():
     data = request.get_json()
-    current = data.get('current_password','')
+    current  = data.get('current_password','')
     new_pass = data.get('new_password','')
     if not new_pass or len(new_pass) < 6:
-        return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
+        return jsonify({'error': 'La nueva contraseña debe tener al menos 6 caracteres'}), 400
     conn = get_db()
-    cur = conn.execute('SELECT * FROM users WHERE id=?', (session['user_id'],))
+    cur = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],))
     user = fetchone_dict(cur)
     if not user or not check_password_hash(user['password_hash'], current):
         conn.close()
         return jsonify({'error': 'Contraseña actual incorrecta'}), 401
-    conn.execute('UPDATE users SET password_hash=? WHERE id=?',
+    conn.execute('UPDATE users SET password_hash = ? WHERE id = ?',
                  (generate_password_hash(new_pass), session['user_id']))
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True})
+
+# ── IMPORT ──
+
+@app.route('/api/import/perforaciones', methods=['POST'])
+@admin_required
+def import_perforaciones():
+    data = request.get_json()
+    records = data.get('records', [])
+    conn = get_db()
+    inserted = 0
+    for r in records:
+        fields = ['calle','entre','y_col','zona','bombeo','denominacion','prof_trabajo_mts',
+                  'tipo_cañeria','mts_cañeria','nivel_estatico','nivel_dinamico','Q_m3h','H_mca','candado','observaciones']
+        vals = [r.get(f) for f in fields]
+        try:
+            conn.execute(f'INSERT INTO perforaciones ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})', vals)
+            inserted += 1
+        except Exception:
+            pass
+    db_commit(conn)
+    conn.close()
+    return jsonify({'ok': True, 'inserted': inserted})
 
 # ── GEMINI CHAT ──
 
@@ -924,53 +891,38 @@ def change_password():
 @login_required
 def chat():
     import requests as req_lib
-    data = request.get_json()
-    user_msg = data.get('message', '').strip()
-    if not user_msg:
-        return jsonify({'error': 'Mensaje vacío'}), 400
-
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-    if not GEMINI_API_KEY:
-        return jsonify({'reply': 'El chat IA no está configurado (falta GEMINI_API_KEY).'}), 200
-
+    data     = request.get_json()
+    msg      = data.get('message','')
+    api_key  = os.environ.get('GEMINI_API_KEY','')
+    if not api_key:
+        return jsonify({'reply': 'GEMINI_API_KEY no configurada.'}), 500
     conn = get_db()
-    stats_cur = conn.execute('''
-        SELECT
-            (SELECT COUNT(*) FROM bombas) as total_bombas,
-            (SELECT COUNT(*) FROM perforaciones) as total_perforaciones,
-            (SELECT COUNT(*) FROM asignaciones WHERE estado='Montado') as montadas,
-            (SELECT COUNT(*) FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')) as en_reparacion
-    ''')
-    stats = fetchone_dict(stats_cur)
+    def scalar(sql):
+        cur = conn.execute(sql)
+        row = fetchone_dict(cur)
+        return list(row.values())[0] if row else 0
+    ctx = (
+        f"Sos un asistente del sistema POZO/MGR de gestión de bombas de pozo profundo. "
+        f"La base tiene {scalar('SELECT COUNT(*) as n FROM bombas')} bombas, "
+        f"{scalar('SELECT COUNT(*) as n FROM perforaciones')} perforaciones, "
+        f"{scalar(\"SELECT COUNT(*) as n FROM asignaciones WHERE estado='Montado'\")} bombas montadas, "
+        f"{scalar(\"SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')\")} en reparación. "
+        f"Respondé en español, de forma concisa."
+    )
     conn.close()
-
-    context = f"""Sos un asistente del sistema POZO/MGR, una aplicación de gestión de bombas de pozo profundo.
-Estado actual del sistema:
-- Total bombas registradas: {stats['total_bombas']}
-- Total perforaciones: {stats['total_perforaciones']}
-- Bombas montadas: {stats['montadas']}
-- Bombas en reparación: {stats['en_reparacion']}
-Respondé en español, de forma concisa y útil."""
-
-    payload = {
-        "contents": [{"parts": [{"text": f"{context}\n\nUsuario: {user_msg}"}]}]
-    }
-
-    GEMINI_MODEL = 'gemini-2.0-flash-lite'
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}'
-
+    gemini_url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={api_key}'
+    payload = {'contents': [{'parts': [{'text': ctx + '\n\nUsuario: ' + msg}]}]}
     try:
-        resp = req_lib.post(url, json=payload, timeout=15)
-        resp.raise_for_status()
-        result = resp.json()
-        reply = result['candidates'][0]['content']['parts'][0]['text']
+        r = req_lib.post(gemini_url, json=payload, timeout=15)
+        r.raise_for_status()
+        reply = r.json()['candidates'][0]['content']['parts'][0]['text']
         return jsonify({'reply': reply})
     except Exception as e:
-        return jsonify({'reply': f'Error al conectar con Gemini: {str(e)}'}), 500
+        return jsonify({'reply': f'Error al consultar Gemini: {e}'}), 500
 
-# ── INIT & RUN ──
+# ── INIT + RUN ──
 
 init_db()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True)
