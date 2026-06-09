@@ -1,373 +1,637 @@
-from flask import render_template, request, jsonify, session
-from datetime import datetime
+import json
+from flask import Blueprint, request, jsonify, render_template, session
 from functools import wraps
-import turso
-from . import cel_bp
 
-# ── Auth helper ──────────────────────────────────────────────
+cel_bp = Blueprint('celulares', __name__, url_prefix='/celulares')
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def get_db():
+    import turso as db_driver
+    return db_driver.connect()
+
+def db_commit(conn):
+    conn.commit()
+
+def fetchall_dicts(cursor):
+    rows = cursor.fetchall()
+    result = []
+    for r in rows:
+        try:
+            result.append(dict(r))
+        except Exception:
+            result.append({k: r[k] for k in r.keys()})
+    return result
+
+def fetchone_dict(cursor):
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    try:
+        return dict(row)
+    except Exception:
+        return {k: row[k] for k in row.keys()}
 
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get('user_id'):
+        if 'user_id' not in session:
             return jsonify({'error': 'No autorizado'}), 401
         return f(*args, **kwargs)
     return decorated
 
-def get_db():
-    return turso.connect()
+def editor_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'No autorizado'}), 401
+        if session.get('role') not in ('editor', 'admin'):
+            return jsonify({'error': 'Se requiere rol editor o admin'}), 403
+        return f(*args, **kwargs)
+    return decorated
 
-def now():
-    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'No autorizado'}), 401
+        if session.get('role') != 'admin':
+            return jsonify({'error': 'Se requiere rol admin'}), 403
+        return f(*args, **kwargs)
+    return decorated
 
-def today():
-    return datetime.now().strftime('%Y-%m-%d')
+def modulo_celulares_required(f):
+    """Verifica que el usuario tenga acceso al módulo celulares."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            from flask import redirect, url_for
+            return redirect(url_for('login_page'))
+        role = session.get('role')
+        # admin siempre pasa
+        if role == 'admin':
+            return f(*args, **kwargs)
+        modulos = session.get('modulos', [])
+        if isinstance(modulos, str):
+            try:
+                modulos = json.loads(modulos)
+            except Exception:
+                modulos = []
+        if 'celulares' not in modulos:
+            from flask import abort
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
 
-# ── Página principal ─────────────────────────────────────────
+def init_cel_tables():
+    """Crea las tablas del módulo celulares si no existen."""
+    conn = get_db()
+    tables = [
+        '''CREATE TABLE IF NOT EXISTS empleados (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            legajo        TEXT UNIQUE,
+            nombre        TEXT NOT NULL,
+            apellido      TEXT NOT NULL,
+            puesto        TEXT,
+            sector        TEXT,
+            lugar_trabajo TEXT,
+            email         TEXT,
+            activo        INTEGER DEFAULT 1,
+            fecha_ingreso TEXT,
+            created_at    TEXT DEFAULT (datetime('now')),
+            updated_at    TEXT DEFAULT (datetime('now'))
+        )''',
+        '''CREATE TABLE IF NOT EXISTS equipos_cel (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            marca           TEXT NOT NULL,
+            modelo          TEXT NOT NULL,
+            imei            TEXT UNIQUE NOT NULL,
+            imei2           TEXT,
+            numero_serie    TEXT,
+            color           TEXT,
+            almacenamiento  TEXT,
+            estado          TEXT DEFAULT 'stock',
+            motivo_baja     TEXT,
+            fecha_baja      TEXT,
+            garantia_hasta  TEXT,
+            accesorios      TEXT,
+            observaciones   TEXT,
+            created_at      TEXT DEFAULT (datetime('now')),
+            updated_at      TEXT DEFAULT (datetime('now'))
+        )''',
+        '''CREATE TABLE IF NOT EXISTS lineas_cel (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero      TEXT UNIQUE NOT NULL,
+            operadora   TEXT,
+            plan        TEXT,
+            datos_gb    REAL,
+            vencimiento TEXT,
+            iccid       TEXT,
+            equipo_id   INTEGER REFERENCES equipos_cel(id) ON DELETE SET NULL,
+            estado      TEXT DEFAULT 'activa',
+            tipo        TEXT DEFAULT 'standard',
+            observaciones TEXT,
+            created_at  TEXT DEFAULT (datetime('now')),
+            updated_at  TEXT DEFAULT (datetime('now'))
+        )''',
+        '''CREATE TABLE IF NOT EXISTS asignaciones_cel (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            equipo_id    INTEGER NOT NULL REFERENCES equipos_cel(id),
+            empleado_id  INTEGER REFERENCES empleados(id) ON DELETE SET NULL,
+            linea_id     INTEGER REFERENCES lineas_cel(id) ON DELETE SET NULL,
+            fecha_desde  TEXT,
+            fecha_hasta  TEXT,
+            activa       INTEGER DEFAULT 1,
+            notas        TEXT,
+            usuario_reg  TEXT,
+            created_at   TEXT DEFAULT (datetime('now')),
+            updated_at   TEXT DEFAULT (datetime('now'))
+        )'''
+    ]
+    for t in tables:
+        try:
+            conn.execute(t)
+            db_commit(conn)
+        except Exception as e:
+            if 'already exists' not in str(e).lower():
+                raise
+    conn.close()
+
+# Ejecutar al importar el módulo
+init_cel_tables()
+
+# ── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
 @cel_bp.route('/')
+@modulo_celulares_required
 def index():
-    if not session.get('user_id'):
-        from flask import redirect, url_for
-        return redirect(url_for('login'))
-    return render_template('celulares/index.html')
+    return render_template('celulares/index.html',
+                           username=session.get('username'),
+                           role=session.get('role'),
+                           user_id=session.get('user_id', 0))
 
-# ════════════════════════════════════════════════════════════
-#  EMPLEADOS
-# ════════════════════════════════════════════════════════════
-
-@cel_bp.route('/api/empleados', methods=['GET'])
-@login_required
-def get_empleados():
-    db = get_db()
-    rows = db.execute('''
-        SELECT e.*,
-               ec.marca || ' ' || ec.modelo AS equipo_actual,
-               ec.id AS equipo_id
-        FROM empleados e
-        LEFT JOIN asignaciones_cel a ON a.empleado_id = e.id AND a.fecha_hasta IS NULL
-        LEFT JOIN equipos_cel ec ON ec.id = a.equipo_id
-        ORDER BY e.apellido, e.nombre
-    ''').fetchall()
-    return jsonify([dict(r) for r in rows])
-
-@cel_bp.route('/api/empleados/<int:eid>', methods=['GET'])
-@login_required
-def get_empleado(eid):
-    db = get_db()
-    emp = db.execute('SELECT * FROM empleados WHERE id = ?', (eid,)).fetchone()
-    if not emp:
-        return jsonify({'error': 'No encontrado'}), 404
-    # asignación actual
-    asig = db.execute('''
-        SELECT a.*, ec.marca, ec.modelo, ec.imei, l.numero AS linea
-        FROM asignaciones_cel a
-        JOIN equipos_cel ec ON ec.id = a.equipo_id
-        LEFT JOIN lineas_cel l ON l.id = a.linea_id
-        WHERE a.empleado_id = ? AND a.fecha_hasta IS NULL
-    ''', (eid,)).fetchone()
-    # historial
-    historial = db.execute('''
-        SELECT a.*, ec.marca, ec.modelo
-        FROM asignaciones_cel a
-        JOIN equipos_cel ec ON ec.id = a.equipo_id
-        WHERE a.empleado_id = ?
-        ORDER BY a.fecha_desde DESC
-    ''', (eid,)).fetchall()
-    return jsonify({
-        'empleado': dict(emp),
-        'asignacion_actual': dict(asig) if asig else None,
-        'historial': [dict(h) for h in historial]
-    })
-
-@cel_bp.route('/api/empleados', methods=['POST'])
-@login_required
-def crear_empleado():
-    d = request.json
-    db = get_db()
-    db.execute('''
-        INSERT INTO empleados (legajo, nombre, apellido, puesto, sector,
-                               lugar_trabajo, email, activo, fecha_ingreso,
-                               created_at, updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
-    ''', (d['legajo'], d['nombre'], d['apellido'],
-          d.get('puesto'), d.get('sector'), d.get('lugar_trabajo'),
-          d.get('email'), d.get('activo', 1), d.get('fecha_ingreso'),
-          now(), now()))
-    return jsonify({'ok': True}), 201
-
-@cel_bp.route('/api/empleados/<int:eid>', methods=['PUT'])
-@login_required
-def editar_empleado(eid):
-    d = request.json
-    db = get_db()
-    db.execute('''
-        UPDATE empleados SET legajo=?, nombre=?, apellido=?, puesto=?,
-               sector=?, lugar_trabajo=?, email=?, activo=?,
-               fecha_ingreso=?, updated_at=?
-        WHERE id=?
-    ''', (d['legajo'], d['nombre'], d['apellido'],
-          d.get('puesto'), d.get('sector'), d.get('lugar_trabajo'),
-          d.get('email'), d.get('activo', 1), d.get('fecha_ingreso'),
-          now(), eid))
-    return jsonify({'ok': True})
-
-@cel_bp.route('/api/empleados/<int:eid>', methods=['DELETE'])
-@login_required
-def eliminar_empleado(eid):
-    if session.get('role') != 'admin':
-        return jsonify({'error': 'Solo admin'}), 403
-    db = get_db()
-    db.execute('UPDATE empleados SET activo=0, updated_at=? WHERE id=?', (now(), eid))
-    return jsonify({'ok': True})
-
-# ════════════════════════════════════════════════════════════
-#  EQUIPOS CELULARES
-# ════════════════════════════════════════════════════════════
+# ── API EQUIPOS ───────────────────────────────────────────────────────────────
 
 @cel_bp.route('/api/equipos', methods=['GET'])
 @login_required
 def get_equipos():
-    db = get_db()
-    rows = db.execute('''
-        SELECT ec.*,
-               e.nombre || ' ' || e.apellido AS usuario_nombre,
-               e.legajo, e.sector,
-               l.numero AS linea_numero, l.operadora,
-               a.fecha_desde AS asignado_desde
-        FROM equipos_cel ec
-        LEFT JOIN asignaciones_cel a ON a.equipo_id = ec.id AND a.fecha_hasta IS NULL
-        LEFT JOIN empleados e ON e.id = a.empleado_id
-        LEFT JOIN lineas_cel l ON l.id = a.linea_id
-        ORDER BY ec.marca, ec.modelo
-    ''').fetchall()
-    return jsonify([dict(r) for r in rows])
+    conn = get_db()
+    q = request.args.get('q', '').strip()
+    estado = request.args.get('estado', '').strip()
+
+    sql = '''
+        SELECT e.*,
+               a.id        AS asig_id,
+               a.fecha_desde,
+               emp.id      AS empleado_id,
+               emp.nombre  || ' ' || emp.apellido AS empleado_nombre,
+               emp.legajo,
+               emp.sector,
+               l.numero    AS linea_numero,
+               l.operadora AS linea_operadora
+        FROM equipos_cel e
+        LEFT JOIN asignaciones_cel a ON a.equipo_id = e.id AND a.activa = 1
+        LEFT JOIN empleados emp ON a.empleado_id = emp.id
+        LEFT JOIN lineas_cel l ON a.linea_id = l.id
+        WHERE 1=1
+    '''
+    params = []
+
+    if q:
+        sql += ''' AND (
+            e.marca LIKE ? OR e.modelo LIKE ? OR e.imei LIKE ?
+            OR e.imei2 LIKE ? OR e.numero_serie LIKE ?
+            OR emp.nombre LIKE ? OR emp.apellido LIKE ? OR emp.legajo LIKE ?
+        )'''
+        like = f'%{q}%'
+        params.extend([like]*8)
+
+    if estado:
+        sql += ' AND e.estado = ?'
+        params.append(estado)
+
+    sql += ' ORDER BY e.marca, e.modelo, e.id'
+
+    cur = conn.execute(sql, params)
+    rows = fetchall_dicts(cur)
+    conn.close()
+    return jsonify(rows)
+
+
+@cel_bp.route('/api/equipos/disponibles', methods=['GET'])
+@login_required
+def get_equipos_disponibles():
+    """Equipos en stock (no asignados actualmente). Acepta ?q= para filtrar."""
+    conn = get_db()
+    q = request.args.get('q', '').strip()
+    sql = '''
+        SELECT id, marca, modelo, imei, imei2, numero_serie, color, almacenamiento
+        FROM equipos_cel
+        WHERE estado = 'stock'
+          AND id NOT IN (SELECT equipo_id FROM asignaciones_cel WHERE activa = 1)
+    '''
+    params = []
+    if q:
+        sql += ''' AND (
+            marca LIKE ? OR modelo LIKE ? OR imei LIKE ?
+            OR imei2 LIKE ? OR numero_serie LIKE ?
+        )'''
+        like = f'%{q}%'
+        params.extend([like]*5)
+    sql += ' ORDER BY marca, modelo'
+    cur = conn.execute(sql, params)
+    rows = fetchall_dicts(cur)
+    conn.close()
+    return jsonify(rows)
+
 
 @cel_bp.route('/api/equipos/<int:eid>', methods=['GET'])
 @login_required
 def get_equipo(eid):
-    db = get_db()
-    eq = db.execute('SELECT * FROM equipos_cel WHERE id=?', (eid,)).fetchone()
-    if not eq:
+    conn = get_db()
+    cur = conn.execute('SELECT * FROM equipos_cel WHERE id = ?', (eid,))
+    equipo = fetchone_dict(cur)
+    if not equipo:
+        conn.close()
         return jsonify({'error': 'No encontrado'}), 404
-    tickets = db.execute(
-        'SELECT * FROM tickets_cel WHERE equipo_id=? ORDER BY created_at DESC', (eid,)
-    ).fetchall()
-    historial = db.execute('''
-        SELECT a.*, e.nombre || ' ' || e.apellido AS empleado_nombre,
-               e.legajo, e.sector, l.numero AS linea
+
+    # historial de asignaciones
+    cur2 = conn.execute('''
+        SELECT a.*,
+               emp.nombre || ' ' || emp.apellido AS empleado_nombre,
+               emp.legajo, emp.sector,
+               l.numero AS linea_numero, l.operadora AS linea_operadora
         FROM asignaciones_cel a
-        LEFT JOIN empleados e ON e.id = a.empleado_id
-        LEFT JOIN lineas_cel l ON l.id = a.linea_id
+        LEFT JOIN empleados emp ON a.empleado_id = emp.id
+        LEFT JOIN lineas_cel l  ON a.linea_id   = l.id
         WHERE a.equipo_id = ?
-        ORDER BY a.fecha_desde DESC
-    ''', (eid,)).fetchall()
-    return jsonify({
-        'equipo': dict(eq),
-        'tickets': [dict(t) for t in tickets],
-        'historial': [dict(h) for h in historial]
-    })
+        ORDER BY a.activa DESC, a.fecha_desde DESC, a.id DESC
+    ''', (eid,))
+    equipo['historial'] = fetchall_dicts(cur2)
+    conn.close()
+    return jsonify(equipo)
+
 
 @cel_bp.route('/api/equipos', methods=['POST'])
-@login_required
-def crear_equipo():
-    d = request.json
-    db = get_db()
-    db.execute('''
-        INSERT INTO equipos_cel (marca, modelo, imei, imei2, numero_serie,
-                                  color, almacenamiento, estado, garantia_hasta,
-                                  accesorios, observaciones, created_at, updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ''', (d['marca'], d['modelo'], d['imei'], d.get('imei2'),
-          d.get('numero_serie'), d.get('color'), d.get('almacenamiento'),
-          d.get('estado', 'stock'), d.get('garantia_hasta'),
-          d.get('accesorios'), d.get('observaciones'), now(), now()))
-    return jsonify({'ok': True}), 201
+@editor_required
+def create_equipo():
+    data = request.get_json()
+    fields = ['marca','modelo','imei','imei2','numero_serie','color',
+              'almacenamiento','estado','garantia_hasta','accesorios','observaciones']
+    vals = [data.get(f) for f in fields]
+    # estado default
+    if not vals[fields.index('estado')]:
+        vals[fields.index('estado')] = 'stock'
+    conn = get_db()
+    try:
+        conn.execute(
+            f'INSERT INTO equipos_cel ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})',
+            vals
+        )
+        db_commit(conn)
+        cur = conn.execute('SELECT * FROM equipos_cel ORDER BY id DESC LIMIT 1')
+        row = fetchone_dict(cur)
+        conn.close()
+        return jsonify(row), 201
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 409
+
 
 @cel_bp.route('/api/equipos/<int:eid>', methods=['PUT'])
-@login_required
-def editar_equipo(eid):
-    d = request.json
-    db = get_db()
-    db.execute('''
-        UPDATE equipos_cel SET marca=?, modelo=?, imei=?, imei2=?,
-               numero_serie=?, color=?, almacenamiento=?, estado=?,
-               garantia_hasta=?, accesorios=?, observaciones=?,
-               motivo_baja=?, fecha_baja=?, updated_at=?
-        WHERE id=?
-    ''', (d['marca'], d['modelo'], d['imei'], d.get('imei2'),
-          d.get('numero_serie'), d.get('color'), d.get('almacenamiento'),
-          d.get('estado', 'stock'), d.get('garantia_hasta'),
-          d.get('accesorios'), d.get('observaciones'),
-          d.get('motivo_baja'), d.get('fecha_baja'), now(), eid))
+@editor_required
+def update_equipo(eid):
+    data = request.get_json()
+    fields = ['marca','modelo','imei','imei2','numero_serie','color',
+              'almacenamiento','estado','motivo_baja','fecha_baja',
+              'garantia_hasta','accesorios','observaciones']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    vals = [data.get(f) for f in fields] + [eid]
+    conn = get_db()
+    conn.execute(f'UPDATE equipos_cel SET {sets} WHERE id = ?', vals)
+    db_commit(conn)
+    cur = conn.execute('SELECT * FROM equipos_cel WHERE id = ?', (eid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    return jsonify(row)
+
+
+@cel_bp.route('/api/equipos/<int:eid>', methods=['DELETE'])
+@admin_required
+def delete_equipo(eid):
+    conn = get_db()
+    conn.execute('UPDATE asignaciones_cel SET activa=0 WHERE equipo_id=?', (eid,))
+    conn.execute('DELETE FROM equipos_cel WHERE id=?', (eid,))
+    db_commit(conn)
+    conn.close()
     return jsonify({'ok': True})
 
-# ── Asignar equipo a empleado ────────────────────────────────
 
-@cel_bp.route('/api/equipos/<int:eid>/asignar', methods=['POST'])
+# ── API EMPLEADOS ─────────────────────────────────────────────────────────────
+
+@cel_bp.route('/api/empleados', methods=['GET'])
 @login_required
-def asignar_equipo(eid):
-    d = request.json
-    db = get_db()
-    # cerrar asignación anterior si existe
-    db.execute('''
-        UPDATE asignaciones_cel SET fecha_hasta=?
-        WHERE equipo_id=? AND fecha_hasta IS NULL
-    ''', (today(), eid))
-    # crear nueva asignación
-    db.execute('''
-        INSERT INTO asignaciones_cel (equipo_id, empleado_id, linea_id,
-                                       fecha_desde, acta_nro, observaciones, created_at)
-        VALUES (?,?,?,?,?,?,?)
-    ''', (eid, d['empleado_id'], d.get('linea_id'),
-          d.get('fecha_desde', today()), d.get('acta_nro'),
-          d.get('observaciones'), now()))
-    db.execute("UPDATE equipos_cel SET estado='asignado', updated_at=? WHERE id=?", (now(), eid))
-    return jsonify({'ok': True})
+def get_empleados():
+    conn = get_db()
+    q = request.args.get('q', '').strip()
+    sql = 'SELECT * FROM empleados WHERE activo = 1'
+    params = []
+    if q:
+        sql += ' AND (nombre LIKE ? OR apellido LIKE ? OR legajo LIKE ? OR sector LIKE ?)'
+        like = f'%{q}%'
+        params.extend([like]*4)
+    sql += ' ORDER BY apellido, nombre'
+    cur = conn.execute(sql, params)
+    rows = fetchall_dicts(cur)
+    conn.close()
+    return jsonify(rows)
 
-@cel_bp.route('/api/equipos/<int:eid>/desasignar', methods=['POST'])
+
+@cel_bp.route('/api/empleados/<int:empid>', methods=['GET'])
 @login_required
-def desasignar_equipo(eid):
-    db = get_db()
-    db.execute('''
-        UPDATE asignaciones_cel SET fecha_hasta=?
-        WHERE equipo_id=? AND fecha_hasta IS NULL
-    ''', (today(), eid))
-    db.execute("UPDATE equipos_cel SET estado='stock', updated_at=? WHERE id=?", (now(), eid))
-    return jsonify({'ok': True})
+def get_empleado(empid):
+    conn = get_db()
+    cur = conn.execute('SELECT * FROM empleados WHERE id = ?', (empid,))
+    emp = fetchone_dict(cur)
+    if not emp:
+        conn.close()
+        return jsonify({'error': 'No encontrado'}), 404
+    cur2 = conn.execute('''
+        SELECT a.*, e.marca, e.modelo, e.imei, l.numero AS linea_numero
+        FROM asignaciones_cel a
+        JOIN equipos_cel e ON a.equipo_id = e.id
+        LEFT JOIN lineas_cel l ON a.linea_id = l.id
+        WHERE a.empleado_id = ?
+        ORDER BY a.activa DESC, a.fecha_desde DESC
+    ''', (empid,))
+    emp['asignaciones'] = fetchall_dicts(cur2)
+    conn.close()
+    return jsonify(emp)
 
-# ════════════════════════════════════════════════════════════
-#  LÍNEAS CELULARES
-# ════════════════════════════════════════════════════════════
+
+@cel_bp.route('/api/empleados', methods=['POST'])
+@editor_required
+def create_empleado():
+    data = request.get_json()
+    fields = ['legajo','nombre','apellido','puesto','sector','lugar_trabajo','email','fecha_ingreso']
+    vals = [data.get(f) for f in fields]
+    conn = get_db()
+    try:
+        conn.execute(
+            f'INSERT INTO empleados ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})',
+            vals
+        )
+        db_commit(conn)
+        cur = conn.execute('SELECT * FROM empleados ORDER BY id DESC LIMIT 1')
+        row = fetchone_dict(cur)
+        conn.close()
+        return jsonify(row), 201
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 409
+
+
+@cel_bp.route('/api/empleados/<int:empid>', methods=['PUT'])
+@editor_required
+def update_empleado(empid):
+    data = request.get_json()
+    fields = ['legajo','nombre','apellido','puesto','sector','lugar_trabajo','email','fecha_ingreso','activo']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    vals = [data.get(f) for f in fields] + [empid]
+    conn = get_db()
+    conn.execute(f'UPDATE empleados SET {sets} WHERE id = ?', vals)
+    db_commit(conn)
+    cur = conn.execute('SELECT * FROM empleados WHERE id = ?', (empid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    return jsonify(row)
+
+
+# ── API ASIGNACIONES CEL ──────────────────────────────────────────────────────
+
+@cel_bp.route('/api/asignaciones', methods=['POST'])
+@editor_required
+def create_asignacion():
+    data = request.get_json()
+    equipo_id = data.get('equipo_id')
+    if not equipo_id:
+        return jsonify({'error': 'equipo_id requerido'}), 400
+
+    conn = get_db()
+
+    # Verificar que el equipo existe y está disponible
+    cur = conn.execute('SELECT * FROM equipos_cel WHERE id = ?', (equipo_id,))
+    equipo = fetchone_dict(cur)
+    if not equipo:
+        conn.close()
+        return jsonify({'error': 'Equipo no encontrado'}), 404
+
+    # Cerrar asignación activa anterior si existe
+    cur2 = conn.execute('SELECT id FROM asignaciones_cel WHERE equipo_id=? AND activa=1', (equipo_id,))
+    prev = fetchone_dict(cur2)
+    if prev:
+        conn.execute('''UPDATE asignaciones_cel SET activa=0, fecha_hasta=datetime('now'),
+                        updated_at=datetime('now') WHERE id=?''', (prev['id'],))
+
+    # Crear nueva asignación
+    conn.execute('''
+        INSERT INTO asignaciones_cel (equipo_id, empleado_id, linea_id, fecha_desde, activa, notas, usuario_reg)
+        VALUES (?, ?, ?, ?, 1, ?, ?)
+    ''', (
+        equipo_id,
+        data.get('empleado_id'),
+        data.get('linea_id'),
+        data.get('fecha_desde') or 'date(\'now\')',
+        data.get('notas'),
+        session.get('username')
+    ))
+
+    # Actualizar estado del equipo
+    conn.execute("UPDATE equipos_cel SET estado='asignado', updated_at=datetime('now') WHERE id=?", (equipo_id,))
+    db_commit(conn)
+
+    cur3 = conn.execute('SELECT * FROM asignaciones_cel ORDER BY id DESC LIMIT 1')
+    row = fetchone_dict(cur3)
+    conn.close()
+    return jsonify(row), 201
+
+
+@cel_bp.route('/api/asignaciones/<int:aid>/desasignar', methods=['POST'])
+@editor_required
+def desasignar(aid):
+    data = request.get_json() or {}
+    conn = get_db()
+    cur = conn.execute('SELECT equipo_id FROM asignaciones_cel WHERE id=?', (aid,))
+    asig = fetchone_dict(cur)
+    if not asig:
+        conn.close()
+        return jsonify({'error': 'Asignación no encontrada'}), 404
+
+    conn.execute('''UPDATE asignaciones_cel SET activa=0, fecha_hasta=?,
+                    notas=COALESCE(?,notas), updated_at=datetime('now') WHERE id=?''',
+                 (data.get('fecha_hasta'), data.get('notas'), aid))
+
+    # Equipo vuelve a stock
+    conn.execute("UPDATE equipos_cel SET estado='stock', updated_at=datetime('now') WHERE id=?",
+                 (asig['equipo_id'],))
+    db_commit(conn)
+
+    cur2 = conn.execute('SELECT * FROM asignaciones_cel WHERE id=?', (aid,))
+    row = fetchone_dict(cur2)
+    conn.close()
+    return jsonify(row)
+
+
+@cel_bp.route('/api/asignaciones/<int:aid>', methods=['PUT'])
+@editor_required
+def update_asignacion(aid):
+    data = request.get_json()
+    fields = ['empleado_id', 'linea_id', 'fecha_desde', 'notas']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    vals = [data.get(f) for f in fields] + [aid]
+    conn = get_db()
+    conn.execute(f'UPDATE asignaciones_cel SET {sets} WHERE id = ?', vals)
+    db_commit(conn)
+    cur = conn.execute('SELECT * FROM asignaciones_cel WHERE id=?', (aid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    return jsonify(row)
+
+
+# ── API LÍNEAS ────────────────────────────────────────────────────────────────
 
 @cel_bp.route('/api/lineas', methods=['GET'])
 @login_required
 def get_lineas():
-    db = get_db()
-    rows = db.execute('''
-        SELECT l.*,
-               ec.marca || ' ' || ec.modelo AS equipo_nombre
+    conn = get_db()
+    cur = conn.execute('''
+        SELECT l.*, e.marca, e.modelo, e.imei
         FROM lineas_cel l
-        LEFT JOIN equipos_cel ec ON ec.id = l.equipo_id
+        LEFT JOIN equipos_cel e ON l.equipo_id = e.id
         ORDER BY l.numero
-    ''').fetchall()
-    return jsonify([dict(r) for r in rows])
+    ''')
+    rows = fetchall_dicts(cur)
+    conn.close()
+    return jsonify(rows)
+
 
 @cel_bp.route('/api/lineas', methods=['POST'])
-@login_required
-def crear_linea():
-    d = request.json
-    db = get_db()
-    db.execute('''
-        INSERT INTO lineas_cel (numero, operadora, plan, datos_gb,
-                                 vencimiento, iccid, equipo_id, estado,
-                                 observaciones, created_at, updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
-    ''', (d['numero'], d.get('operadora'), d.get('plan'),
-          d.get('datos_gb'), d.get('vencimiento'), d.get('iccid'),
-          d.get('equipo_id'), d.get('estado', 'activa'),
-          d.get('observaciones'), now(), now()))
-    return jsonify({'ok': True}), 201
+@editor_required
+def create_linea():
+    data = request.get_json()
+    fields = ['numero','operadora','plan','datos_gb','vencimiento','iccid','estado','tipo','observaciones']
+    vals = [data.get(f) for f in fields]
+    conn = get_db()
+    try:
+        conn.execute(
+            f'INSERT INTO lineas_cel ({",".join(fields)}) VALUES ({",".join(["?"]*len(fields))})',
+            vals
+        )
+        db_commit(conn)
+        cur = conn.execute('SELECT * FROM lineas_cel ORDER BY id DESC LIMIT 1')
+        row = fetchone_dict(cur)
+        conn.close()
+        return jsonify(row), 201
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 409
+
 
 @cel_bp.route('/api/lineas/<int:lid>', methods=['PUT'])
-@login_required
-def editar_linea(lid):
-    d = request.json
-    db = get_db()
-    db.execute('''
-        UPDATE lineas_cel SET numero=?, operadora=?, plan=?, datos_gb=?,
-               vencimiento=?, iccid=?, equipo_id=?, estado=?,
-               observaciones=?, updated_at=?
-        WHERE id=?
-    ''', (d['numero'], d.get('operadora'), d.get('plan'),
-          d.get('datos_gb'), d.get('vencimiento'), d.get('iccid'),
-          d.get('equipo_id'), d.get('estado', 'activa'),
-          d.get('observaciones'), now(), lid))
-    return jsonify({'ok': True})
+@editor_required
+def update_linea(lid):
+    data = request.get_json()
+    fields = ['numero','operadora','plan','datos_gb','vencimiento','iccid','estado','tipo','observaciones','equipo_id']
+    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    vals = [data.get(f) for f in fields] + [lid]
+    conn = get_db()
+    conn.execute(f'UPDATE lineas_cel SET {sets} WHERE id = ?', vals)
+    db_commit(conn)
+    cur = conn.execute('SELECT * FROM lineas_cel WHERE id=?', (lid,))
+    row = fetchone_dict(cur)
+    conn.close()
+    return jsonify(row)
 
-# ════════════════════════════════════════════════════════════
-#  TICKETS
-# ════════════════════════════════════════════════════════════
 
-@cel_bp.route('/api/tickets', methods=['GET'])
-@login_required
-def get_tickets():
-    db = get_db()
-    rows = db.execute('''
-        SELECT t.*,
-               ec.marca || ' ' || ec.modelo AS equipo_nombre,
-               e.nombre || ' ' || e.apellido AS empleado_nombre
-        FROM tickets_cel t
-        JOIN equipos_cel ec ON ec.id = t.equipo_id
-        LEFT JOIN empleados e ON e.id = t.empleado_id
-        ORDER BY t.created_at DESC
-    ''').fetchall()
-    return jsonify([dict(r) for r in rows])
+# ── IMPORT EXCEL ──────────────────────────────────────────────────────────────
 
-@cel_bp.route('/api/tickets', methods=['POST'])
-@login_required
-def crear_ticket():
-    d = request.json
-    db = get_db()
-    # generar nro_ticket
-    count = db.execute('SELECT COUNT(*) as c FROM tickets_cel').fetchone()
-    nro = f"TK-{(count['c'] + 1):04d}"
-    db.execute('''
-        INSERT INTO tickets_cel (nro_ticket, equipo_id, empleado_id, descripcion,
-                                  tipo, estado, en_garantia, service_nombre,
-                                  service_ingreso, created_at, updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
-    ''', (nro, d['equipo_id'], d.get('empleado_id'), d['descripcion'],
-          d.get('tipo'), d.get('estado', 'abierto'), d.get('en_garantia', 0),
-          d.get('service_nombre'), d.get('service_ingreso'), now(), now()))
-    # si el equipo va a reparación, actualizar estado
-    if d.get('estado') in ('abierto', 'en_service'):
-        db.execute("UPDATE equipos_cel SET estado='reparacion', updated_at=? WHERE id=?",
-                   (now(), d['equipo_id']))
-    return jsonify({'ok': True, 'nro_ticket': nro}), 201
+@cel_bp.route('/api/import', methods=['POST'])
+@admin_required
+def import_excel():
+    """
+    Acepta JSON con keys: equipos[], empleados[], asignaciones[]
+    Cada equipo: {marca, modelo, imei, imei2, numero_serie, color, almacenamiento, estado, observaciones}
+    Cada empleado: {legajo, nombre, apellido, puesto, sector, lugar_trabajo, email}
+    Cada asignacion: {imei, legajo, linea_numero, fecha_desde, notas}
+    """
+    data = request.get_json()
+    conn = get_db()
+    stats = {'equipos': 0, 'empleados': 0, 'asignaciones': 0, 'errores': []}
 
-@cel_bp.route('/api/tickets/<int:tid>', methods=['PUT'])
-@login_required
-def editar_ticket(tid):
-    d = request.json
-    db = get_db()
-    db.execute('''
-        UPDATE tickets_cel SET estado=?, service_nombre=?, service_ingreso=?,
-               service_egreso=?, costo=?, resolucion=?, updated_at=?
-        WHERE id=?
-    ''', (d.get('estado'), d.get('service_nombre'), d.get('service_ingreso'),
-          d.get('service_egreso'), d.get('costo'), d.get('resolucion'),
-          now(), tid))
-    # si se cierra el ticket, volver el equipo a stock o asignado
-    if d.get('estado') == 'cerrado':
-        ticket = db.execute('SELECT equipo_id FROM tickets_cel WHERE id=?', (tid,)).fetchone()
-        if ticket:
-            asig = db.execute(
-                'SELECT id FROM asignaciones_cel WHERE equipo_id=? AND fecha_hasta IS NULL',
-                (ticket['equipo_id'],)
-            ).fetchone()
-            nuevo_estado = 'asignado' if asig else 'stock'
-            db.execute("UPDATE equipos_cel SET estado=?, updated_at=? WHERE id=?",
-                       (nuevo_estado, now(), ticket['equipo_id']))
-    return jsonify({'ok': True})
+    # Equipos
+    for eq in data.get('equipos', []):
+        try:
+            conn.execute('''
+                INSERT INTO equipos_cel (marca,modelo,imei,imei2,numero_serie,color,almacenamiento,estado,observaciones)
+                VALUES (?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(imei) DO UPDATE SET
+                  marca=excluded.marca, modelo=excluded.modelo,
+                  imei2=excluded.imei2, numero_serie=excluded.numero_serie,
+                  color=excluded.color, almacenamiento=excluded.almacenamiento,
+                  observaciones=excluded.observaciones,
+                  updated_at=datetime('now')
+            ''', (eq.get('marca'), eq.get('modelo'), eq.get('imei'), eq.get('imei2'),
+                  eq.get('numero_serie'), eq.get('color'), eq.get('almacenamiento'),
+                  eq.get('estado','stock'), eq.get('observaciones')))
+            stats['equipos'] += 1
+        except Exception as e:
+            stats['errores'].append(f"Equipo {eq.get('imei')}: {e}")
 
-# ════════════════════════════════════════════════════════════
-#  STATS para dashboard
-# ════════════════════════════════════════════════════════════
+    db_commit(conn)
 
-@cel_bp.route('/api/stats', methods=['GET'])
-@login_required
-def get_stats():
-    db = get_db()
-    total     = db.execute("SELECT COUNT(*) as c FROM equipos_cel").fetchone()['c']
-    asignados = db.execute("SELECT COUNT(*) as c FROM equipos_cel WHERE estado='asignado'").fetchone()['c']
-    reparacion= db.execute("SELECT COUNT(*) as c FROM equipos_cel WHERE estado='reparacion'").fetchone()['c']
-    stock     = db.execute("SELECT COUNT(*) as c FROM equipos_cel WHERE estado='stock'").fetchone()['c']
-    t_abiertos= db.execute("SELECT COUNT(*) as c FROM tickets_cel WHERE estado != 'cerrado'").fetchone()['c']
-    return jsonify({
-        'total': total,
-        'asignados': asignados,
-        'reparacion': reparacion,
-        'stock': stock,
-        'tickets_abiertos': t_abiertos
-    })
+    # Empleados
+    for emp in data.get('empleados', []):
+        try:
+            conn.execute('''
+                INSERT INTO empleados (legajo,nombre,apellido,puesto,sector,lugar_trabajo,email)
+                VALUES (?,?,?,?,?,?,?)
+                ON CONFLICT(legajo) DO UPDATE SET
+                  nombre=excluded.nombre, apellido=excluded.apellido,
+                  puesto=excluded.puesto, sector=excluded.sector,
+                  lugar_trabajo=excluded.lugar_trabajo, email=excluded.email,
+                  updated_at=datetime('now')
+            ''', (emp.get('legajo'), emp.get('nombre'), emp.get('apellido'),
+                  emp.get('puesto'), emp.get('sector'), emp.get('lugar_trabajo'), emp.get('email')))
+            stats['empleados'] += 1
+        except Exception as e:
+            stats['errores'].append(f"Empleado {emp.get('legajo')}: {e}")
+
+    db_commit(conn)
+
+    # Asignaciones (por imei + legajo)
+    for asig in data.get('asignaciones', []):
+        try:
+            cur_e = conn.execute('SELECT id FROM equipos_cel WHERE imei=?', (asig.get('imei'),))
+            eq_row = fetchone_dict(cur_e)
+            cur_emp = conn.execute('SELECT id FROM empleados WHERE legajo=?', (asig.get('legajo'),))
+            emp_row = fetchone_dict(cur_emp)
+            if not eq_row:
+                stats['errores'].append(f"Asig: IMEI {asig.get('imei')} no encontrado")
+                continue
+            # Cerrar asignación activa previa
+            conn.execute('''UPDATE asignaciones_cel SET activa=0, updated_at=datetime('now')
+                            WHERE equipo_id=? AND activa=1''', (eq_row['id'],))
+            conn.execute('''
+                INSERT INTO asignaciones_cel (equipo_id, empleado_id, fecha_desde, activa, notas, usuario_reg)
+                VALUES (?, ?, ?, 1, ?, 'import')
+            ''', (eq_row['id'], emp_row['id'] if emp_row else None,
+                  asig.get('fecha_desde'), asig.get('notas')))
+            if emp_row:
+                conn.execute("UPDATE equipos_cel SET estado='asignado' WHERE id=?", (eq_row['id'],))
+            stats['asignaciones'] += 1
+        except Exception as e:
+            stats['errores'].append(f"Asig IMEI {asig.get('imei')}: {e}")
+
+    db_commit(conn)
+    conn.close()
+    return jsonify({'ok': True, 'stats': stats})
