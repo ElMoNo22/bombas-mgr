@@ -162,7 +162,8 @@ init_cel_tables()
 
 # ── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
-@cel_bp.route('/')
+@cel_bp.route('/', strict_slashes=False)
+@cel_bp.route('/home', strict_slashes=False)
 @modulo_celulares_required
 def index():
     return render_template('celulares/index.html',
