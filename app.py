@@ -901,12 +901,14 @@ def chat():
         cur = conn.execute(sql)
         row = fetchone_dict(cur)
         return list(row.values())[0] if row else 0
+    n_bombas   = scalar('SELECT COUNT(*) as n FROM bombas')
+    n_perfs    = scalar('SELECT COUNT(*) as n FROM perforaciones')
+    n_montadas = scalar("SELECT COUNT(*) as n FROM asignaciones WHERE estado='Montado'")
+    n_rep      = scalar("SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')")
     ctx = (
         f"Sos un asistente del sistema POZO/MGR de gestión de bombas de pozo profundo. "
-        f"La base tiene {scalar('SELECT COUNT(*) as n FROM bombas')} bombas, "
-        f"{scalar('SELECT COUNT(*) as n FROM perforaciones')} perforaciones, "
-        f"{scalar(\"SELECT COUNT(*) as n FROM asignaciones WHERE estado='Montado'\")} bombas montadas, "
-        f"{scalar(\"SELECT COUNT(*) as n FROM reparaciones WHERE estado NOT IN ('Entregada','Cancelada')\")} en reparación. "
+        f"La base tiene {n_bombas} bombas, {n_perfs} perforaciones, "
+        f"{n_montadas} bombas montadas, {n_rep} en reparación. "
         f"Respondé en español, de forma concisa."
     )
     conn.close()
