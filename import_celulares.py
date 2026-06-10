@@ -1,28 +1,26 @@
 """
-import_celulares.py
-Importa empleados, equipos y asignaciones desde el Excel de telefonía.
-Ejecutar UNA SOLA VEZ en el servidor o localmente con las vars de entorno de Turso.
-
-Uso:
-  python import_celulares.py
-
-Requiere:
-  - TURSO_URL y TURSO_AUTH_TOKEN en variables de entorno (igual que el resto del proyecto)
-  - openpyxl instalado: pip install openpyxl
+import_celulares.py - Import masivo desde Excel a Turso
+Versión optimizada: usa batch requests para velocidad
 """
-
 import os, re, sys, json, datetime
+import urllib.request
+
+# Descargar turso.py si no existe localmente
+if not os.path.exists('turso.py'):
+    print("Descargando turso.py...")
+    url = "https://raw.githubusercontent.com/ElMoNo22/bombas-mgr/main/turso.py"
+    with urllib.request.urlopen(url) as r:
+        open('turso.py','wb').write(r.read())
 
 try:
     import openpyxl
 except ImportError:
-    print("Instalando openpyxl...")
-    os.system("pip install openpyxl --break-system-packages -q")
+    os.system("pip install openpyxl -q")
     import openpyxl
 
 import turso
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "celus.xlsx")
+EXCEL_PATH = "celus.xlsx"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,7 +56,7 @@ def clean_fecha(v):
     try:
         n = float(s)
         if 30000 < n < 60000:
-            d = datetime.datetime(1899, 12, 30) + datetime.timedelta(days=n)
+            d = datetime.datetime(1899,12,30) + datetime.timedelta(days=n)
             return d.strftime('%Y-%m-%d')
     except: pass
     return None
@@ -79,15 +77,48 @@ def detect_marca(modelo):
     if 'lg ' in m or m.startswith('lg'): return 'LG'
     if 'iphone' in m or 'apple' in m: return 'Apple'
     if 'xiaomi' in m or 'redmi' in m: return 'Xiaomi'
-    if 'nokia' in m: return 'Nokia'
     return modelo.split()[0].capitalize()
+
+def build_stmt(sql, params):
+    """Construye un stmt para _send_stmts de turso"""
+    args = []
+    for p in (params or []):
+        if p is None:
+            args.append({'type': 'null'})
+        elif isinstance(p, int):
+            args.append({'type': 'text', 'value': str(p)})
+        elif isinstance(p, float):
+            args.append({'type': 'float', 'value': p})
+        else:
+            args.append({'type': 'text', 'value': str(p)})
+    return {'sql': sql, 'args': args}
+
+def batch_execute(stmts, label=""):
+    """Manda stmts en bloques de 80 para no exceder límites"""
+    import turso as t
+    total = len(stmts)
+    errores = []
+    CHUNK = 80
+    for i in range(0, total, CHUNK):
+        chunk = stmts[i:i+CHUNK]
+        try:
+            results = t._send_stmts(chunk)
+            for j, res in enumerate(results):
+                if res.get('type') == 'error':
+                    msg = res.get('error', {})
+                    if isinstance(msg, dict): msg = msg.get('message', str(msg))
+                    errores.append(f"{label}[{i+j}]: {msg}")
+        except Exception as e:
+            errores.append(f"{label} chunk {i}: {e}")
+        pct = min(i+CHUNK, total)
+        print(f"  {label}: {pct}/{total}...", flush=True)
+    return errores
 
 # ── Leer Excel ────────────────────────────────────────────────────────────────
 
 print(f"Leyendo {EXCEL_PATH}...")
 wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True)
 ws = wb.active
-
 headers = None
 raw_rows = []
 for i, row in enumerate(ws.iter_rows(values_only=True)):
@@ -95,7 +126,6 @@ for i, row in enumerate(ws.iter_rows(values_only=True)):
         headers = [str(h).strip() if h else '' for h in row]
         continue
     raw_rows.append(dict(zip(headers, row)))
-
 print(f"  {len(raw_rows)} filas leídas")
 
 # ── Procesar ──────────────────────────────────────────────────────────────────
@@ -105,11 +135,12 @@ equipos_list   = []
 lineas_list    = []
 asignaciones_list = []
 imei_seen = set()
+now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 for r in raw_rows:
-    tipo     = clean_str(r.get('TIPO', ''))
+    tipo = clean_str(r.get('TIPO',''))
     if not tipo: continue
-    tipo_up  = tipo.upper()
+    tipo_up = tipo.upper()
 
     apellido = clean_str(r.get('APELLIDO'))
     nombre   = clean_str(r.get('NOMBRE'))
@@ -125,173 +156,116 @@ for r in raw_rows:
     fecha    = clean_fecha(r.get('FECHA INICIO'))
     obs      = clean_str(r.get('CAMBIOS'))
 
-    # Empleados
     if legajo and apellido:
         if legajo not in empleados_dict:
-            empleados_dict[legajo] = {
-                'legajo': legajo,
-                'apellido': apellido,
-                'nombre': nombre or '',
-                'sector': sector,
-                'lugar_trabajo': lugar,
-                'observaciones': ceco,
-            }
+            empleados_dict[legajo] = (legajo, nombre or '', apellido, sector, lugar, ceco, now, now)
 
-    # Equipos celulares
     if tipo_up == 'CELULAR' and imei and imei not in imei_seen:
         imei_seen.add(imei)
-        equipos_list.append({
-            'imei': imei,
-            'marca': detect_marca(modelo),
-            'modelo': modelo or 'Sin modelo',
-            'estado': 'asignado' if legajo else 'stock',
-            'observaciones': obs,
-        })
+        equipos_list.append((imei, detect_marca(modelo), modelo or 'Sin modelo',
+                             'asignado' if legajo else 'stock', obs, now, now))
 
-    # Líneas SIM
     if numero and len(numero) >= 8:
-        operadora = empresa if empresa in ('MOVISTAR', 'CLARO', 'PERSONAL') else 'MOVISTAR'
-        lineas_list.append({
-            'numero': numero,
-            'operadora': operadora,
-            'plan': plan,
-            'tipo': 'kite' if tipo_up == 'TELEMETRIA' else 'standard',
-            'estado': 'activa',
-            'imei_ref': imei,
-            'legajo_ref': legajo,
-        })
+        operadora = empresa if empresa in ('MOVISTAR','CLARO','PERSONAL') else 'MOVISTAR'
+        lineas_list.append((numero, operadora, plan,
+                            'kite' if tipo_up == 'TELEMETRIA' else 'standard',
+                            'activa', imei, now, now))
 
-    # Asignaciones
     if tipo_up == 'CELULAR' and imei and legajo:
-        asignaciones_list.append({
-            'imei': imei,
-            'legajo': legajo,
-            'fecha_desde': fecha,
-            'notas': obs,
-        })
+        asignaciones_list.append((imei, legajo, fecha, obs))
 
 empleados_list = list(empleados_dict.values())
-print(f"  Empleados únicos: {len(empleados_list)}")
-print(f"  Equipos únicos:   {len(equipos_list)}")
-print(f"  Líneas:           {len(lineas_list)}")
-print(f"  Asignaciones:     {len(asignaciones_list)}")
+print(f"  Empleados: {len(empleados_list)}")
+print(f"  Equipos:   {len(equipos_list)}")
+print(f"  Líneas:    {len(lineas_list)}")
+print(f"  Asignaciones: {len(asignaciones_list)}")
 
-# ── Cargar a DB ───────────────────────────────────────────────────────────────
+# ── Batch inserts ─────────────────────────────────────────────────────────────
 
-conn = turso.connect()
-stats = {'empleados': 0, 'equipos': 0, 'lineas': 0, 'asignaciones': 0, 'errores': []}
-
-now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+all_errors = []
 
 # Empleados
 print("\nImportando empleados...")
-for emp in empleados_list:
-    try:
-        conn.execute('''
-            INSERT INTO empleados (legajo, nombre, apellido, sector, lugar_trabajo, observaciones, activo, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
-            ON CONFLICT(legajo) DO UPDATE SET
-              nombre=excluded.nombre, apellido=excluded.apellido,
-              sector=excluded.sector, lugar_trabajo=excluded.lugar_trabajo,
-              updated_at=excluded.updated_at
-        ''', (emp['legajo'], emp['nombre'], emp['apellido'],
-              emp['sector'], emp['lugar_trabajo'], emp['observaciones'], now, now))
-        stats['empleados'] += 1
-    except Exception as e:
-        stats['errores'].append(f"Empleado {emp['legajo']}: {e}")
-conn.commit()
-print(f"  ✓ {stats['empleados']} empleados")
+emp_sql = '''INSERT INTO empleados (legajo,nombre,apellido,sector,lugar_trabajo,observaciones,activo,created_at,updated_at)
+VALUES (?,?,?,?,?,?,1,?,?)
+ON CONFLICT(legajo) DO UPDATE SET nombre=excluded.nombre,apellido=excluded.apellido,
+sector=excluded.sector,lugar_trabajo=excluded.lugar_trabajo,updated_at=excluded.updated_at'''
+stmts = [build_stmt(emp_sql, row) for row in empleados_list]
+all_errors += batch_execute(stmts, "Empleados")
 
 # Equipos
-print("Importando equipos...")
-for eq in equipos_list:
-    try:
-        conn.execute('''
-            INSERT INTO equipos_cel (imei, marca, modelo, estado, observaciones, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(imei) DO UPDATE SET
-              marca=excluded.marca, modelo=excluded.modelo,
-              observaciones=excluded.observaciones, updated_at=excluded.updated_at
-        ''', (eq['imei'], eq['marca'], eq['modelo'],
-              eq['estado'], eq['observaciones'], now, now))
-        stats['equipos'] += 1
-    except Exception as e:
-        stats['errores'].append(f"Equipo {eq['imei']}: {e}")
-conn.commit()
-print(f"  ✓ {stats['equipos']} equipos")
+print("\nImportando equipos...")
+eq_sql = '''INSERT INTO equipos_cel (imei,marca,modelo,estado,observaciones,created_at,updated_at)
+VALUES (?,?,?,?,?,?,?)
+ON CONFLICT(imei) DO UPDATE SET marca=excluded.marca,modelo=excluded.modelo,
+observaciones=excluded.observaciones,updated_at=excluded.updated_at'''
+stmts = [build_stmt(eq_sql, row) for row in equipos_list]
+all_errors += batch_execute(stmts, "Equipos")
 
-# Asignaciones
-print("Importando asignaciones...")
-for asig in asignaciones_list:
+# Para asignaciones necesitamos los IDs — hacemos lookup
+print("\nImportando asignaciones...")
+conn = turso.connect()
+
+asig_ok = 0
+asig_errors = []
+for imei, legajo, fecha, obs in asignaciones_list:
     try:
-        # Buscar IDs
-        cur_eq = conn.execute('SELECT id FROM equipos_cel WHERE imei=?', (asig['imei'],))
-        eq_row = cur_eq.fetchone()
-        cur_emp = conn.execute('SELECT id FROM empleados WHERE legajo=?', (asig['legajo'],))
+        cur_eq  = conn.execute('SELECT id FROM equipos_cel WHERE imei=?', (imei,))
+        eq_row  = cur_eq.fetchone()
+        cur_emp = conn.execute('SELECT id FROM empleados WHERE legajo=?', (legajo,))
         emp_row = cur_emp.fetchone()
-
         if not eq_row:
-            stats['errores'].append(f"Asig sin equipo IMEI {asig['imei']}")
+            asig_errors.append(f"Sin equipo IMEI {imei}")
             continue
-
-        eq_id  = eq_row[0] if not isinstance(eq_row, dict) else eq_row['id']
-        emp_id = (emp_row[0] if not isinstance(emp_row, dict) else emp_row['id']) if emp_row else None
-
-        # Cerrar asignación activa previa si existe
-        conn.execute('''UPDATE asignaciones_cel SET activa=0, updated_at=?
-                        WHERE equipo_id=? AND activa=1''', (now, eq_id))
-
-        conn.execute('''
-            INSERT INTO asignaciones_cel (equipo_id, empleado_id, fecha_desde, activa, notas, usuario_reg, created_at, updated_at)
-            VALUES (?, ?, ?, 1, ?, 'import', ?, ?)
-        ''', (eq_id, emp_id, asig['fecha_desde'], asig['notas'], now, now))
-
-        # Marcar equipo como asignado
-        conn.execute("UPDATE equipos_cel SET estado='asignado', updated_at=? WHERE id=?", (now, eq_id))
-        stats['asignaciones'] += 1
+        eq_id  = eq_row['id'] if isinstance(eq_row, dict) else eq_row[0]
+        emp_id = (emp_row['id'] if isinstance(emp_row, dict) else emp_row[0]) if emp_row else None
+        conn.execute('''UPDATE asignaciones_cel SET activa=0,updated_at=? WHERE equipo_id=? AND activa=1''', (now, eq_id))
+        conn.execute('''INSERT INTO asignaciones_cel (equipo_id,empleado_id,fecha_desde,activa,notas,usuario_reg,created_at,updated_at)
+            VALUES (?,?,?,1,?,'import',?,?)''', (eq_id, emp_id, fecha, obs, now, now))
+        conn.execute("UPDATE equipos_cel SET estado='asignado',updated_at=? WHERE id=?", (now, eq_id))
+        asig_ok += 1
     except Exception as e:
-        stats['errores'].append(f"Asig IMEI {asig['imei']}: {e}")
+        asig_errors.append(f"IMEI {imei}: {e}")
 
 conn.commit()
-print(f"  ✓ {stats['asignaciones']} asignaciones")
+conn.close()
+print(f"  Asignaciones: {asig_ok}/{len(asignaciones_list)}")
+all_errors += asig_errors
 
 # Líneas
-print("Importando líneas SIM...")
-for lin in lineas_list:
+print("\nImportando líneas SIM...")
+conn2 = turso.connect()
+lin_ok = 0
+lin_errors = []
+for numero, operadora, plan, tipo, estado, imei_ref, cat, uat in lineas_list:
     try:
-        # Buscar equipo asociado si tiene IMEI
         eq_id = None
-        if lin['imei_ref']:
-            cur = conn.execute('SELECT id FROM equipos_cel WHERE imei=?', (lin['imei_ref'],))
+        if imei_ref:
+            cur = conn2.execute('SELECT id FROM equipos_cel WHERE imei=?', (imei_ref,))
             row = cur.fetchone()
             if row:
-                eq_id = row[0] if not isinstance(row, dict) else row['id']
-
-        conn.execute('''
-            INSERT OR IGNORE INTO lineas_cel (numero, operadora, plan, tipo, estado, equipo_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (lin['numero'], lin['operadora'], lin['plan'],
-              lin['tipo'], lin['estado'], eq_id, now, now))
-        stats['lineas'] += 1
+                eq_id = row['id'] if isinstance(row, dict) else row[0]
+        conn2.execute('''INSERT OR IGNORE INTO lineas_cel (numero,operadora,plan,tipo,estado,equipo_id,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?)''', (numero, operadora, plan, tipo, estado, eq_id, cat, uat))
+        lin_ok += 1
     except Exception as e:
-        stats['errores'].append(f"Línea {lin['numero']}: {e}")
-
-conn.commit()
-print(f"  ✓ {stats['lineas']} líneas")
+        lin_errors.append(f"Línea {numero}: {e}")
+conn2.commit()
+conn2.close()
+print(f"  Líneas: {lin_ok}/{len(lineas_list)}")
+all_errors += lin_errors
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
-
 print("\n" + "="*50)
 print("IMPORT COMPLETADO")
-print(f"  Empleados: {stats['empleados']}")
-print(f"  Equipos:   {stats['equipos']}")
-print(f"  Asignaciones: {stats['asignaciones']}")
-print(f"  Líneas:    {stats['lineas']}")
-if stats['errores']:
-    print(f"\n  ERRORES ({len(stats['errores'])}):")
-    for e in stats['errores'][:20]:
+print(f"  Empleados:    {len(empleados_list)}")
+print(f"  Equipos:      {len(equipos_list)}")
+print(f"  Asignaciones: {asig_ok}")
+print(f"  Líneas:       {lin_ok}")
+if all_errors:
+    print(f"\n  ERRORES ({len(all_errors)}):")
+    for e in all_errors[:15]:
         print(f"    - {e}")
-    if len(stats['errores']) > 20:
-        print(f"    ... y {len(stats['errores'])-20} más")
+    if len(all_errors) > 15:
+        print(f"    ... y {len(all_errors)-15} más")
 print("="*50)
-conn.close()
