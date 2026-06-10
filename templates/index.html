@@ -405,7 +405,12 @@ textarea{resize:vertical;min-height:60px}
         <div class="g3">
           <div><label>Usuario</label><input type="text" id="nu-user"></div>
           <div><label>Contraseña</label><input type="password" id="nu-pass"></div>
-          <div><label>Rol</label><select id="nu-role"><option value="viewer">viewer</option><option value="editor">editor</option><option value="admin">admin</option></select></div>
+          <div><label>Rol global</label><select id="nu-role"><option value="viewer">viewer</option><option value="editor">editor</option><option value="admin">admin</option></select></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:14px;flex-wrap:wrap">
+          <div><label>Pozos</label><select id="nu-perm-pozos" style="min-width:120px"><option value="">Sin acceso</option><option value="viewer">viewer</option><option value="editor">editor</option><option value="admin">admin</option></select></div>
+          <div><label>Celulares</label><select id="nu-perm-celulares" style="min-width:120px"><option value="">Sin acceso</option><option value="viewer">viewer</option><option value="editor">editor</option><option value="admin">admin</option></select></div>
+          <div><label>Telemetría</label><select id="nu-perm-telemetria" style="min-width:120px"><option value="">Sin acceso</option><option value="viewer">viewer</option><option value="editor">editor</option><option value="admin">admin</option></select></div>
         </div>
         <button class="btn btn-sm" style="margin-top:8px" onclick="crearUsuario()">Crear</button>
       </div>
@@ -2067,32 +2072,65 @@ async function loadUsers(){
   const res=await api('/api/users');
   if(!res||!res.ok)return;
   const users=await res.json();
-  document.getElementById('users-lista').innerHTML=users.map(u=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="flex:1;font-family:var(--mono);font-size:13px">${u.username}</span>
-      <span class="badge b-gray">${u.role}</span>
-      ${u.id!==USER_ID?`
-        <select onchange="cambiarRol(${u.id},this.value)" style="font-size:12px;max-width:100px">
-          ${['viewer','editor','admin'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
-        </select>
-        <button class="btn btn-sm btn-red" onclick="eliminarUser(${u.id})">✕</button>
-      `:'<span style="font-size:11px;color:var(--text3)">(tú)</span>'}
-    </div>`).join('');
+  document.getElementById('users-lista').innerHTML=users.map(u=>{
+    const mods = ['pozos','celulares','telemetria'];
+    const roles = ['','viewer','editor','admin'];
+    const labels = {'':'Sin acceso','viewer':'👁 ver','editor':'✏ editar','admin':'⚙ admin'};
+    const permisos = u.permisos || {};
+    const modSelects = mods.map(m=>`
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:90px">
+        <span style="font-size:10px;color:var(--text3);text-transform:uppercase;font-family:var(--mono)">${m}</span>
+        ${u.id!==USER_ID && u.role!=='admin'?`
+          <select onchange="cambiarPermiso(${u.id},'${m}',this.value)"
+            style="font-size:11px;padding:3px 5px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+            ${roles.map(r=>`<option value="${r}" ${(permisos[m]||'')=== r?'selected':''}>${labels[r]}</option>`).join('')}
+          </select>
+        `:`<span class="badge b-${permisos[m]?'blue':'gray'}" style="font-size:10px">${permisos[m]||'—'}</span>`}
+      </div>
+    `).join('');
+    return `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${u.role!=='admin'?'8px':'0'}">
+        <span style="flex:1;font-family:var(--mono);font-size:13px;font-weight:500">${u.username}</span>
+        <span class="badge b-${u.role==='admin'?'red':u.role==='editor'?'amber':'gray'}">${u.role}</span>
+        ${u.id!==USER_ID?`<button class="btn btn-sm btn-red" onclick="eliminarUser(${u.id})">✕</button>`:'<span style="font-size:11px;color:var(--text3)">(vos)</span>'}
+      </div>
+      ${u.role!=='admin'?`<div style="display:flex;gap:12px;flex-wrap:wrap">${modSelects}</div>`:'<span style="font-size:11px;color:var(--text3)">Acceso total a todos los módulos</span>'}
+    </div>`;
+  }).join('');
 }
 async function crearUsuario(){
   const username=document.getElementById('nu-user').value.trim();
   const password=document.getElementById('nu-pass').value;
   const role=document.getElementById('nu-role').value;
   if(!username||!password){toast('Completá usuario y contraseña','err');return;}
-  const res=await api('/api/users','POST',{username,password,role});
+  const permisos={};
+  ['pozos','celulares','telemetria'].forEach(m=>{
+    const v=document.getElementById(`nu-perm-${m}`).value;
+    if(v) permisos[m]=v;
+  });
+  const res=await api('/api/users','POST',{username,password,role,permisos});
   if(!res||!res.ok){const e=await res.json();toast(e.error||'Error','err');return;}
-  toast('Usuario creado');document.getElementById('nu-user').value='';document.getElementById('nu-pass').value='';
+  toast('Usuario creado');
+  document.getElementById('nu-user').value='';
+  document.getElementById('nu-pass').value='';
   loadUsers();
 }
-async function cambiarRol(uid,role){
-  const res=await api(`/api/users/${uid}/role`,'PATCH',{role});
-  if(!res||!res.ok){toast('Error','err');return;}
-  toast('Rol actualizado');
+async function cambiarPermiso(uid, modulo, rol){
+  // Buscar el usuario actual para tomar sus permisos
+  const res = await api('/api/users');
+  if(!res||!res.ok) return;
+  const users = await res.json();
+  const user = users.find(u=>u.id===uid);
+  if(!user) return;
+  const permisos = user.permisos || {};
+  permisos[modulo] = rol || null;
+  // Limpiar nulls
+  Object.keys(permisos).forEach(k=>{ if(!permisos[k]) delete permisos[k]; });
+  const r2 = await api(`/api/users/${uid}`,'PUT',{role: user.role, permisos});
+  if(!r2||!r2.ok){toast('Error al guardar','err');return;}
+  toast(`Permiso ${modulo} → ${rol||'sin acceso'}`);
+  loadUsers();
 }
 async function eliminarUser(uid){
   if(!confirm('¿Eliminar este usuario?'))return;

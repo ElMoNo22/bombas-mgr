@@ -6,11 +6,32 @@ from . import tele_bp
 
 # ── Helpers ──────────────────────────────────────────────────
 
+def _rol_telemetria():
+    role = session.get('role')
+    if role == 'admin':
+        return 'admin'
+    permisos = session.get('permisos', session.get('modulos', {}))
+    if isinstance(permisos, list):
+        return 'viewer' if 'telemetria' in permisos else None
+    if isinstance(permisos, dict):
+        return permisos.get('telemetria')
+    return None
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('user_id'):
             return jsonify({'error': 'No autorizado'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def editor_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('user_id'):
+            return jsonify({'error': 'No autorizado'}), 401
+        if _rol_telemetria() not in ('editor', 'admin'):
+            return jsonify({'error': 'Se requiere rol editor o admin en telemetria'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -25,11 +46,14 @@ def today():
 
 # ── Página principal ─────────────────────────────────────────
 
-@tele_bp.route('/')
+@tele_bp.route('/', strict_slashes=False)
 def index():
     if not session.get('user_id'):
         from flask import redirect, url_for
-        return redirect(url_for('login'))
+        return redirect(url_for('login_page'))
+    if not _rol_telemetria():
+        from flask import abort
+        abort(403)
     return render_template('telemetria/index.html')
 
 # ════════════════════════════════════════════════════════════

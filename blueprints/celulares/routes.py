@@ -32,6 +32,18 @@ def fetchone_dict(cursor):
     except Exception:
         return {k: row[k] for k in row.keys()}
 
+def _rol_celulares():
+    """Retorna el rol del usuario en el módulo celulares, o None si no tiene acceso."""
+    role = session.get('role')
+    if role == 'admin':
+        return 'admin'
+    permisos = session.get('permisos', session.get('modulos', {}))
+    if isinstance(permisos, list):
+        return 'viewer' if 'celulares' in permisos else None
+    if isinstance(permisos, dict):
+        return permisos.get('celulares')
+    return None
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -41,43 +53,37 @@ def login_required(f):
     return decorated
 
 def editor_required(f):
+    """Requiere rol editor o admin EN el módulo celulares."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
             return jsonify({'error': 'No autorizado'}), 401
-        if session.get('role') not in ('editor', 'admin'):
-            return jsonify({'error': 'Se requiere rol editor o admin'}), 403
+        rol = _rol_celulares()
+        if rol not in ('editor', 'admin'):
+            return jsonify({'error': 'Se requiere rol editor o admin en celulares'}), 403
         return f(*args, **kwargs)
     return decorated
 
 def admin_required(f):
+    """Requiere rol admin EN el módulo celulares (o admin global)."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
             return jsonify({'error': 'No autorizado'}), 401
-        if session.get('role') != 'admin':
-            return jsonify({'error': 'Se requiere rol admin'}), 403
+        rol = _rol_celulares()
+        if rol != 'admin':
+            return jsonify({'error': 'Se requiere rol admin en celulares'}), 403
         return f(*args, **kwargs)
     return decorated
 
 def modulo_celulares_required(f):
-    """Verifica que el usuario tenga acceso al módulo celulares."""
+    """Verifica que el usuario tenga cualquier acceso al módulo celulares."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
             from flask import redirect, url_for
             return redirect(url_for('login_page'))
-        role = session.get('role')
-        # admin siempre pasa
-        if role == 'admin':
-            return f(*args, **kwargs)
-        modulos = session.get('modulos', [])
-        if isinstance(modulos, str):
-            try:
-                modulos = json.loads(modulos)
-            except Exception:
-                modulos = []
-        if 'celulares' not in modulos:
+        if not _rol_celulares():
             from flask import abort
             abort(403)
         return f(*args, **kwargs)

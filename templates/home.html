@@ -250,32 +250,32 @@
   </div>
 
   <div class="modules-grid" id="modules-grid">
-    {% set modulos = modulos if modulos else [] %}
+    {% set permisos = permisos if permisos else {} %}
 
-    {% if 'pozos' in modulos or role == 'admin' %}
+    {% if permisos.get('pozos') or role == 'admin' %}
     <a href="/" class="mod-card mod-pozos">
       <div class="mod-icon-wrap">💧</div>
       <div class="mod-name">Pozos / Bombas</div>
       <div class="mod-desc">Inventario de equipos, perforaciones, asignaciones y reparaciones</div>
-      <span class="mod-badge">Abrir módulo →</span>
+      <span class="mod-badge" style="text-transform:capitalize;">{{ permisos.get('pozos','admin') }} →</span>
     </a>
     {% endif %}
 
-    {% if 'celulares' in modulos or role == 'admin' %}
+    {% if permisos.get('celulares') or role == 'admin' %}
     <a href="/celulares/" class="mod-card mod-celulares">
       <div class="mod-icon-wrap">📱</div>
       <div class="mod-name">Celulares</div>
       <div class="mod-desc">Equipos móviles, líneas SIM, empleados y asignaciones</div>
-      <span class="mod-badge">Abrir módulo →</span>
+      <span class="mod-badge" style="text-transform:capitalize;">{{ permisos.get('celulares','admin') }} →</span>
     </a>
     {% endif %}
 
-    {% if 'telemetria' in modulos or role == 'admin' %}
+    {% if permisos.get('telemetria') or role == 'admin' %}
     <a href="/telemetria/" class="mod-card mod-telemetria">
       <div class="mod-icon-wrap">📡</div>
       <div class="mod-name">Telemetría</div>
       <div class="mod-desc">Módems de campo, sensores, sitios remotos y monitoreo</div>
-      <span class="mod-badge">Abrir módulo →</span>
+      <span class="mod-badge" style="text-transform:capitalize;">{{ permisos.get('telemetria','admin') }} →</span>
     </a>
     {% endif %}
   </div>

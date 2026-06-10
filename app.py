@@ -67,16 +67,35 @@ def fetchone_dict(cursor):
     except Exception:
         return {k: row[k] for k in row.keys()}
 
-def _parse_modulos(raw):
-    """Convierte el campo modulos (JSON string o lista) a lista Python."""
+def _parse_permisos(raw):
+    """Convierte el campo modulos a dict {modulo: rol}.
+    Soporta tanto el formato viejo (lista) como el nuevo (dict).
+    Ej nuevo: {"pozos":"editor","celulares":"viewer","telemetria":null}
+    """
     if raw is None:
-        return []
-    if isinstance(raw, list):
+        return {}
+    if isinstance(raw, dict):
         return raw
     try:
-        return json.loads(raw)
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            return parsed
+        # formato viejo: lista -> convertir a dict con rol viewer
+        if isinstance(parsed, list):
+            return {m: 'viewer' for m in parsed}
     except Exception:
-        return []
+        pass
+    return {}
+
+def _parse_modulos(raw):
+    """Compatibilidad: retorna lista de módulos con acceso (rol != null)."""
+    permisos = _parse_permisos(raw)
+    return [m for m, r in permisos.items() if r]
+
+def _rol_en_modulo(modulos_raw, modulo):
+    """Retorna el rol del usuario en un módulo específico, o None si no tiene acceso."""
+    permisos = _parse_permisos(modulos_raw)
+    return permisos.get(modulo)
 
 def init_db():
     conn = get_db()
@@ -245,14 +264,17 @@ def index():
 @app.route('/home')
 @login_required
 def home():
-    modulos = session.get('modulos', ['pozos','celulares','telemetria'])
     role = session.get('role')
     if role == 'admin':
-        modulos = ['pozos','celulares','telemetria']
+        permisos = {'pozos':'admin','celulares':'admin','telemetria':'admin'}
+    else:
+        permisos = session.get('permisos', session.get('modulos', {}))
+        if isinstance(permisos, list):
+            permisos = {m: 'viewer' for m in permisos}
     return render_template('home.html',
                            username=session.get('username'),
                            role=role,
-                           modulos=modulos)
+                           permisos=permisos)
 
 @app.route('/login', methods=['GET'])
 def login_page():
@@ -270,16 +292,19 @@ def login():
     user = fetchone_dict(cur)
     conn.close()
     if user and check_password_hash(user['password_hash'], password):
-        modulos = _parse_modulos(user.get('modulos'))
-        # admin siempre tiene todos
+        permisos = _parse_permisos(user.get('modulos'))
+        # admin siempre tiene todos con rol admin
         if user['role'] == 'admin':
-            modulos = ['pozos','celulares','telemetria']
+            permisos = {'pozos':'admin','celulares':'admin','telemetria':'admin'}
         session['user_id']  = user['id']
         session['username'] = user['username']
         session['role']     = user['role']
-        session['modulos']  = modulos
+        session['modulos']  = permisos
+        session['permisos'] = permisos
+        modulos_lista = [m for m,r in permisos.items() if r]
         return jsonify({'ok': True, 'username': user['username'],
-                        'role': user['role'], 'modulos': modulos})
+                        'role': user['role'], 'modulos': modulos_lista,
+                        'permisos': permisos})
     return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
 
 @app.route('/logout')
@@ -825,7 +850,8 @@ def get_users():
     rows = fetchall_dicts(cur)
     conn.close()
     for r in rows:
-        r['modulos'] = _parse_modulos(r.get('modulos'))
+        r['permisos'] = _parse_permisos(r.get('modulos'))
+        r['modulos'] = [m for m,v in r['permisos'].items() if v]
     return jsonify(rows)
 
 @app.route('/api/users', methods=['POST'])
@@ -835,15 +861,15 @@ def create_user():
     username = data.get('username','').strip()
     password = data.get('password','')
     role     = data.get('role', 'viewer')
-    modulos  = data.get('modulos', ['pozos','celulares','telemetria'])
+    permisos = data.get('permisos', {'pozos':'viewer','celulares':'viewer','telemetria':'viewer'})
     if not username or not password:
         return jsonify({'error': 'username y password requeridos'}), 400
     if role == 'admin':
-        modulos = ['pozos','celulares','telemetria']
+        permisos = {'pozos':'admin','celulares':'admin','telemetria':'admin'}
     conn = get_db()
     try:
         conn.execute('INSERT INTO users (username, password_hash, role, modulos) VALUES (?, ?, ?, ?)',
-                     (username, generate_password_hash(password), role, json.dumps(modulos)))
+                     (username, generate_password_hash(password), role, json.dumps(permisos)))
         db_commit(conn)
         cur = conn.execute('SELECT id, username, role, modulos FROM users WHERE username=?', (username,))
         row = fetchone_dict(cur)
@@ -858,22 +884,23 @@ def create_user():
 @admin_required
 def update_user(uid):
     data = request.get_json()
-    role    = data.get('role')
-    modulos = data.get('modulos', ['pozos','celulares','telemetria'])
+    role     = data.get('role')
+    permisos = data.get('permisos', {'pozos':'viewer','celulares':'viewer','telemetria':'viewer'})
     if role == 'admin':
-        modulos = ['pozos','celulares','telemetria']
+        permisos = {'pozos':'admin','celulares':'admin','telemetria':'admin'}
     conn = get_db()
     if data.get('password'):
         conn.execute('UPDATE users SET role=?, modulos=?, password_hash=? WHERE id=?',
-                     (role, json.dumps(modulos), generate_password_hash(data['password']), uid))
+                     (role, json.dumps(permisos), generate_password_hash(data['password']), uid))
     else:
         conn.execute('UPDATE users SET role=?, modulos=? WHERE id=?',
-                     (role, json.dumps(modulos), uid))
+                     (role, json.dumps(permisos), uid))
     db_commit(conn)
     cur = conn.execute('SELECT id, username, role, modulos FROM users WHERE id=?', (uid,))
     row = fetchone_dict(cur)
     conn.close()
-    row['modulos'] = _parse_modulos(row.get('modulos'))
+    row['permisos'] = _parse_permisos(row.get('modulos'))
+    row['modulos'] = [m for m,v in row['permisos'].items() if v]
     return jsonify(row)
 
 @app.route('/api/users/<int:uid>', methods=['DELETE'])
