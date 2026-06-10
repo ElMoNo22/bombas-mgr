@@ -23,7 +23,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
   .app { display: flex; height: 100vh; }
-  .sidebar { width: 220px; background: var(--primary); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar { width: 220px; background: var(--primary); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
   .sidebar-logo { padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
   .sidebar-logo h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .sidebar-logo p { font-size: 11px; opacity: 0.6; margin-top: 3px; }
@@ -119,6 +119,8 @@
     <div class="sidebar-section">Sistema</div>
     <div class="nav-item" onclick="window.location='/'"><span>💧</span><span class="nav-label">POZO/MGR</span></div>
     <div class="nav-item" onclick="window.location='/celulares'"><span>📱</span><span class="nav-label">CelMGR</span></div>
+    <div class="nav-item" onclick="window.location='/home'" style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.1);opacity:0.6;"><span>⬡</span><span class="nav-label">← Módulos</span></div>
+    <div class="nav-item" onclick="window.location='/logout'" style="opacity:0.5;"><span>🚪</span><span class="nav-label">Salir</span></div>
   </div>
 
   <div class="main">
