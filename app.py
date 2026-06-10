@@ -210,10 +210,22 @@ def index():
                            user_id=session.get('user_id', 0),
                            modulos=session.get('modulos', ['pozos','celulares','telemetria']))
 
+@app.route('/home')
+@login_required
+def home():
+    modulos = session.get('modulos', ['pozos','celulares','telemetria'])
+    role = session.get('role')
+    if role == 'admin':
+        modulos = ['pozos','celulares','telemetria']
+    return render_template('home.html',
+                           username=session.get('username'),
+                           role=role,
+                           modulos=modulos)
+
 @app.route('/login', methods=['GET'])
 def login_page():
     if 'user_id' in session:
-        return redirect(url_for('index'))
+        return redirect(url_for('home'))
     return render_template('login.html')
 
 @app.route('/login', methods=['POST'])
