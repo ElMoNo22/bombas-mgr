@@ -7,10 +7,6 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'bombas-mgr-secret-2024')
 
-# ── BLUEPRINTS ──
-from blueprints.celulares import cel_bp
-app.register_blueprint(cel_bp)
-
 # ── DB CONNECTION ──
 
 def norm_fecha(s):
@@ -933,6 +929,10 @@ def chat():
         return jsonify({'reply': reply})
     except Exception as e:
         return jsonify({'reply': f'Error al consultar Gemini: {e}'}), 500
+
+# ── BLUEPRINTS ──
+from blueprints.celulares import cel_bp
+app.register_blueprint(cel_bp)
 
 # ── INIT + RUN ──
 
