@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POZO/MGR — Inicio</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    min-height: 100vh;
+    color: #e2e8f0;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    background: #1a1d27;
+    border-bottom: 1px solid #2e3350;
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar-icon {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .topbar-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: 0.3px;
+  }
+  .topbar-sub {
+    font-size: 11px;
+    color: #64748b;
+  }
+  .topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .role-badge {
+    background: #22263a;
+    border: 1px solid #2e3350;
+    border-radius: 99px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: #818cf8;
+  }
+  .btn-logout {
+    background: none;
+    border: 1px solid #2e3350;
+    border-radius: 7px;
+    padding: 6px 12px;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .btn-logout:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  /* MAIN */
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 24px 40px;
+  }
+  .welcome {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .welcome h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 8px;
+  }
+  .welcome p {
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  /* MÓDULOS GRID */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    justify-content: center;
+  }
+
+  /* Si hay un solo módulo, centrarlo */
+  .modules-grid.solo {
+    grid-template-columns: 280px;
+  }
+
+  .mod-card {
+    background: #1a1d27;
+    border: 1px solid #2e3350;
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .mod-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 16px;
+  }
+  .mod-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+  .mod-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Colores por módulo */
+  .mod-pozos { --accent: #3b82f6; }
+  .mod-pozos .mod-icon-wrap { background: #1e3060; }
+  .mod-pozos .mod-icon-wrap { border-color: #1d4ed8; }
+  .mod-pozos:hover { box-shadow: 0 8px 32px rgba(59,130,246,0.15); }
+
+  .mod-celulares { --accent: #22c55e; }
+  .mod-celulares .mod-icon-wrap { background: #14321f; border-color: #15803d; }
+  .mod-celulares:hover { box-shadow: 0 8px 32px rgba(34,197,94,0.15); }
+
+  .mod-telemetria { --accent: #a855f7; }
+  .mod-telemetria .mod-icon-wrap { background: #2e1a47; border-color: #7e22ce; }
+  .mod-telemetria:hover { box-shadow: 0 8px 32px rgba(168,85,247,0.15); }
+
+  .mod-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 34px;
+  }
+  .mod-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 8px;
+  }
+  .mod-desc {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+  .mod-badge {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+
+  /* Admin panel link */
+  .admin-section {
+    margin-top: 48px;
+    text-align: center;
+    padding-top: 32px;
+    border-top: 1px solid #1e2235;
+  }
+  .admin-section p {
+    font-size: 12px;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+  .btn-admin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #22263a;
+    border: 1px solid #2e3350;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: #64748b;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .btn-admin:hover {
+    border-color: #6366f1;
+    color: #818cf8;
+  }
+
+  @media (max-width: 480px) {
+    .modules-grid { grid-template-columns: 1fr; }
+    .modules-grid.solo { grid-template-columns: 1fr; }
+    .main { padding: 40px 16px; }
+    .topbar { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-icon">💧</div>
+    <div>
+      <div class="topbar-name">POZO/MGR</div>
+      <div class="topbar-sub">Sistema de Gestión</div>
+    </div>
+  </div>
+  <div class="topbar-user">
+    <span>{{ username }}</span>
+    <span class="role-badge">{{ role }}</span>
+    <button class="btn-logout" onclick="window.location.href='/logout'">Salir</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="welcome">
+    <h1>Bienvenido, {{ username }}</h1>
+    <p>Seleccioná el módulo al que querés acceder</p>
+  </div>
+
+  <div class="modules-grid" id="modules-grid">
+    {% set modulos = modulos if modulos else [] %}
+
+    {% if 'pozos' in modulos or role == 'admin' %}
+    <a href="/" class="mod-card mod-pozos">
+      <div class="mod-icon-wrap">💧</div>
+      <div class="mod-name">Pozos / Bombas</div>
+      <div class="mod-desc">Inventario de equipos, perforaciones, asignaciones y reparaciones</div>
+      <span class="mod-badge">Abrir módulo →</span>
+    </a>
+    {% endif %}
+
+    {% if 'celulares' in modulos or role == 'admin' %}
+    <a href="/celulares/" class="mod-card mod-celulares">
+      <div class="mod-icon-wrap">📱</div>
+      <div class="mod-name">Celulares</div>
+      <div class="mod-desc">Equipos móviles, líneas SIM, empleados y asignaciones</div>
+      <span class="mod-badge">Abrir módulo →</span>
+    </a>
+    {% endif %}
+
+    {% if 'telemetria' in modulos or role == 'admin' %}
+    <a href="/telemetria/" class="mod-card mod-telemetria">
+      <div class="mod-icon-wrap">📡</div>
+      <div class="mod-name">Telemetría</div>
+      <div class="mod-desc">Módems de campo, sensores, sitios remotos y monitoreo</div>
+      <span class="mod-badge">Abrir módulo →</span>
+    </a>
+    {% endif %}
+  </div>
+
+  {% if role == 'admin' %}
+  <div class="admin-section">
+    <p>Accesos de administración</p>
+    <a href="/admin/usuarios" class="btn-admin">⚙️ Gestión de usuarios</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  // Si solo hay un módulo habilitado, redirigir directo
+  const grid = document.getElementById('modules-grid');
+  const cards = grid.querySelectorAll('.mod-card');
+
+  if (cards.length === 0) {
+    grid.innerHTML = '<p style="color:#64748b;text-align:center;padding:40px;">No tenés módulos habilitados. Contactá al administrador.</p>';
+  } else if (cards.length === 1) {
+    // Un solo módulo — redirigir automáticamente
+    setTimeout(() => {
+      window.location.href = cards[0].href;
+    }, 800);
+    grid.classList.add('solo');
+    // Mostrar mensaje de redireccionando
+    cards[0].querySelector('.mod-badge').textContent = 'Redirigiendo...';
+  } else {
+    // Múltiples módulos — centrar si son exactamente 2
+    if (cards.length === 2) {
+      grid.style.maxWidth = '500px';
+      grid.style.margin = '0 auto';
+    }
+  }
+</script>
+
+</body>
+</html>
