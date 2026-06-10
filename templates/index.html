@@ -2154,6 +2154,9 @@ async function importarReparaciones(){
 document.addEventListener('DOMContentLoaded',()=>{
   loadAll();
   if(CAN_ADMIN)document.getElementById('tabUsers').style.display='inline-block';
+  // Abrir panel si viene desde home
+  const panel = sessionStorage.getItem('openPanel');
+  if(panel){ sessionStorage.removeItem('openPanel'); showPanel(panel); }
 });
 </script>
   <!-- ══ CHAT WIDGET GEMINI ══ -->
