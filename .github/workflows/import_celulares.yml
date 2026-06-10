@@ -1,0 +1,31 @@
+name: Importar celulares desde Excel
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escribí CONFIRMAR para ejecutar el import'
+        required: true
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirmar == 'CONFIRMAR'
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install openpyxl requests
+
+      - name: Ejecutar import
+        env:
+          TURSO_URL: ${{ secrets.TURSO_URL }}
+          TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
+        run: python import_celulares.py
