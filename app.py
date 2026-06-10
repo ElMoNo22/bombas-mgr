@@ -148,6 +148,42 @@ def init_db():
         except Exception:
             pass
 
+    # Tablas telemetria
+    tele_tables = [
+        '''CREATE TABLE IF NOT EXISTS modems_telemetria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            marca TEXT, modelo TEXT, nro_serie TEXT, imei TEXT,
+            firmware TEXT, ip_asignada TEXT, tag_tablero TEXT,
+            perforacion_id INTEGER, estado TEXT DEFAULT 'activo',
+            fecha_instalacion TEXT, garantia_hasta TEXT,
+            ultimo_contacto TEXT, observaciones TEXT,
+            created_at TEXT, updated_at TEXT)''',
+        '''CREATE TABLE IF NOT EXISTS sensores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            modem_id INTEGER NOT NULL, canal INTEGER,
+            tipo TEXT, descripcion TEXT, tipo_senal TEXT,
+            rango_min REAL, rango_max REAL, unidad TEXT,
+            alarma_min REAL, alarma_max REAL,
+            activo INTEGER DEFAULT 1, created_at TEXT)''',
+        '''CREATE TABLE IF NOT EXISTS lineas_telemetria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero TEXT, tipo_sim TEXT, operadora TEXT, iccid TEXT,
+            apn TEXT, ip_sim TEXT, modem_id INTEGER,
+            estado TEXT DEFAULT 'activa', fecha_alta TEXT,
+            observaciones TEXT, created_at TEXT, updated_at TEXT)''',
+        '''CREATE TABLE IF NOT EXISTS intervenciones_telemetria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            modem_id INTEGER NOT NULL, tipo TEXT, descripcion TEXT,
+            tecnico TEXT, fecha TEXT, costo REAL, created_at TEXT)'''
+    ]
+    for t in tele_tables:
+        try:
+            conn.execute(t)
+            db_commit(conn)
+        except Exception as e:
+            if 'already exists' not in str(e).lower():
+                raise
+
     # Clean .0 suffix from n_equipo
     try:
         conn.execute("UPDATE bombas SET n_equipo = REPLACE(n_equipo, '.0', '') WHERE n_equipo LIKE '%.0'")
@@ -933,6 +969,9 @@ def chat():
 # ── BLUEPRINTS ──
 from blueprints.celulares import cel_bp
 app.register_blueprint(cel_bp)
+
+from blueprints.telemetria import tele_bp
+app.register_blueprint(tele_bp)
 
 # ── INIT + RUN ──
 
