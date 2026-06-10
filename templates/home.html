@@ -283,7 +283,7 @@
   {% if role == 'admin' %}
   <div class="admin-section">
     <p>Accesos de administración</p>
-    <a href="/admin/usuarios" class="btn-admin">⚙️ Gestión de usuarios</a>
+    <a href="/" onclick="sessionStorage.setItem('openPanel','datos')" class="btn-admin">⚙️ Gestión de usuarios</a>
   </div>
   {% endif %}
 </div>
