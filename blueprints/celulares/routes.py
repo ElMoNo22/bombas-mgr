@@ -466,7 +466,7 @@ def create_asignacion():
     ))
 
     # Actualizar estado del equipo
-    conn.execute("UPDATE equipos_cel SET estado='asignado', updated_at=datetime('now') WHERE id=?", (equipo_id,))
+    conn.execute("UPDATE equipos_cel SET estado='asignado' WHERE id=?", (equipo_id,))
     db_commit(conn)
 
     cur3 = conn.execute('SELECT * FROM asignaciones_cel ORDER BY id DESC LIMIT 1')
@@ -487,11 +487,11 @@ def desasignar(aid):
         return jsonify({'error': 'Asignación no encontrada'}), 404
 
     conn.execute('''UPDATE asignaciones_cel SET activa=0, fecha_hasta=?,
-                    notas=COALESCE(?,notas), updated_at=datetime('now') WHERE id=?''',
+                    notas=COALESCE(?,notas) WHERE id=?''',
                  (data.get('fecha_hasta'), data.get('notas'), aid))
 
     # Equipo vuelve a stock
-    conn.execute("UPDATE equipos_cel SET estado='stock', updated_at=datetime('now') WHERE id=?",
+    conn.execute("UPDATE equipos_cel SET estado='stock' WHERE id=?",
                  (asig['equipo_id'],))
     db_commit(conn)
 
@@ -648,7 +648,7 @@ def import_excel():
                 stats['errores'].append(f"Asig: IMEI {asig.get('imei')} no encontrado")
                 continue
             # Cerrar asignación activa previa
-            conn.execute('''UPDATE asignaciones_cel SET activa=0, updated_at=datetime('now')
+            conn.execute('''UPDATE asignaciones_cel SET activa=0
                             WHERE equipo_id=? AND activa=1''', (eq_row['id'],))
             conn.execute('''
                 INSERT INTO asignaciones_cel (equipo_id, empleado_id, fecha_desde, activa, notas, usuario_reg)
