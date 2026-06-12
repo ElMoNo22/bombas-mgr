@@ -209,9 +209,10 @@ def get_equipos():
             e.marca LIKE ? OR e.modelo LIKE ? OR e.imei LIKE ?
             OR e.imei2 LIKE ? OR e.numero_serie LIKE ?
             OR emp.nombre LIKE ? OR emp.apellido LIKE ? OR emp.legajo LIKE ?
+            OR l.numero LIKE ?
         )'''
         like = f'%{q}%'
-        params.extend([like]*8)
+        params.extend([like]*9)
 
     if estado:
         sql += ' AND e.estado = ?'
@@ -341,18 +342,29 @@ def delete_equipo(eid):
 def get_empleados():
     conn = get_db()
     q = request.args.get('q', '').strip()
-    sql = 'SELECT * FROM empleados WHERE activo = 1'
+    sql = '''
+        SELECT emp.*,
+               e.id    AS equipo_id,
+               e.marca AS equipo_marca,
+               e.modelo AS equipo_modelo,
+               e.imei  AS equipo_imei,
+               e.estado AS equipo_estado
+        FROM empleados emp
+        LEFT JOIN asignaciones_cel a ON a.empleado_id = emp.id AND a.activa = 1
+        LEFT JOIN equipos_cel e ON a.equipo_id = e.id
+        WHERE emp.activo = 1
+    '''
     params = []
     if q:
-        sql += ' AND (nombre LIKE ? OR apellido LIKE ? OR legajo LIKE ? OR sector LIKE ?)'
+        sql += ''' AND (emp.nombre LIKE ? OR emp.apellido LIKE ?
+                    OR emp.legajo LIKE ? OR emp.sector LIKE ?)'''
         like = f'%{q}%'
         params.extend([like]*4)
-    sql += ' ORDER BY apellido, nombre'
+    sql += ' ORDER BY emp.apellido, emp.nombre'
     cur = conn.execute(sql, params)
     rows = fetchall_dicts(cur)
     conn.close()
     return jsonify(rows)
-
 
 @cel_bp.route('/api/empleados/<int:empid>', methods=['GET'])
 @login_required
@@ -511,12 +523,21 @@ def update_asignacion(aid):
 @login_required
 def get_lineas():
     conn = get_db()
-    cur = conn.execute('''
+    q = request.args.get('q', '').strip()
+    sql = '''
         SELECT l.*, e.marca, e.modelo, e.imei
         FROM lineas_cel l
         LEFT JOIN equipos_cel e ON l.equipo_id = e.id
-        ORDER BY l.numero
-    ''')
+        WHERE 1=1
+    '''
+    params = []
+    if q:
+        sql += ''' AND (l.numero LIKE ? OR l.operadora LIKE ? OR l.plan LIKE ?
+                    OR e.marca LIKE ? OR e.modelo LIKE ?)'''
+        like = f'%{q}%'
+        params.extend([like]*5)
+    sql += ' ORDER BY l.numero'
+    cur = conn.execute(sql, params)
     rows = fetchall_dicts(cur)
     conn.close()
     return jsonify(rows)
