@@ -245,7 +245,7 @@ for numero, operadora, plan, tipo, estado, imei_ref, cat in lineas_list:
             if row:
                 eq_id = row['id'] if isinstance(row, dict) else row[0]
         conn2.execute('''INSERT OR IGNORE INTO lineas_cel (numero,operadora,plan,tipo,estado,equipo_id,created_at)
-            VALUES (?,?,?,?,?,?,?)''', (numero, operadora, plan, tipo, estado, eq_id, cat, uat))
+            VALUES (?,?,?,?,?,?,?)''', (numero, operadora, plan, tipo, estado, eq_id, cat))
         lin_ok += 1
     except Exception as e:
         lin_errors.append(f"Línea {numero}: {e}")
