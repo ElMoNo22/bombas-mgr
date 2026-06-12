@@ -163,13 +163,13 @@ for r in raw_rows:
     if tipo_up == 'CELULAR' and imei and imei not in imei_seen:
         imei_seen.add(imei)
         equipos_list.append((imei, detect_marca(modelo), modelo or 'Sin modelo',
-                             'asignado' if legajo else 'stock', obs, now))
+                             'asignado' if legajo else 'stock', now))
 
     if numero and len(numero) >= 8:
         operadora = empresa if empresa in ('MOVISTAR','CLARO','PERSONAL') else 'MOVISTAR'
         lineas_list.append((numero, operadora, plan,
                             'kite' if tipo_up == 'TELEMETRIA' else 'standard',
-                            'activa', imei, now, now))
+                            'activa', imei, now))
 
     if tipo_up == 'CELULAR' and imei and legajo:
         asignaciones_list.append((imei, legajo, fecha, obs))
@@ -195,10 +195,9 @@ all_errors += batch_execute(stmts, "Empleados")
 
 # Equipos
 print("\nImportando equipos...")
-eq_sql = '''INSERT INTO equipos_cel (imei,marca,modelo,estado,observaciones,created_at)
-VALUES (?,?,?,?,?,?)
-ON CONFLICT(imei) DO UPDATE SET marca=excluded.marca,modelo=excluded.modelo,
-observaciones=excluded.observaciones'''
+eq_sql = '''INSERT INTO equipos_cel (imei,marca,modelo,estado,created_at)
+VALUES (?,?,?,?,?)
+ON CONFLICT(imei) DO UPDATE SET marca=excluded.marca,modelo=excluded.modelo'''
 stmts = [build_stmt(eq_sql, row) for row in equipos_list]
 all_errors += batch_execute(stmts, "Equipos")
 
@@ -221,7 +220,7 @@ for imei, legajo, fecha, obs in asignaciones_list:
         emp_id = (emp_row['id'] if isinstance(emp_row, dict) else emp_row[0]) if emp_row else None
         conn.execute('UPDATE asignaciones_cel SET activa=0 WHERE equipo_id=? AND activa=1', (eq_id,))
         conn.execute('''INSERT INTO asignaciones_cel (equipo_id,empleado_id,fecha_desde,activa,notas,usuario_reg,created_at)
-            VALUES (?,?,?,1,?,'import',?)''', (eq_id, emp_id, fecha, obs, now))
+            VALUES (?,?,?,1,?,'import',?)''', (eq_id, emp_id, fecha or '2020-01-01', obs, now))
         conn.execute("UPDATE equipos_cel SET estado='asignado' WHERE id=?", (eq_id,))
         asig_ok += 1
     except Exception as e:
@@ -237,7 +236,7 @@ print("\nImportando líneas SIM...")
 conn2 = turso.connect()
 lin_ok = 0
 lin_errors = []
-for numero, operadora, plan, tipo, estado, imei_ref, cat, uat in lineas_list:
+for numero, operadora, plan, tipo, estado, imei_ref, cat in lineas_list:
     try:
         eq_id = None
         if imei_ref:
