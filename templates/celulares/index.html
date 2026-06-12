@@ -156,6 +156,12 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/><path d="M11 11a5 5 0 0 1 5.196 4.14"/></svg>
         Líneas SIM
       </div>
+      {% if role in ['admin', 'editor'] %}
+      <div class="nav-item" onclick="showSection('integridad')" id="nav-integridad" style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Integridad
+      </div>
+      {% endif %}
     </nav>
     <div class="sidebar-back">
       <a href="/home">← Volver al inicio</a>
@@ -298,6 +304,50 @@
               <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text2);">Cargando...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+
+      <!-- ═══════════════════ SECCIÓN INTEGRIDAD ═══════════════════ -->
+      <div class="section" id="section-integridad">
+
+        <div id="integ-loading" style="text-align:center;padding:40px;color:var(--text2);">Analizando base de datos...</div>
+
+        <div id="integ-content" style="display:none;">
+          <!-- Stats row -->
+          <div class="stats-row" id="integ-stats" style="margin-bottom:20px;"></div>
+
+          <!-- Filtros -->
+          <div class="toolbar" style="margin-bottom:16px;">
+            <select class="filter-select" id="integ-filtro-tipo" onchange="filtrarIssues()">
+              <option value="">Todos los tipos</option>
+              <option value="error">🔴 Errores</option>
+              <option value="warning">🟡 Advertencias</option>
+              <option value="info">🔵 Info</option>
+            </select>
+            <select class="filter-select" id="integ-filtro-cat" onchange="filtrarIssues()">
+              <option value="">Todas las categorías</option>
+              <option value="Equipos">Equipos</option>
+              <option value="Asignaciones">Asignaciones</option>
+              <option value="Empleados">Empleados</option>
+              <option value="Líneas">Líneas</option>
+            </select>
+            <button class="btn btn-ghost" onclick="loadIntegridad()">↻ Actualizar</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:80px;">Tipo</th>
+                  <th style="width:120px;">Categoría</th>
+                  <th>Problema</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody id="integ-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1013,6 +1063,65 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+
+// ── INTEGRIDAD ───────────────────────────────────────────────────────────────
+let allIssues = [];
+
+async function loadIntegridad() {
+  document.getElementById('integ-loading').style.display = 'block';
+  document.getElementById('integ-content').style.display = 'none';
+  try {
+    const data = await api('GET', '/api/integridad');
+    allIssues = data.issues || [];
+
+    // Stats
+    const s = data.stats;
+    document.getElementById('integ-stats').innerHTML = `
+      <div class="stat-card"><div class="val">${s.errores}</div><div class="lbl" style="color:var(--red)">Errores</div></div>
+      <div class="stat-card"><div class="val">${s.warnings}</div><div class="lbl" style="color:var(--yellow)">Advertencias</div></div>
+      <div class="stat-card"><div class="val">${s.info}</div><div class="lbl" style="color:var(--blue)">Info</div></div>
+      <div class="stat-card"><div class="val">${s.total_equipos}</div><div class="lbl">Equipos</div></div>
+      <div class="stat-card"><div class="val">${s.total_asignaciones}</div><div class="lbl">Asignaciones</div></div>
+      <div class="stat-card"><div class="val">${s.total_lineas}</div><div class="lbl">Líneas activas</div></div>
+    `;
+
+    filtrarIssues();
+    document.getElementById('integ-loading').style.display = 'none';
+    document.getElementById('integ-content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('integ-loading').textContent = 'Error al cargar: ' + e.message;
+  }
+}
+
+function filtrarIssues() {
+  const tipo = document.getElementById('integ-filtro-tipo').value;
+  const cat  = document.getElementById('integ-filtro-cat').value;
+  const filtered = allIssues.filter(i =>
+    (!tipo || i.tipo === tipo) && (!cat || i.categoria === cat)
+  );
+  const tbody = document.getElementById('integ-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-row">${allIssues.length ? 'Sin resultados para ese filtro' : '✓ Sin problemas detectados'}</td></tr>`;
+    return;
+  }
+  const icons = { error: '🔴', warning: '🟡', info: '🔵' };
+  tbody.innerHTML = filtered.map(i => `
+    <tr>
+      <td><span style="font-size:16px;">${icons[i.tipo]||'⚪'}</span></td>
+      <td><span class="badge badge-stock" style="font-size:11px;">${i.categoria}</span></td>
+      <td style="font-weight:500;">${i.mensaje}</td>
+      <td style="font-size:12px;color:var(--text2);">${i.detalle}</td>
+    </tr>
+  `).join('');
+}
+
+// Modificar showSection para cargar integridad al entrar
+const _origShowSection = showSection;
+showSection = function(name) {
+  _origShowSection(name);
+  if (name === 'integridad') loadIntegridad();
+};
+
 loadEquipos();
 </script>
 </body>

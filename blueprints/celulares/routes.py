@@ -663,3 +663,180 @@ def import_excel():
     db_commit(conn)
     conn.close()
     return jsonify({'ok': True, 'stats': stats})
+
+
+# ── INTEGRIDAD ────────────────────────────────────────────────────────────────
+
+@cel_bp.route('/api/integridad', methods=['GET'])
+@editor_required
+def get_integridad():
+    conn = get_db()
+    issues = []
+
+    def q(sql, params=()):
+        cur = conn.execute(sql, params)
+        return fetchall_dicts(cur)
+
+    # 1. Equipos asignados sin asignación activa
+    rows = q("""
+        SELECT e.id, e.imei, e.marca, e.modelo
+        FROM equipos_cel e
+        WHERE e.estado = 'asignado'
+        AND NOT EXISTS (
+            SELECT 1 FROM asignaciones_cel a
+            WHERE a.equipo_id = e.id AND a.activa = 1
+        )
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'error',
+            'categoria': 'Equipos',
+            'mensaje': f"Equipo marcado como 'asignado' sin asignación activa",
+            'detalle': f"{r['marca']} {r['modelo']} — IMEI: {r['imei']}",
+            'id': r['id'], 'tabla': 'equipos_cel'
+        })
+
+    # 2. Equipos en stock con asignación activa
+    rows = q("""
+        SELECT e.id, e.imei, e.marca, e.modelo
+        FROM equipos_cel e
+        WHERE e.estado = 'stock'
+        AND EXISTS (
+            SELECT 1 FROM asignaciones_cel a
+            WHERE a.equipo_id = e.id AND a.activa = 1
+        )
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'error',
+            'categoria': 'Equipos',
+            'mensaje': f"Equipo en 'stock' con asignación activa",
+            'detalle': f"{r['marca']} {r['modelo']} — IMEI: {r['imei']}",
+            'id': r['id'], 'tabla': 'equipos_cel'
+        })
+
+    # 3. Asignaciones activas sin empleado
+    rows = q("""
+        SELECT a.id, e.imei, e.marca, e.modelo
+        FROM asignaciones_cel a
+        JOIN equipos_cel e ON a.equipo_id = e.id
+        WHERE a.activa = 1 AND a.empleado_id IS NULL
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'warning',
+            'categoria': 'Asignaciones',
+            'mensaje': 'Asignación activa sin empleado asignado',
+            'detalle': f"{r['marca']} {r['modelo']} — IMEI: {r['imei']}",
+            'id': r['id'], 'tabla': 'asignaciones_cel'
+        })
+
+    # 4. Asignaciones activas sin fecha_desde
+    rows = q("""
+        SELECT a.id, e.imei, e.marca, e.modelo
+        FROM asignaciones_cel a
+        JOIN equipos_cel e ON a.equipo_id = e.id
+        WHERE a.activa = 1 AND (a.fecha_desde IS NULL OR a.fecha_desde = '')
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'warning',
+            'categoria': 'Asignaciones',
+            'mensaje': 'Asignación activa sin fecha de inicio',
+            'detalle': f"{r['marca']} {r['modelo']} — IMEI: {r['imei']}",
+            'id': r['id'], 'tabla': 'asignaciones_cel'
+        })
+
+    # 5. Empleados con múltiples equipos activos
+    rows = q("""
+        SELECT emp.id, emp.legajo, emp.nombre, emp.apellido, COUNT(*) as n
+        FROM asignaciones_cel a
+        JOIN empleados emp ON a.empleado_id = emp.id
+        WHERE a.activa = 1
+        GROUP BY a.empleado_id
+        HAVING COUNT(*) > 1
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'warning',
+            'categoria': 'Empleados',
+            'mensaje': f"Empleado con {r['n']} equipos asignados simultáneamente",
+            'detalle': f"{r['apellido']}, {r['nombre']} — Legajo: {r['legajo']}",
+            'id': r['id'], 'tabla': 'empleados'
+        })
+
+    # 6. Empleados sin legajo
+    rows = q("""
+        SELECT id, nombre, apellido
+        FROM empleados
+        WHERE legajo IS NULL OR legajo = ''
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'warning',
+            'categoria': 'Empleados',
+            'mensaje': 'Empleado sin legajo',
+            'detalle': f"{r['apellido']}, {r['nombre']}",
+            'id': r['id'], 'tabla': 'empleados'
+        })
+
+    # 7. Equipos sin marca o modelo
+    rows = q("""
+        SELECT id, imei, marca, modelo
+        FROM equipos_cel
+        WHERE marca IS NULL OR marca = '' OR marca = 'Desconocida'
+           OR modelo IS NULL OR modelo = '' OR modelo = 'Sin modelo'
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'info',
+            'categoria': 'Equipos',
+            'mensaje': 'Equipo sin marca o modelo identificado',
+            'detalle': f"IMEI: {r['imei']} — {r['marca'] or '?'} {r['modelo'] or '?'}",
+            'id': r['id'], 'tabla': 'equipos_cel'
+        })
+
+    # 8. Líneas activas sin número
+    rows = q("""
+        SELECT id, operadora
+        FROM lineas_cel
+        WHERE numero IS NULL OR numero = ''
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'error',
+            'categoria': 'Líneas',
+            'mensaje': 'Línea sin número registrado',
+            'detalle': f"Operadora: {r['operadora'] or '—'}",
+            'id': r['id'], 'tabla': 'lineas_cel'
+        })
+
+    # 9. Líneas vinculadas a equipo de baja
+    rows = q("""
+        SELECT l.id, l.numero, e.imei, e.marca, e.modelo
+        FROM lineas_cel l
+        JOIN equipos_cel e ON l.equipo_id = e.id
+        WHERE e.estado = 'baja' AND l.estado = 'activa'
+    """)
+    for r in rows:
+        issues.append({
+            'tipo': 'warning',
+            'categoria': 'Líneas',
+            'mensaje': 'Línea activa vinculada a equipo de baja',
+            'detalle': f"Línea {r['numero']} — {r['marca']} {r['modelo']} IMEI: {r['imei']}",
+            'id': r['id'], 'tabla': 'lineas_cel'
+        })
+
+    # Stats resumen
+    stats = {
+        'total_equipos': q("SELECT COUNT(*) as n FROM equipos_cel")[0]['n'],
+        'total_empleados': q("SELECT COUNT(*) as n FROM empleados WHERE activo=1")[0]['n'],
+        'total_asignaciones': q("SELECT COUNT(*) as n FROM asignaciones_cel WHERE activa=1")[0]['n'],
+        'total_lineas': q("SELECT COUNT(*) as n FROM lineas_cel WHERE estado='activa'")[0]['n'],
+        'errores': len([i for i in issues if i['tipo'] == 'error']),
+        'warnings': len([i for i in issues if i['tipo'] == 'warning']),
+        'info': len([i for i in issues if i['tipo'] == 'info']),
+    }
+
+    conn.close()
+    return jsonify({'issues': issues, 'stats': stats})
