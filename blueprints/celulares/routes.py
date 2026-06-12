@@ -313,7 +313,7 @@ def update_equipo(eid):
     fields = ['marca','modelo','imei','imei2','numero_serie','color',
               'almacenamiento','estado','motivo_baja','fecha_baja',
               'garantia_hasta','accesorios','observaciones']
-    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    sets = ', '.join([f'{f} = ?' for f in fields])
     vals = [data.get(f) for f in fields] + [eid]
     conn = get_db()
     conn.execute(f'UPDATE equipos_cel SET {sets} WHERE id = ?', vals)
@@ -415,7 +415,7 @@ def create_empleado():
 def update_empleado(empid):
     data = request.get_json()
     fields = ['legajo','nombre','apellido','puesto','sector','lugar_trabajo','email','fecha_ingreso','activo']
-    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    sets = ', '.join([f'{f} = ?' for f in fields])
     vals = [data.get(f) for f in fields] + [empid]
     conn = get_db()
     conn.execute(f'UPDATE empleados SET {sets} WHERE id = ?', vals)
@@ -569,8 +569,9 @@ def create_linea():
 @editor_required
 def update_linea(lid):
     data = request.get_json()
-    fields = ['numero','operadora','plan','datos_gb','vencimiento','iccid','estado','tipo','observaciones','equipo_id']
-    sets = ', '.join([f'{f} = ?' for f in fields]) + ', updated_at = datetime(\'now\')'
+    # Columnas reales de lineas_cel (sin tipo, sin updated_at)
+    fields = ['numero','operadora','plan','datos_gb','vencimiento','iccid','estado','observaciones','equipo_id']
+    sets = ', '.join([f'{f} = ?' for f in fields])
     vals = [data.get(f) for f in fields] + [lid]
     conn = get_db()
     conn.execute(f'UPDATE lineas_cel SET {sets} WHERE id = ?', vals)
