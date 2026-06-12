@@ -867,8 +867,12 @@ async function loadEmpleados() {
         <td style="font-size:12px;color:var(--text2);">${r.legajo || '—'}</td>
         <td>${r.apellido}, ${r.nombre}</td>
         <td>${r.sector || '—'}</td>
-        <td style="font-size:12px;color:var(--text2);">${r.puesto || '—'}</td>
-        <td style="font-size:12px;">—</td>
+        <td style="font-size:12px;color:var(--text2);">${r.lugar_trabajo || '—'}</td>
+        <td style="font-size:12px;">
+          ${r.equipo_marca ? `<strong>${r.equipo_marca}</strong> ${r.equipo_modelo || ''}
+            <span style="color:var(--text2);font-size:11px;">(${r.equipo_imei || ''})</span>`
+            : '<span style="color:var(--text2)">—</span>'}
+        </td>
         <td>
           ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="openModalEmpleado(${r.id})">Editar</button>` : ''}
         </td>
